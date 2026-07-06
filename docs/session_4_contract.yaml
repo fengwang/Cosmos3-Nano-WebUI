@@ -21,6 +21,8 @@ session_contract:
       - docs/evidence_map.md
       - docs/risk_register.md
       - docs/eval_seed_cases.md
+      - docs/eval_corpus/**   # amended MIG-S4 (FA-4): reconcile with Session End Protocol step 4
+      - docs/handoff.md       # amended MIG-S4 (FA-4): Session End Protocol step 3 (as in S1-S3)
       - docs/model_setup.md
     forbidden_files:
       - model weight files

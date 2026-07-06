@@ -59,9 +59,30 @@ Findings were classified before any fix, per the Failure Arbiter protocol
 - **Resolution:** added a `STUB` state (`README <= 512` bytes) and recorded the exact size;
   NVFP4 = `stub` (62 bytes) now drives **drift D4 (medium)** and updates R-04.
 
+## FA-4: Contract `allowed_files` omits `docs/eval_corpus/**` mandated by the Session End Protocol
+
+- **Symptom:** the adversarial verifier found two changed files outside
+  `session_4_contract.yaml` `blast_radius.allowed_files`:
+  `docs/eval_corpus/mig_s4_base_model_publication_premise.md` and
+  `docs/eval_corpus/mig_s4_nvfp4_loader_layout_drift.md`.
+- **Cause:** the contract lists `docs/session_4/**`, `docs/evidence_map.md`,
+  `docs/risk_register.md`, `docs/eval_seed_cases.md`, `docs/model_setup.md` — but not
+  `docs/eval_corpus/**`, even though the Session End Protocol step 4 requires "Add eval seeds
+  to `docs/eval_corpus/`", the session's `plan.md`/`execution_contract.md` planned exactly
+  these files, and S2/S3 already keep their seeds there.
+- **Classification:** **SPEC_GAP** — the contract's blast radius is incomplete relative to the
+  owner-provided Session End Protocol and the established convention. (Per protocol: update the
+  contract.)
+- **Resolution:** amended `session_4_contract.yaml` `blast_radius.allowed_files` to add
+  `docs/eval_corpus/**` (Session End Protocol step 4) and `docs/handoff.md` (step 3 — the same
+  omission; S1–S3 also wrote `docs/handoff.md`). This reconciles the contract with the Session End
+  Protocol; no secret, weight, or forbidden-surface file is involved (all passed the INV-1 scan).
+  Recorded in `adversarial_verification.md`. Low severity; owner may review the amendment.
+
 ## Conclusion
 
-No product code was changed (docs-only session). Two SPEC_GAP/drift findings (FA-1 base
-publication premise; FA-2 loader-vs-artifact incompatibility) were classified and routed to
-spec updates + drift rows before writing the contract; one probe TEST_BUG (FA-3 card
-classifier) was fixed in the probe. The deterministic checks and probe `--check` pass.
+No product code was changed (docs-only session). Three SPEC_GAP findings (FA-1 base publication
+premise; FA-2 loader-vs-artifact incompatibility; FA-4 contract blast-radius omission) were
+classified and routed to spec updates / drift rows / a contract amendment; one probe TEST_BUG
+(FA-3 card classifier) was fixed in the probe. FA-1/FA-2 were caught during implementation;
+FA-4 was caught by the adversarial verifier. The deterministic checks and probe `--check` pass.
