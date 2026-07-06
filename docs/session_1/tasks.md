@@ -2,21 +2,21 @@
 
 ## 1. Lifecycle Planning Pack
 
-- [ ] 1.1 Record approved brainstorming decisions in `docs/session_1/brainstorming.md`.
-- [ ] 1.2 Create `docs/session_1/proposal.md` with motivation, agreed changes, capabilities, and impact.
-- [ ] 1.3 Create `docs/session_1/design.md` with context, goals, decisions, risks, and migration plan.
-- [ ] 1.4 Create one spec file per proposal capability under `docs/session_1/specs/`.
-- [ ] 1.5 Create `docs/session_1/tasks.md`, `docs/session_1/plan.md`, and `docs/session_1/execution_contract.md`.
-- [ ] 1.6 Record any failure arbiter entries found before or during planning.
-- [ ] 1.7 Run planning pack checks and commit the checkpoint.
+- [x] 1.1 Record approved brainstorming decisions in `docs/session_1/brainstorming.md`.
+- [x] 1.2 Create `docs/session_1/proposal.md` with motivation, agreed changes, capabilities, and impact.
+- [x] 1.3 Create `docs/session_1/design.md` with context, goals, decisions, risks, and migration plan.
+- [x] 1.4 Create one spec file per proposal capability under `docs/session_1/specs/`.
+- [x] 1.5 Create `docs/session_1/tasks.md`, `docs/session_1/plan.md`, and `docs/session_1/execution_contract.md`.
+- [x] 1.6 Record any failure arbiter entries found before or during planning.
+- [x] 1.7 Run planning pack checks and commit the checkpoint.
 
 ## 2. Public Repository Inventory
 
-- [ ] 2.1 Run or reuse baseline deterministic commands from the session contract.
-- [ ] 2.2 Create `docs/session_1/inventory.md` with local branch, commit, status, remotes, file tree, docs state, README state, logo state, and handoff state.
-- [ ] 2.3 Record public WebUI, vLLM-Omni, and Hugging Face target IDs.
-- [ ] 2.4 Classify unavailable or malformed baseline checks before substituting fallback commands.
-- [ ] 2.5 Run inventory checks and commit the checkpoint.
+- [x] 2.1 Run or reuse baseline deterministic commands from the session contract.
+- [x] 2.2 Create `docs/session_1/inventory.md` with local branch, commit, status, remotes, file tree, docs state, README state, logo state, and handoff state.
+- [x] 2.3 Record public WebUI, vLLM-Omni, and Hugging Face target IDs.
+- [x] 2.4 Classify unavailable or malformed baseline checks before substituting fallback commands.
+- [x] 2.5 Run inventory checks and commit the checkpoint.
 
 ## 3. Import And Exclusion Manifests
 

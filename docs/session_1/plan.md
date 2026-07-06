@@ -46,7 +46,7 @@
 - Create: `docs/session_1/execution_contract.md`
 - Create: `docs/session_1/failure_arbiter.md`
 
-- [ ] **Step 1: Run failing check**
+- [x] **Step 1: Run failing check**
 
 Run:
 
@@ -56,11 +56,11 @@ rtk sh -lc 'test -f docs/session_1/brainstorming.md'
 
 Expected before implementation: command exits `1` because the file does not exist.
 
-- [ ] **Step 2: Create planning files**
+- [x] **Step 2: Create planning files**
 
 Write the lifecycle files listed for Task 1. Each spec file must use `#### Scenario:` headings.
 
-- [ ] **Step 3: Run planning checks**
+- [x] **Step 3: Run planning checks**
 
 Run:
 
@@ -72,7 +72,7 @@ rtk rg -n "T[B]D|T[O]DO|F[I]XME" docs/session_1
 
 Expected after implementation: first two commands exit `0`; the placeholder scan exits `1` with no matches.
 
-- [ ] **Step 4: Commit checkpoint**
+- [x] **Step 4: Commit checkpoint**
 
 Run:
 
@@ -89,7 +89,7 @@ Expected: commit succeeds and contains only `docs/session_1/**`.
 **Files:**
 - Create: `docs/session_1/inventory.md`
 
-- [ ] **Step 1: Run failing check**
+- [x] **Step 1: Run failing check**
 
 Run:
 
@@ -99,7 +99,7 @@ rtk sh -lc 'test -f docs/session_1/inventory.md'
 
 Expected before implementation: command exits `1`.
 
-- [ ] **Step 2: Run baseline commands**
+- [x] **Step 2: Run baseline commands**
 
 Run:
 
@@ -115,7 +115,7 @@ rtk sh -lc 'test -n "$PRIVATE_REF_PATTERN"'
 
 Expected: git status, remote, file list, log, and remote probes exit `0`. The `$PRIVATE_REF_PATTERN` check may exit `1`; classify as environment/setup if unset.
 
-- [ ] **Step 3: Write inventory**
+- [x] **Step 3: Write inventory**
 
 Write `docs/session_1/inventory.md` with:
 
@@ -130,7 +130,7 @@ Write `docs/session_1/inventory.md` with:
 - baseline check table
 - out-of-scope validation note for Hugging Face checkpoints
 
-- [ ] **Step 4: Run inventory checks**
+- [x] **Step 4: Run inventory checks**
 
 Run:
 
@@ -140,7 +140,7 @@ rtk rg -n "session-1|Cosmos3-Nano-WebUI|vllm-omni|wfen/Cosmos3-Nano-FP8-Blockwis
 
 Expected: command exits `0` and finds each required baseline item.
 
-- [ ] **Step 5: Commit checkpoint**
+- [x] **Step 5: Commit checkpoint**
 
 Run:
 
