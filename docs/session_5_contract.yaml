@@ -53,7 +53,11 @@ session_contract:
   deterministic_checks:
     - "rtk pytest -q"
     - "rtk ruff check api tests"
-    - "rtk proxy sh -lc 'cd webui && pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test'"
+    # S5 amendment (SPEC_GAP FA-2, owner-review): `pnpm build` must precede
+    # `pnpm typecheck` — Next generates the CSS-module (*.module.css) type
+    # declarations during build that `tsc --noEmit` needs. Verified empirically;
+    # see docs/session_5/failure_arbiter.md.
+    - "rtk proxy sh -lc 'cd webui && pnpm install --frozen-lockfile && pnpm build && pnpm lint && pnpm typecheck && pnpm test'"
     - "rtk proxy sh -lc 'cd webui && pnpm gen:api && git diff --exit-code lib/api/schema.d.ts'"
     - "rtk rg -n \"$PRIVATE_REF_PATTERN\" .github docs tests api webui"
   review_axes:
