@@ -20,9 +20,9 @@
 
 ## 3. Import And Exclusion Manifests
 
-- [ ] 3.1 Create `docs/session_1/import_manifest.md` with allowed import categories and proof requirements.
-- [ ] 3.2 Create `docs/session_1/exclusion_manifest.md` with default exclusions and exception rules.
-- [ ] 3.3 Run manifest checks and commit the checkpoint.
+- [x] 3.1 Create `docs/session_1/import_manifest.md` with allowed import categories and proof requirements.
+- [x] 3.2 Create `docs/session_1/exclusion_manifest.md` with default exclusions and exception rules.
+- [x] 3.3 Run manifest checks and commit the checkpoint.
 
 ## 4. Scrub Checklist And Baseline Scan
 

@@ -158,7 +158,7 @@ Expected: commit succeeds and stays inside `docs/session_1/**`.
 - Create: `docs/session_1/import_manifest.md`
 - Create: `docs/session_1/exclusion_manifest.md`
 
-- [ ] **Step 1: Run failing check**
+- [x] **Step 1: Run failing check**
 
 Run:
 
@@ -168,11 +168,11 @@ rtk sh -lc 'test -f docs/session_1/import_manifest.md && test -f docs/session_1/
 
 Expected before implementation: command exits `1`.
 
-- [ ] **Step 2: Write manifests**
+- [x] **Step 2: Write manifests**
 
 Write `docs/session_1/import_manifest.md` with allowed import categories, proof requirements, and stop conditions. Write `docs/session_1/exclusion_manifest.md` with excluded file classes, path fragments, extensions, and exception rules.
 
-- [ ] **Step 3: Run manifest checks**
+- [x] **Step 3: Run manifest checks**
 
 Run:
 
@@ -183,7 +183,7 @@ rtk rg -n "safetensors|TensorRT-LLM|generated media|cache|archive|private eviden
 
 Expected: both commands exit `0` and show the required categories.
 
-- [ ] **Step 4: Commit checkpoint**
+- [x] **Step 4: Commit checkpoint**
 
 Run:
 
