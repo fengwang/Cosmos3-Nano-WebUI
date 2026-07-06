@@ -33,10 +33,10 @@
 
 ## 5. Evidence, Risk, Handoff, And Done Gate
 
-- [ ] 5.1 Update `docs/evidence_map.md` only if Session 1 evidence changes or sharpens the public baseline.
-- [ ] 5.2 Update `docs/risk_register.md` only if risk status changes.
-- [ ] 5.3 Update `docs/eval_seed_cases.md` only if a reusable missed or noisy check is found.
-- [ ] 5.4 Write `docs/handoff.md` from the repo template.
-- [ ] 5.5 Run final deterministic checks.
-- [ ] 5.6 Verify `GATE-MIG-S1-SCOPE`.
-- [ ] 5.7 Commit the final checkpoint.
+- [x] 5.1 Update `docs/evidence_map.md` only if Session 1 evidence changes or sharpens the public baseline.
+- [x] 5.2 Update `docs/risk_register.md` only if risk status changes.
+- [x] 5.3 Update `docs/eval_seed_cases.md` only if a reusable missed or noisy check is found.
+- [x] 5.4 Write `docs/handoff.md` from the repo template.
+- [x] 5.5 Run final deterministic checks.
+- [x] 5.6 Verify `GATE-MIG-S1-SCOPE`.
+- [x] 5.7 Commit the final checkpoint.

@@ -22,6 +22,7 @@ Operators may set local paths with environment variables such as:
 |---|---|---|---|---|
 | EV-MIG-REPO-TREE | Confirm public repo shape after import. | `git status`, `rg --files` | Runtime source, tests, schemas, deploy files, and docs are present; archives/caches/model weights are absent. | MIG-S3 |
 | EV-MIG-SCRUB | Detect private references. | Recursive `rg` patterns for private hosts, private absolute paths, codenames, secrets, and model-weight paths. | No matches outside explicitly allowed placeholder examples. | MIG-S1, MIG-S3, MIG-S7, MIG-S8 |
+| EV-MIG-SCRUB-COMMAND-SANITY | Confirm scrub checks search the intended surface and do not match their own documentation. | `docs/session_1/scrub_checklist.md`, fallback private-reference scan, and `rg --files` path scans. | Content scans are used for private references; file-path scans are used for extensions, caches, archives, artifact folders, and legacy submodules; documented regex examples do not create false release blockers. | MIG-S1, MIG-S3, MIG-S7, MIG-S8 |
 | EV-MIG-VLLM-FORK | Confirm vLLM-Omni public pin. | GitHub fork remote and pinned commit/tag. | Pinned commit exists publicly and contains the Cosmos3 patch line selected by `MIG-S2`. | MIG-S2 |
 | EV-MIG-HF-FP8-METADATA | Verify FP8 public checkpoint metadata. | HF repo ID, license, file listing, model card. | Repo reachable; license recorded; file layout supports planned loader checks or drift is documented. | MIG-S4 |
 | EV-MIG-HF-NVFP4-METADATA | Verify NVFP4 public checkpoint metadata. | HF repo ID, license, file listing, model card. | Repo reachable; license recorded; empty or incomplete model-card gaps are documented. | MIG-S4 |
@@ -60,4 +61,3 @@ For every manual GPU case, record:
 - request mode, prompt or fixture name, dimensions, frames, fps, steps, seed
 - artifact path, dimensions, streams, duration, and pass/fail result
 - known limitation if the case is not passed
-

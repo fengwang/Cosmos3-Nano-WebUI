@@ -260,7 +260,7 @@ Expected: commit succeeds and stays inside `docs/session_1/**`.
 - Modify: `docs/eval_seed_cases.md` if needed
 - Create: `docs/handoff.md`
 
-- [ ] **Step 1: Run final-document failing check**
+- [x] **Step 1: Run final-document failing check**
 
 Run:
 
@@ -270,15 +270,15 @@ rtk sh -lc 'test -f docs/handoff.md'
 
 Expected before implementation: command exits `1`.
 
-- [ ] **Step 2: Update evidence, risk, and eval docs only as needed**
+- [x] **Step 2: Update evidence, risk, and eval docs only as needed**
 
 Use the observed baseline. Add narrowly scoped rows if they improve future checks. Do not rewrite unrelated rows.
 
-- [ ] **Step 3: Write handoff**
+- [x] **Step 3: Write handoff**
 
 Write `docs/handoff.md` with state snapshot, narrative context, decision log, next priority queue, warnings, and eval seed notes.
 
-- [ ] **Step 4: Run final checks**
+- [x] **Step 4: Run final checks**
 
 Run:
 
@@ -299,7 +299,7 @@ rtk rg -n "T[B]D|T[O]DO|F[I]XME" docs/session_1 docs/handoff.md
 
 Expected: contract baseline commands run; fallback private-reference and artifact scans produce no release-blocking matches; placeholder scan produces no matches.
 
-- [ ] **Step 5: Commit checkpoint**
+- [x] **Step 5: Commit checkpoint**
 
 Run:
 
