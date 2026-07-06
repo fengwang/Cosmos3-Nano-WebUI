@@ -31,6 +31,11 @@ session_contract:
       - docs/session_5/**
       - docs/evidence_map.md
       - docs/risk_register.md
+      # S5 amendment (owner-approved 2026-07-07; Session End Protocol requires these
+      # outputs; precedent: S4 FA-4). Adds handoff, eval corpus, and eval seed cases.
+      - docs/handoff.md
+      - docs/eval_corpus/**
+      - docs/eval_seed_cases.md
     forbidden_files:
       - model weight files
       - Docker publishing workflows with secrets
