@@ -2,7 +2,7 @@
 
 Derived from `docs/session_4/specs/reasoner-source-guard.md`. Torch-free, no GPU: exercises the pure
 verdict Calculation, the header-reading Action, the CLI exit codes, and the `build_reasoner` fail-fast.
-The keep/drop rule mirrors `submodules/vllm/.../models/cosmos3.py` `WeightsMapper`.
+The keep/drop rule mirrors the vLLM Cosmos3 model definition's `WeightsMapper`.
 """
 from __future__ import annotations
 

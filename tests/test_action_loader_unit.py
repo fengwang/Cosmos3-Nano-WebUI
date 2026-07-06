@@ -28,7 +28,7 @@ def test_merge_raises_on_collision():
 
 
 def test_config_defaults_to_trusted_base_action_mount():
-    cfg = ActionEngineConfig(quant_dir="/data/models/Cosmos3-Nano-NVFP4-wfen")
+    cfg = ActionEngineConfig(quant_dir="/data/models/Cosmos3-Nano-NVFP4-Blockwise")
     assert cfg.base_action_dir == "/data/models/Cosmos3-Nano/transformer"
     assert cfg.device == "cuda"
 
