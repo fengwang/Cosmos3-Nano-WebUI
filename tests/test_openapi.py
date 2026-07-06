@@ -37,5 +37,5 @@ def test_openapi_is_31_with_versioned_health_and_components():
 
 def test_committed_openapi_matches_live_app():
     # specs/shared-schemas.md :: committed schema matches the live app (no drift)
-    assert COMMITTED.exists(), "run `make -f deploy/Makefile schemas` to emit schemas/openapi.json"
+    assert COMMITTED.exists(), "run: PYTHONPATH=api python -m app.openapi_export schemas/openapi.json"
     assert json.loads(COMMITTED.read_text()) == openapi_dict()

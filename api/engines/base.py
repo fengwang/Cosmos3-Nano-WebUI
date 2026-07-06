@@ -1,7 +1,7 @@
 """The EngineAdapter contract + its immutable Data (ACD: Data + one Action method).
 
 The equivalence harness drives two `EngineAdapter`s and compares their `GenerationResult`s
-to a band verdict — the INV-3 mechanism S3's TRT-LLM adapter reuses unchanged. This module is
+to a band verdict. This module is
 deliberately **torch-free at import**: tensors/frames are typed `Any` and no heavy ML library is
 imported at module scope, so the torch-free server and host-test loop can import the interface.
 Concrete adapters (e.g. `diffusers_oracle`) own all GPU I/O and defer their heavy imports.

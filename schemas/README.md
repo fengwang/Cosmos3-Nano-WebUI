@@ -9,9 +9,10 @@ Code-first contract artifacts for the Cosmos3-Nano serving API.
 ## Regenerate / verify
 
 ```bash
-make -f deploy/Makefile schemas          # regenerate schemas/openapi.json
-make -f deploy/Makefile schemas-check    # fail if the committed file drifts from the app
-make -f deploy/Makefile openapi-validate # validate as OpenAPI 3.1
+# regenerate schemas/openapi.json from the FastAPI app
+PYTHONPATH=api python -m app.openapi_export schemas/openapi.json
+# fail if the committed file drifts from the app, and validate as OpenAPI 3.1
+PYTHONPATH=api python -m pytest -q tests/test_openapi.py
 ```
 
 The Pydantic models in `api/app/schemas.py` are the source of truth: `JobStatus`,

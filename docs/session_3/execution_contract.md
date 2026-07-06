@@ -7,7 +7,7 @@ Status: Active before implementation
 
 ## Planned File Changes
 
-Created by curated import (from `/data/home_feng/workspace/gitea/cosmos3-nano-webui`):
+Created by curated import (from `the owner-provided private source repo`):
 
 - `api/**` except `api/engines/trtllm/**`
 - `webui/**` (tracked files; no `node_modules`/`.next`/build output)

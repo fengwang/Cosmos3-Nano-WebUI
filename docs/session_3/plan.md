@@ -6,10 +6,10 @@ Inputs: `docs/session_3/tasks.md`, `docs/session_3/design.md`, `docs/session_3/s
 Conventions:
 
 ```bash
-SRC=/data/home_feng/workspace/gitea/cosmos3-nano-webui
+SRC=<PRIVATE_SOURCE_REPO>   # owner-provided; real path redacted from public docs
 DST=/workspace/github.repo/Cosmos3-Nano-WebUI
 # Session 3 private-reference pattern (fallback; $PRIVATE_REF_PATTERN unset):
-S3_PAT='10\.147\.[0-9.]+|/data/home_feng|/workspace/gitea|(^|[^a-z])gitea|cosmos3-nano-quantization|-wfen|-dist|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN [A-Z ]*PRIVATE KEY'
+S3_PAT='10\.[0-9]+\.[0-9]+\.[0-9]+|/home/[^ ]+|/data/home_[^ ]+|/workspace/[^ ]+|-wfen|-dist|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN [A-Z ]*PRIVATE KEY'  # + operator-supplied private repo/codename literals
 ```
 
 Copy uses `git ls-files` so only tracked files move (caches/venvs/node_modules are

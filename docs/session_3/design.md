@@ -7,7 +7,7 @@ Risk: high
 ## Context
 
 The public repo is an empty seed. The private source at
-`/data/home_feng/workspace/gitea/cosmos3-nano-webui` contains the full product:
+`the owner-provided private source repo` contains the full product:
 a FastAPI backend (`api/`), a Next.js WebUI (`webui/`), an OpenAPI schema
 (`schemas/`), CPU + GPU tests (`tests/`), checkpoint tooling (`tools/`), Docker /
 diagnostic deploy support (`deploy/`), three legacy git submodules
@@ -63,7 +63,7 @@ no beta benefit.
 ### D3: Drop `.gitmodules` and `submodules/` entirely
 The WebUI repo consumes vLLM-Omni through the Session 2 public pin at the deploy
 layer; plain vLLM and TensorRT-LLM are out of milestone 1. `.gitmodules` also
-carries private host `10.147.19.203`. **Why:** INV-3, the forbidden-files list,
+carries private host `a private intranet host`. **Why:** INV-3, the forbidden-files list,
 and the 638 MB size. Alternative (scrub `.gitmodules` to public URLs) rejected —
 milestone 1 has no submodules by contract.
 

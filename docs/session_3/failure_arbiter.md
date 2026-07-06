@@ -63,5 +63,22 @@ Failure Arbiter protocol (BUG / SPEC_GAP / AMBIGUITY / ENVIRONMENT / TEST_BUG).
 - **Resolution:** left verbatim; ruff (configured in `pyproject`) normalizes it in
   S5 CI. REVIEW.md: do not report style already enforced by the linter.
 
-No failure was classified BUG or SPEC_GAP; no product-code fix was required to make
-the deterministic checks pass.
+## FA-6: Private values leaked in the session's own public docs (caught by sharded review)
+
+- **Symptom:** the security-axis reviewer found the initial `docs/session_3/**` named
+  private values (the private source checkout path, the private intranet host, and a
+  sibling private repo name), matching the MIG-S2 eval seed
+  (`docs/eval_corpus/mig_s2_private_source_scrub.md`).
+- **Cause:** the refining-pack docs quoted the owner-provided answers verbatim.
+- **Classification:** **BUG against INV-1** (and PRD FR-2 / NFR-1). The imported source
+  tree was already clean; the leak was only in the committed docs.
+- **Resolution:** redacted all such literals to policy/descriptor language and generic
+  detectors across the 8 affected docs; the MIG-S2 regression over `docs/session_3/**`
+  is now clean. See `scrub_report.md` "Sharded-Review Correction".
+
+## Conclusion
+
+One BUG (FA-6, a docs INV-1 leak) was caught by sharded review and fixed. No product-code
+fix was required to make the deterministic checks pass; the remaining items are curation
+exclusions, ENVIRONMENT (generated file / analysis env), and pre-existing Nits deferred
+to MIG-S5.

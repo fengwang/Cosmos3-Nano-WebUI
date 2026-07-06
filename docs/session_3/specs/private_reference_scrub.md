@@ -10,8 +10,9 @@ Capability: Private Reference Scrub
 Imported source, config, schema, test, and tool files MUST NOT contain private
 hosts, private absolute paths, private codenames, private repository names,
 secrets, or tokens. The Session 3 private-reference pattern SHALL cover at least:
-`10.147.19.203` and other `10.147.*` hosts, `/data/home_feng`, `/workspace/gitea`,
-`gitea`, `cosmos3-nano-quantization`, checkpoint suffixes `-wfen` and `-dist`,
+RFC1918 intranet hosts (the private host in the source `.gitmodules`), private
+home / checkout paths, a sibling private quantization repo name and private
+codenames, checkpoint suffixes `-wfen` and `-dist`,
 `hf_[A-Za-z0-9]{20,}`, `sk-[A-Za-z0-9_-]{20,}`, and private-key headers.
 
 #### Scenario: Private-reference scan is clean
@@ -38,8 +39,8 @@ not a `-wfen`/`-dist` or home path.
 
 #### Scenario: No private checkpoint specifics remain
 
-WHEN the imported tree is scanned for `-wfen`, `-dist`, `/data/home_feng`, and
-`/workspace/gitea`
+WHEN the imported tree is scanned for `-wfen`, `-dist`, and the private home /
+checkout paths
 THEN there SHALL be no match.
 
 ### Requirement: Submodule and private-host config is removed
@@ -52,7 +53,7 @@ file may reference the private vLLM-Omni host.
 WHEN the repo root is listed and the imported tree is scanned
 THEN `.gitmodules` SHALL be absent
 AND no `submodules/` path SHALL be present
-AND `10.147.19.203` SHALL NOT appear in any imported file.
+AND the private intranet host SHALL NOT appear in any imported file.
 
 ### Requirement: Scrub report is recorded
 

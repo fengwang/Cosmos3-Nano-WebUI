@@ -8,8 +8,7 @@ Status: Derived from approved brainstorming
 
 The public repo has no runtime source, so CI (S5), Docker (S6), README (S7), and
 release (S8) work cannot be verified. Session 3 imports the API and WebUI source
-in curated form from the owner-provided private repo
-`/data/home_feng/workspace/gitea/cosmos3-nano-webui`, while removing private
+in curated form from the owner-provided private source repo, while removing private
 references, legacy submodule dependencies, bulky artifacts, and non-CPU-safe
 material. A direct mirror is unsafe because the private tree contains private
 hosts, private paths, 638 MB of legacy submodules, and 1265 files of private
@@ -32,8 +31,8 @@ development history.
   the Session 2 public pin at the deploy layer (S6), not a submodule (INV-3).
 - Keep `/data/models` as the documented public container-mount convention; drive
   real checkpoint locations through `COSMOS3_*_MODEL_DIR` env; scrub only the
-  truly-private specifics (`10.147.19.203`, `/data/home_feng`, `/workspace/gitea`,
-  `cosmos3-nano-quantization`, `-wfen`, `-dist`).
+  truly-private specifics (`a private intranet host`, `a private home path`, `a private checkout root`,
+  `a sibling private quantization repo`, `-wfen`, `-dist`).
 - Defer the entire `deploy/` tree to S6 and record it as a handoff item.
 - Add source-level CPU smoke evidence and an OpenAPI schema-sync check.
 - Commit imported source + refining docs at clean checkpoints on `session-3`; do

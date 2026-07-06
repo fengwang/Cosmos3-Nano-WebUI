@@ -2,7 +2,7 @@
 
 Date: 2026-07-06
 Session: MIG-S3
-Source: `/data/home_feng/workspace/gitea/cosmos3-nano-webui` (owner-provided private repo)
+Source: `the owner-provided private source repo` (owner-provided private repo)
 Method: allowlist copy from the private repo's `git ls-files`, then targeted scrub.
 
 ## Summary
@@ -54,7 +54,7 @@ Method: allowlist copy from the private repo's `git ls-files`, then targeted scr
   `docs/session_7/outputs/evidence_lib.py` (excluded private docs); see
   `failure_arbiter.md`.
 - **`submodules/` (3 gitlinks + ~638 MB)** and **`.gitmodules`** — forbidden;
-  `.gitmodules` also carries private host `10.147.19.203`. vLLM-Omni is consumed
+  `.gitmodules` also carries private host `a private intranet host`. vLLM-Omni is consumed
   via the Session 2 public pin at the S6 deploy layer (INV-3).
 - **`.github/**`** — CI is S5. **`README.md`** — S7. **private `docs/**` (1265)** —
   private development history/evidence.

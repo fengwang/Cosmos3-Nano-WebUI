@@ -19,7 +19,7 @@ Status: Approved design (owner approved on 2026-07-06)
   `cosmos3-nano-webui-mig-s2` -> `697035018b70…`), consumed by later Docker work,
   not this session.
 - Located the private source (owner-provided) at
-  `/data/home_feng/workspace/gitea/cosmos3-nano-webui`. It is a full repo with its
+  `the owner-provided private source repo`. It is a full repo with its
   own `session-1..session-8` development history and the target
   `api/ webui/ schemas/ tests/ tools/ deploy/ submodules/` layout. Tracked file
   counts: `docs` 1265, `webui` 158, `tests` 155, `api` 64, `deploy` 41,
@@ -43,9 +43,9 @@ Status: Approved design (owner approved on 2026-07-06)
    at import but not reachable from the API server (only its own test), and it
    hardcodes `submodules/TensorRT-LLM/...` paths.
 5. **`submodules/` is huge and forbidden** (TensorRT-LLM 533 MB, vllm 105 MB) and
-   `.gitmodules` points vllm-omni at private host `http://10.147.19.203:7333`.
-6. **Concrete private tokens found in the candidate tree:** host `10.147.19.203`,
-   `/data/home_feng`, `/workspace/gitea`, private repo `cosmos3-nano-quantization`,
+   `.gitmodules` points vllm-omni at private host `a private intranet host`.
+6. **Concrete private tokens found in the candidate tree:** host `a private intranet host`,
+   `a private home path`, `a private checkout root`, private repo `a sibling private quantization repo`,
    private checkpoint suffixes `-wfen`/`-dist`. No `hf_`/`sk-` secrets, no hidden
    large binaries outside `submodules/`.
 7. **`/data/models` is used pervasively** as the checkpoint mount, including as the
@@ -56,7 +56,7 @@ Status: Approved design (owner approved on 2026-07-06)
 
 | # | Question | Decision |
 |---|---|---|
-| Q0 | Where is the private source? | `/data/home_feng/workspace/gitea/cosmos3-nano-webui` (owner-provided). |
+| Q0 | Where is the private source? | `the owner-provided private source repo` (owner-provided). |
 | Q_A | How to treat `/data/models`? | **Keep as documented public container-mount convention**; drive real dirs via `COSMOS3_*_MODEL_DIR`; scrub only truly-private specifics. |
 | Q_B | Which tests to import (CPU-scoped session)? | **CPU-safe only**: exclude gpu-marked, `tests/equivalence/`, `tests/e2e/`; defer GPU suites to S8. |
 | Q_C | Keep or drop `api/engines/trtllm/`? | **Drop** the trtllm engine + its test; no proven public runtime need. |
@@ -113,7 +113,7 @@ Copy the whole tree, then delete excluded classes and scrub.
   `tools/checkpoint_prep/copy_shared.py` `_BF16_BASE_REF` (default
   `/data/models/Cosmos3-Nano`); rephrase the `submodules/vllm/...` comment in
   `api/engines/vllm/reasoner_preflight.py`; verify the kept test set carries no
-  `-wfen`/`-dist`/`gitea`/private-venv strings.
+  `-wfen`/`-dist`/`a private git host`/private-venv strings.
 
 **CPU smoke (no CUDA/weights)**
 - `python -m compileall api`; `PYTHONPATH=api python -c "import app.main"`;

@@ -15,7 +15,7 @@ public inputs.
 |---|---|---|
 | Byte-compile | `python -m compileall -q api` | **exit 0** |
 | Torch-free import graph | `PYTHONPATH=api python -c "import app.main"` | **OK** (FastAPI app builds; logs an expected "transformers unavailable → char heuristic" torch-free fallback) |
-| CPU test suite | `pytest -m "not gpu"` | **exit 0**; 469 tests collected; all selected pass, **no FAILED/ERROR**; numpy-dependent tests skipped (numpy absent); gpu-marked deselected for the S8 gate |
+| CPU test suite | `pytest -m "not gpu"` | **exit 0**; ~470 tests collected, **467 passed, 3 skipped, 0 failed/error**; the 3 skips are numpy-dependent (numpy absent); gpu-marked deselected for the S8 gate |
 | OpenAPI schema sync | `pytest tests/test_openapi.py::test_committed_openapi_matches_live_app` | **pass** — committed `schemas/openapi.json` equals the live app's `openapi_dict()` (no drift) |
 | Tools compile | `python -m compileall -q tools` | **exit 0** |
 
