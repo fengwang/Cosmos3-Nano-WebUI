@@ -25,3 +25,16 @@
 - Why ENVIRONMENT does not fit: the command ran successfully in the current shell.
 - Allowed next action: rewrite the scan examples with non-self-matching regex spelling.
 - Forbidden next action: delete the placeholder scan requirement or ignore real placeholder matches.
+
+## FA-003: Path Fragment Scan Searched File Contents
+
+- Category: TEST_BUG
+- Failing command: `rtk rg -n "(checkpoints|weights|artifacts|outputs|samples/generated)" . --glob "!docs/session_1/**"`
+- Output evidence: command matched ordinary documentation sentences about weights and artifacts across project docs.
+- Relevant contract clause: scrub scans must detect files that should not enter the public repo.
+- Why BUG does not fit: no forbidden file path or artifact was found.
+- Why SPEC_GAP does not fit: the exclusion requirement is clear; the scan should inspect file paths for excluded path fragments.
+- Why AMBIGUITY does not fit: the false positives came from content search rather than multiple valid interpretations.
+- Why ENVIRONMENT does not fit: `rg` worked correctly.
+- Allowed next action: replace path and extension scans with `rg --files | rg ...` commands.
+- Forbidden next action: remove weight, artifact, cache, archive, or legacy-submodule scan coverage.

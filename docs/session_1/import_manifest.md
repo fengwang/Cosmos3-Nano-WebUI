@@ -65,7 +65,7 @@ The importing session must stop and classify the issue before commit when any of
 rtk rg --files
 rtk rg -n "$PRIVATE_REF_PATTERN" .
 rtk rg -n "submodules/(vllm|TensorRT-LLM)|TensorRT-LLM" .
-rtk rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$" .
+rtk sh -lc 'rg --files | rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$"'
 ```
 
 If `$PRIVATE_REF_PATTERN` is unset, use the fallback command set in `docs/session_1/scrub_checklist.md`.

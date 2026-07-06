@@ -106,7 +106,11 @@ rtk rg --files
 rtk sh -lc 'GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10" git ls-remote git@github.com:fengwang/Cosmos3-Nano-WebUI.git HEAD "refs/heads/*"'
 rtk sh -lc 'GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10" git ls-remote git@github.com:fengwang/vllm-omni.git HEAD "refs/heads/*"'
 rtk sh -lc 'PRIVATE_REF_PATTERN="(/home/[A-Za-z0-9._-]+|/Users/[A-Za-z0-9._-]+|/mnt/[^[:space:]]+|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY|([A-Za-z0-9_]*token|secret|password|api[_-]?key)[[:space:]]*[:=])"; rg -n -i "$PRIVATE_REF_PATTERN" .'
-rtk rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$" .
+rtk sh -lc 'rg --files | rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$"'
+rtk sh -lc 'rg --files | rg -n "(^|/)(checkpoints|weights|artifacts|outputs|samples/generated)(/|$)"'
+rtk sh -lc 'rg --files | rg -n "\.(zip|tar|tar\.gz|tgz|7z|rar)$"'
+rtk sh -lc 'rg --files | rg -n "(^|/)(__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache|node_modules|dist|build|\.next|coverage)(/|$)"'
+rtk sh -lc 'rg --files | rg -n "(^|/)submodules/(vllm|TensorRT-LLM)(/|$)|(^|/)TensorRT-LLM(/|$)"'
 rtk rg -n "T[B]D|T[O]DO|F[I]XME" docs/session_1 docs/handoff.md
 ```
 

@@ -97,11 +97,11 @@ The worker must classify the failure as `BUG`, `SPEC_GAP`, `AMBIGUITY`, `ENVIRON
 ## Required Exclusion Scans
 
 ```bash
-rtk rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$" .
-rtk rg -n "\.(zip|tar|tar\.gz|tgz|7z|rar)$" .
-rtk rg -n "(__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache|node_modules|dist|build|\.next|coverage)" .
-rtk rg -n "(checkpoints|weights|artifacts|outputs|samples/generated)" .
-rtk rg -n "submodules/(vllm|TensorRT-LLM)|TensorRT-LLM" .
+rtk sh -lc 'rg --files | rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$"'
+rtk sh -lc 'rg --files | rg -n "\.(zip|tar|tar\.gz|tgz|7z|rar)$"'
+rtk sh -lc 'rg --files | rg -n "(^|/)(__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache|node_modules|dist|build|\.next|coverage)(/|$)"'
+rtk sh -lc 'rg --files | rg -n "(^|/)(checkpoints|weights|artifacts|outputs|samples/generated)(/|$)"'
+rtk sh -lc 'rg --files | rg -n "(^|/)submodules/(vllm|TensorRT-LLM)(/|$)|(^|/)TensorRT-LLM(/|$)"'
 ```
 
 Matches inside this Session 1 documentation are examples. Matches in candidate import files are release-blocking until classified and removed or explicitly approved by a later contract.

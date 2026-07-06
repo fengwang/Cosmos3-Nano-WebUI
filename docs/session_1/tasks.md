@@ -26,10 +26,10 @@
 
 ## 4. Scrub Checklist And Baseline Scan
 
-- [ ] 4.1 Create `docs/session_1/scrub_checklist.md` with pattern groups and exact commands.
-- [ ] 4.2 Run private-reference, model weight, generated media, and legacy submodule baseline scans.
-- [ ] 4.3 Record scan results and known environment caveats.
-- [ ] 4.4 Run scrub checklist checks and commit the checkpoint.
+- [x] 4.1 Create `docs/session_1/scrub_checklist.md` with pattern groups and exact commands.
+- [x] 4.2 Run private-reference, model weight, generated media, and legacy submodule baseline scans.
+- [x] 4.3 Record scan results and known environment caveats.
+- [x] 4.4 Run scrub checklist checks and commit the checkpoint.
 
 ## 5. Evidence, Risk, Handoff, And Done Gate
 
