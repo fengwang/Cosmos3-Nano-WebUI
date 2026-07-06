@@ -86,8 +86,10 @@ covered by the two public repos, and MUST record the base repo's reachability.
 
 #### Scenario: Base model requirement and reachability recorded
 
-WHEN the probe checks reachability of the BF16 base repo `wfen/Cosmos3-Nano`
-THEN the reachability SHALL be recorded as REACHABLE or NOT_FOUND or ERROR
+WHEN the probe checks reachability of the declared base repo (`nvidia/Cosmos3-Nano`) and the
+runtime's convention name (`wfen/Cosmos3-Nano`)
+THEN each reachability SHALL be recorded as REACHABLE or NOT_FOUND or ERROR
 AND the reasoner (`COSMOS3_REASONER_MODEL_DIR`) and action/forward_dynamics
 (`COSMOS3_BASE_ACTION_DIR`) dependence on that base SHALL be recorded
-AND a NOT_FOUND result SHALL feed the beta-limited compatibility matrix.
+AND a REACHABLE declared base SHALL mark those modes publicly backed (residual limit
+GPU-unverified), while a NOT_FOUND convention id SHALL be recorded as naming drift D2.

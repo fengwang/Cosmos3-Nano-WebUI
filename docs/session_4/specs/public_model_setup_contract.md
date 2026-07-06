@@ -47,19 +47,26 @@ WHEN `docs/model_setup.md` is read
 THEN it SHALL state the model license `openmdw-1.0`
 AND SHALL state that it is separate from the repository MIT license.
 
-### Requirement: Per-mode compatibility matrix marks unbacked modes beta-limited
+### Requirement: Per-mode compatibility matrix records verified backing and true residual limits
 
-The contract MUST include a per-mode compatibility matrix. Modes backed by the two
-public checkpoints (generation: `t2v`, `t2v_audio`, `i2v`, `t2i`) MUST be marked
-backed. Modes requiring the non-public BF16 base (reasoning, action/`forward_dynamics`)
-MUST be marked beta-limited with the reason recorded.
+The contract MUST include a per-mode compatibility matrix grounded in the verification
+evidence. Each mode's weight backing (which public repos supply its weights) MUST be
+recorded, together with each residual limit: GPU-unverified runtime (the blanket `MIG-S8`
+gate, INV-8) and any loader/serving incompatibility (drift D1). Because verification found
+the declared BF16 base publicly available (`nvidia/Cosmos3-Nano`), no mode may be marked
+beta-limited for a "non-public base"; any unverified status MUST be attributed to its true
+cause. (Updated per Failure Arbiter FA-1: the original non-public-base premise was refuted
+by `evidence.json`.)
 
-#### Scenario: Matrix distinguishes backed from beta-limited modes
+#### Scenario: Matrix records weight backing and true residual limits
 
 WHEN `docs/model_setup.md` is read
-THEN generation modes SHALL be marked as backed by the public checkpoints
-AND reasoning and action/`forward_dynamics` SHALL be marked beta-limited
-AND the reason (non-public BF16 base model) SHALL be recorded for each beta-limited mode.
+THEN each mode (generation `t2v`/`t2v_audio`/`i2v`/`t2i`, reasoning, action/`forward_dynamics`)
+SHALL record the public repo(s) that supply its weights
+AND generation SHALL cite the FP8/NVFP4 checkpoints while reasoning and action/`forward_dynamics`
+SHALL cite the public base `nvidia/Cosmos3-Nano`
+AND each mode's residual limit SHALL be recorded as GPU-unverified (`MIG-S8`) and, where it
+applies, the D1 in-process-oracle incompatibility — not a non-public-base claim.
 
 ### Requirement: Contract respects session scope boundaries
 

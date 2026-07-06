@@ -32,18 +32,23 @@ THEN drift D1 SHALL list the files present in one public repo and absent in the 
 AND SHALL state whether the diffusers loader path still resolves for NVFP4
 AND SHALL route the disposition to a risk row.
 
-### Requirement: Non-public BF16 base model is captured
+### Requirement: BF16 base model publication is captured accurately
 
-The verification MUST record that the BF16 base model required by the reasoner and the
-action/forward_dynamics graft is not among the public repos, and MUST route the
-affected modes as beta-limited.
+The verification MUST record the public availability of the BF16 base model required by
+the reasoner and the action/forward_dynamics graft, using the base id declared on the
+checkpoint cards. (Updated per Failure Arbiter FA-1.) If the declared base is public, the
+affected modes MUST be recorded as publicly backed (residual limit: GPU-unverified); a
+convention repo id that 404s MUST be recorded as a low-severity naming drift so operators
+use the correct id.
 
-#### Scenario: Base-model drift D2 marks modes beta-limited
+#### Scenario: Base-model drift D2 records public backing and the correct id
 
 WHEN `docs/session_4/drift_report.md` is read
-THEN drift D2 SHALL record the base repo reachability as NOT_FOUND
-AND SHALL mark reasoning and action/forward_dynamics beta-limited
-AND SHALL route the disposition to a risk row (R-03 / R-08).
+THEN drift D2 SHALL record the reachability of the declared base (`nvidia/Cosmos3-Nano`)
+and of the runtime's convention name (`wfen/Cosmos3-Nano`)
+AND SHALL state that reasoning and action/forward_dynamics are publicly backed by the
+reachable base (residual limit GPU-unverified, `MIG-S8`)
+AND SHALL route the correct-base-id disposition to a risk row.
 
 ### Requirement: External-repo hygiene is captured without reproducing contents
 
