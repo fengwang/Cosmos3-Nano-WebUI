@@ -1,0 +1,77 @@
+session_contract:
+  id: MIG-S7
+  objective: Write public README and add core project hygiene for beta users.
+  risk_level: medium
+  routing: worker_plus_reviewers
+  in_scope:
+    - Write public README using logo, pitch, badges, features, quickstart, setup, limitations, and troubleshooting.
+    - Add MIT LICENSE for repo code.
+    - Add SECURITY.md, CONTRIBUTING.md, issue templates, and release checklist.
+    - Ensure model license and dependency license boundaries are clear.
+    - Link README claims to evidence or phrase them as beta limitations.
+    - Run link, claim, and private-reference reviews.
+  out_of_scope:
+    - Runtime feature work.
+    - Docker publishing.
+    - Model-card edits outside this repo.
+    - Production-readiness claim.
+  blast_radius:
+    allowed_files:
+      - README.md
+      - LICENSE
+      - SECURITY.md
+      - CONTRIBUTING.md
+      - .github/ISSUE_TEMPLATE/**
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - docs/release_checklist.md
+      - docs/session_7/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+    forbidden_files:
+      - runtime source files
+      - model weight files
+      - Docker publishing workflows
+      - vLLM-Omni fork source
+  invariants:
+    - README claims match public evidence or are marked as manual/beta validation.
+    - Repo code license is not conflated with model license.
+    - Setup commands work from public inputs only.
+    - README stays concise and points to docs for detail.
+  acceptance_criteria:
+    - README exists and is non-empty.
+    - LICENSE, SECURITY.md, CONTRIBUTING.md, issue templates, and release checklist exist.
+    - Private-reference scan passes.
+    - Claim review finds no unsupported production or performance claims.
+  deterministic_checks:
+    - "rtk test -s README.md"
+    - "rtk test -f LICENSE"
+    - "rtk test -f SECURITY.md"
+    - "rtk test -f CONTRIBUTING.md"
+    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" README.md docs .github"
+    - "rtk rg -n \"production-ready|guaranteed|always|official\" README.md docs"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - README says GPU support is shipped without manual evidence.
+    - MIT license text appears to cover HF model weights.
+    - Quickstart depends on unpublished images or private paths.
+    - Security reporting asks users to disclose vulnerabilities in public issues.
+  failure_modes_to_watch:
+    - README grows too long and hides setup steps.
+    - Links to HF or GitHub pins rot before beta.
+    - Issue templates request sensitive data.
+  done_condition: GATE-MIG-S7-PUBLIC passes with public-facing docs and hygiene ready for release review.
+  handoff_requirements:
+    - README claim matrix.
+    - Hygiene file list.
+    - Link check notes.
+    - Remaining docs limitations.
+  eval_seed_candidates:
+    - EV-MIG-README-LINKS
+    - EV-MIG-LICENSE-HYGIENE
+    - EV-MIG-SCRUB
+

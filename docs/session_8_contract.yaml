@@ -1,0 +1,86 @@
+session_contract:
+  id: MIG-S8
+  objective: Review all migration evidence, run final checks, record manual GPU gates, and decide public beta GO/NO-GO.
+  risk_level: high
+  routing: worker_plus_reviewers
+  in_scope:
+    - Verify gates MIG-S1 through MIG-S7.
+    - Re-run CPU deterministic checks.
+    - Review private-reference, weight, and generated-media scans.
+    - Review vLLM-Omni pin and HF checkpoint evidence.
+    - Run or review manual GPU gate evidence for target modes.
+    - Reconcile evidence map, risk register, and eval seed cases.
+    - Produce acceptance matrix, deterministic checks, evidence review, gate record, and handoff.
+  out_of_scope:
+    - New feature work.
+    - Lowering acceptance bars without owner decision.
+    - Docker image publishing.
+    - Private evidence citations.
+  blast_radius:
+    allowed_files:
+      - docs/session_8/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+      - docs/release_checklist.md
+    forbidden_files:
+      - runtime source files except owner-approved release fixes
+      - model weight files
+      - generated media files
+      - Docker publishing workflows
+      - vLLM-Omni fork source
+  invariants:
+    - Final release decision is evidence-based.
+    - Checks not run are recorded with reasons.
+    - Unsupported or unverified modes are marked beta-limited.
+    - No private evidence is cited.
+  acceptance_criteria:
+    - Acceptance matrix covers every PRD MUST.
+    - Evidence review ties major claims to public evidence.
+    - Risk register has no unowned release-blocking risk.
+    - Manual GPU gate status is recorded.
+    - Owner GO/NO-GO is recorded.
+  deterministic_checks:
+    - "rtk git status --short --branch"
+    - "rtk pytest -q"
+    - "rtk proxy sh -lc 'cd webui && pnpm lint && pnpm typecheck && pnpm test'"
+    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" ."
+    - "rtk rg -n \"\\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$\" ."
+    - "rtk docker compose -f deploy/docker-compose.fp8.yml config"
+    - "rtk docker compose -f deploy/docker-compose.nvfp4.yml config"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - Release gate accepts a claim with no public evidence.
+    - Manual GPU evidence was run against a different vLLM-Omni or checkpoint revision.
+    - Private-reference scan is scoped too narrowly.
+    - Risk register leaves a release blocker open without owner decision.
+  failure_modes_to_watch:
+    - Final docs contradict README or Docker setup.
+    - GPU checks are skipped but README still implies support.
+    - CI passes locally but GitHub runner behavior is unverified.
+  done_condition: GATE-MIG-S8-BETA records owner GO or NO-GO with evidence, risks, and limitations reconciled.
+  handoff_requirements:
+    - Acceptance matrix.
+    - Deterministic check log.
+    - Evidence review.
+    - Gate record.
+    - Final vLLM-Omni pin.
+    - HF checkpoint revisions.
+    - Manual GPU result summary.
+    - Known limitations and follow-ups.
+  eval_seed_candidates:
+    - EV-MIG-GPU-FP8-T2V
+    - EV-MIG-GPU-FP8-T2V-AUDIO
+    - EV-MIG-GPU-FP8-I2V
+    - EV-MIG-GPU-FP8-T2I
+    - EV-MIG-GPU-FP8-FD
+    - EV-MIG-GPU-NVFP4-SURFACE
+    - EV-MIG-GPU-REASONING
+    - EV-MIG-GPU-JOBS-SSE
+    - EV-MIG-GPU-ARTIFACTS
