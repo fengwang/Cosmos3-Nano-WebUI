@@ -44,10 +44,11 @@ metadata even without local checkpoints.
 
 ## Layout vs the imported diffusers_oracle loader contract
 
-`discover_transformer_dir` (`loader.py:43-49`) requires `*.safetensors` +
+`discover_transformer_dir` (`loader.py:33-50`) requires `*.safetensors` +
 `modelopt_state.pt` + `config.json`; `verify_precision`→`precision_from_quant_config`
 (`config.py:45`) requires an exact `recipe == "fp8"` or `nvfp4*` from
-`quantization_config.json` (else raises).
+`quantization_config.json` (else raises). `build_oracle` calls discovery **before**
+verify, so a discovery failure short-circuits verify.
 
 | Check | FP8 | NVFP4 |
 |---|---|---|
@@ -55,7 +56,7 @@ metadata even without local checkpoints.
 | top-level `quantization_config.json` | yes (sha256 **match**) | **no** |
 | `quantization_config.json` `recipe` | `fp8_blockwise_mixed` | (absent) |
 | `discover_transformer_dir` result | satisfied | **FileNotFoundError** |
-| `verify_precision` result | **ValueError** (recipe ≠ exact `"fp8"`) | **ValueError** ({} recipe) |
+| `verify_precision` result | **ValueError** (recipe ≠ exact `"fp8"`) | n/a — never reached (discovery raises first) |
 | in-process oracle loadable as-is | **no** | **no** |
 
 The NVFP4 transformer instead ships `nvfp4_blockwise_mixed_v1.json` (51,434 B) +

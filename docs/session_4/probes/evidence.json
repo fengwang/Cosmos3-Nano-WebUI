@@ -12,7 +12,18 @@
       "readme_size": 43813,
       "repo_id": "nvidia/Cosmos3-Nano",
       "revision": "fea6e03ac3d7884b4105ed8ee79fc480fca70965",
-      "revision_hfapi": "fea6e03ac3d7884b4105ed8ee79fc480fca70965"
+      "revision_hfapi": "fea6e03ac3d7884b4105ed8ee79fc480fca70965",
+      "transformer_files": [
+        "transformer/config.json",
+        "transformer/diffusion_pytorch_model-00001-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model-00002-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model-00003-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model-00004-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model-00005-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model-00006-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model-00007-of-00007.safetensors",
+        "transformer/diffusion_pytorch_model.safetensors.index.json"
+      ]
     },
     {
       "reachability": "not_found",

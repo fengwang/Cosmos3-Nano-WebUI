@@ -34,7 +34,7 @@ Findings were classified before any fix, per the Failure Arbiter protocol
   but `api/engines/diffusers_oracle/config.py:45` requires the exact string `recipe == "fp8"`
   (else `precision_from_quant_config` raises `ValueError`). NVFP4 has no top-level
   `quantization_config.json` and no `modelopt_state.pt`, so `discover_transformer_dir`
-  (`loader.py:43-49`) raises `FileNotFoundError`. The imported in-process `diffusers_oracle`
+  (`loader.py:33-50`) raises `FileNotFoundError`. The imported in-process `diffusers_oracle`
   engine therefore cannot load **or** verify either current public checkpoint as-is.
 - **Cause:** artifact-vs-code drift (R-03): the public export recipe strings / NVFP4 export
   format diverged from the imported loader's expectations. The FP8 quant-config crosscheck is

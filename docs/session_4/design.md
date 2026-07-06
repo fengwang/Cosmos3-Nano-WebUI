@@ -4,6 +4,22 @@ Date: 2026-07-06
 Session: MIG-S4
 Status: Derived from approved brainstorming + proposal
 
+> **Post-verification note (supersedes parts of this design).** This blueprint predates the
+> probe evidence. Two things changed and are authoritative in `failure_arbiter.md`,
+> `hf_verification.md`, `model_setup.md`, `drift_report.md`, and the specs:
+> - **FA-1:** the "non-public base → beta-limited" premise (D3/D6 rationale, Risks, Open
+>   Questions below) is **refuted** — the declared base `nvidia/Cosmos3-Nano` is public and
+>   ungated, so reasoning/action are publicly backed; the residual limit is GPU-unverified
+>   (`MIG-S8`), not beta-limited-for-missing-weights.
+> - **FA-2:** D1 covers **both** current public checkpoints (FP8 recipe `fp8_blockwise_mixed`
+>   ≠ exact `"fp8"`; NVFP4 missing sidecars), not NVFP4 alone.
+> - **As-built deltas** from the ACD blueprint below: `run_probe` takes positional args (no
+>   `ProbeConfig`/`RepoSpec`); layout evaluation is `evaluate_transformer_discovery` (not
+>   `evaluate_layout`/`LayoutFinding`); assertions live in `run_self_check` (not
+>   `evaluate_assertions`/`AssertionReport`); `CardState` gained `STUB` (FA-3); `SatisfyState`
+>   is `{SATISFIED, MISSING}` (no `ALTERNATE`); the base-repo 404 is data, so `ProbeError` is
+>   unused. The ACD *shape* (pure core vs impure shell) was honored as designed.
+
 ## Context
 
 The public beta serves external weights from `wfen/Cosmos3-Nano-FP8-Blockwise` and

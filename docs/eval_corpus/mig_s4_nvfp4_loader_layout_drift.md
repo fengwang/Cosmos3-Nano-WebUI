@@ -23,7 +23,7 @@ loader expectations"):
 ## Inputs
 
 - The public manifests + `quantization_config.json` recipe (SHA-gated `local == public`).
-- The imported loader contract: `discover_transformer_dir` (`loader.py:43-49`) and
+- The imported loader contract: `discover_transformer_dir` (`loader.py:33-50`) and
   `precision_from_quant_config` (`config.py:41-47`).
 
 ## Expected Verifier Behavior

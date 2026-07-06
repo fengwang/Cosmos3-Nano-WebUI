@@ -16,11 +16,18 @@ Evidence sources:
 Usage:
   python3 docs/session_4/probes/verify_hf_checkpoints.py            # full probe
   python3 docs/session_4/probes/verify_hf_checkpoints.py --check    # pure-core spec assertions
-  python3 docs/session_4/probes/verify_hf_checkpoints.py --no-hash  # skip full-file sha (size-only)
+  python3 docs/session_4/probes/verify_hf_checkpoints.py --no-hash  # skip the full-file sha256 gate
 
 The full probe writes ``evidence.json`` + ``summary.md`` into ``--out`` (default: this
 probe's own directory). Provenance: every filesystem path is passed through ``scrub``
 before it is recorded (R-01).
+
+Cost note: the ``local == public`` gate sha256s only the two probed local files per repo
+(the transformer shard + ``quantization_config.json``); with a populated local mount that is
+~34 GB / ~80s of reads, and 0 cost when no local mount is present (files absent ->
+LOCAL_ABSENT). No large blob is ever downloaded (metadata + partial header reads only).
+Transformer-dir discovery here inspects the ``transformer/`` listing; the runtime also tries
+``transformer/transformer/`` and the repo root, but neither public repo ships those.
 """
 from __future__ import annotations
 
@@ -114,9 +121,11 @@ def precision_from_quant_config(cfg: dict) -> tuple[Precision, str]:
 def precision_from_header_keys(header: dict) -> Precision:
     """Pure: infer precision from safetensors tensor keys.
 
-    Mirrors ``diffusers_oracle/loader.py:observe_precision`` discriminator: a
-    ``weight_quantizer._double_scale`` key marks NVFP4 (two-level scaling); a
-    ``weight_quantizer._scale`` without ``_double_scale`` marks FP8; neither -> UNKNOWN.
+    Approximates ``diffusers_oracle/loader.py:observe_precision``'s discriminator
+    (``_double_scale`` present -> NVFP4). It differs deliberately: ``observe_precision`` is
+    binary and defaults to FP8 in the absence of ``_double_scale`` because it runs on a
+    *loaded, modelopt-restored* module; this probe reads the *raw header* and so returns
+    UNKNOWN when no ``weight_quantizer`` key is present (rather than a spurious FP8).
     """
     keys = [k for k in header if k != "__metadata__"]
     if any(k.endswith("weight_quantizer._double_scale") for k in keys):
@@ -237,6 +246,9 @@ def run_self_check() -> int:
         Precision.FP8, "per-tensor")
     assert precision_from_quant_config({"recipe": "nvfp4_blockwise_mixed"})[0] is Precision.NVFP4
     assert precision_from_quant_config({})[0] is Precision.UNKNOWN
+    # pin the exact-"fp8" semantic the D1/FA-2 finding rests on: the public recipe is
+    # 'fp8_blockwise_mixed', which the runtime does NOT accept (a 'startswith' regression must fail).
+    assert precision_from_quant_config({"recipe": "fp8_blockwise_mixed"})[0] is Precision.UNKNOWN
 
     st, pres = evaluate_transformer_discovery(["config.json", "diffusion_pytorch_model.safetensors", "modelopt_state.pt"])
     assert st is SatisfyState.SATISFIED, pres
@@ -273,6 +285,8 @@ def run_self_check() -> int:
     assert oracle_loadable(SatisfyState.SATISFIED, True, Precision.FP8) is True
     assert oracle_loadable(SatisfyState.SATISFIED, True, Precision.UNKNOWN) is False
     assert oracle_loadable(SatisfyState.MISSING, False, Precision.UNKNOWN) is False
+    # isolate the discovery guard (a regression that dropped it must fail here):
+    assert oracle_loadable(SatisfyState.MISSING, True, Precision.FP8) is False
 
     # torch-free guard
     assert "torch" not in sys.modules and "diffusers" not in sys.modules
@@ -445,6 +459,7 @@ def probe_base_repos(api) -> list[dict]:
                     "license": card.get("license"),
                     "n_files": len(files),
                     "has_transformer": any(f.startswith("transformer/") for f in files),
+                    "transformer_files": [f for f in files if f.startswith("transformer/")],
                     "has_vision_encoder": any(f.startswith("vision_encoder/") for f in files),
                     "card_state": card_state_from(readme_size).value,
                     "readme_size": readme_size,
@@ -595,7 +610,10 @@ def main() -> int:
     ap.add_argument("--check", action="store_true", help="run pure-core spec assertions only")
     ap.add_argument("--mount-root", default=DEFAULT_MOUNT_ROOT, help="local checkpoint mount root")
     ap.add_argument("--out", default=str(pathlib.Path(__file__).resolve().parent), help="output dir")
-    ap.add_argument("--no-hash", action="store_true", help="skip full-file sha256 (size-only cross-check)")
+    ap.add_argument("--no-hash", action="store_true",
+                    help="skip the full-file sha256 gate (hashes only the 2 probed local files per repo; "
+                         "~34 GB / ~80s when a local mount is present, 0 cost if absent) — cross-check "
+                         "downgrades to LOCAL_ABSENT")
     args = ap.parse_args()
 
     if args.check:

@@ -16,7 +16,7 @@ for the probed shards + FP8 quant config, so these describe the public artifacts
     while `config.py:45` requires the exact string `recipe == "fp8"` → `verify_precision` raises
     `ValueError`.
   - NVFP4: `transformer/` has no `modelopt_state.pt` and there is no top-level
-    `quantization_config.json` → `discover_transformer_dir` (`loader.py:43-49`) raises
+    `quantization_config.json` → `discover_transformer_dir` (`loader.py:33-50`) raises
     `FileNotFoundError`; the shard header carries no `weight_quantizer` keys
     (`observe_precision` → unknown). NVFP4 ships a vLLM-Omni-native export
     (`transformer/nvfp4_blockwise_mixed_v1.json`, `producer_provenance.json`).

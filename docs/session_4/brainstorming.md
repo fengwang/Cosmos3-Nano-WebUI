@@ -4,6 +4,11 @@ Date: 2026-07-06
 Session: MIG-S4
 Status: Approved design (owner approved on 2026-07-06)
 
+> **Note (frozen pre-verification snapshot).** Finding 5 below assumed the BF16 base was
+> non-public. Verification refuted this (base `nvidia/Cosmos3-Nano` is public) — see
+> `failure_arbiter.md` FA-1 and `drift_report.md` D2. This document is kept as the approved
+> record; the authoritative post-verification story is in `hf_verification.md` / `model_setup.md`.
+
 ## Context Explored
 
 - Read `docs/prd.md`, `docs/project_contract.md`, `docs/evidence_map.md`,

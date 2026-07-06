@@ -34,8 +34,10 @@ resolve, or is the load blocked).
 
 The verification MUST determine each checkpoint's quantization precision. Precision
 MAY come from `<root>/quantization_config.json` (`recipe`, `scale_layout.granularity`)
-and/or from safetensors header keys (`weight_quantizer._double_scale` present ⇒ NVFP4,
-absent ⇒ FP8). A disagreement between the two sources MUST be recorded as drift.
+and/or from safetensors header keys (`weight_quantizer._double_scale` present ⇒ NVFP4;
+`weight_quantizer._scale` present without `_double_scale` ⇒ FP8; no `weight_quantizer`
+key present ⇒ UNKNOWN, since the probe reads the raw header rather than a loaded module).
+A disagreement between the two sources MUST be recorded as drift.
 
 #### Scenario: FP8 precision resolves to FP8
 
