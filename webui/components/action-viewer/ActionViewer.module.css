@@ -1,0 +1,47 @@
+.viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stage {
+  position: relative;
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-inset);
+  overflow: hidden;
+  min-height: 22rem;
+  aspect-ratio: 4 / 3;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.video {
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.scrub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text);
+}
+
+.scrub input {
+  flex: 1;
+}

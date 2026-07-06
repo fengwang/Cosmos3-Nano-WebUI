@@ -1,0 +1,29 @@
+.tablist {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.tab {
+  font: inherit;
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-raised-sm);
+  cursor: pointer;
+}
+
+.tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Selected: border-weight + inset shadow deltas (non-color signals). Text stays --text — the audited
+   accent (#15795a) is a non-text token (3:1) and falls below the 4.5:1 normal-text floor (RK-18). */
+.tab[data-selected="true"] {
+  border-width: 2px;
+  box-shadow: var(--shadow-inset);
+}

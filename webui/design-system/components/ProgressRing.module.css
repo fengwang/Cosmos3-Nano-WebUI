@@ -1,0 +1,41 @@
+.ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.track {
+  stroke: var(--surface-sunken);
+}
+
+.value {
+  stroke: var(--accent); /* audited ≥3:1 vs surface; redundant with the text + aria */
+  transition: stroke-dashoffset var(--motion-base) var(--ease);
+}
+
+.text {
+  position: absolute;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Indeterminate: a quarter arc spun about the ring centre — progress is unreadable, never a fake %. */
+.spinner {
+  stroke: var(--accent); /* audited ≥3:1 vs surface; motion + aria-label carry the "busy" meaning */
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-spin 0.9s linear infinite;
+}
+
+@keyframes ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect reduced-motion: hold a static arc (still clearly "in progress" via the aria-label). */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

@@ -1,0 +1,47 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.textarea {
+  font: inherit;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+  color: var(--text);
+  box-shadow: var(--shadow-inset);
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.textarea::placeholder {
+  color: var(--text-muted); /* audited ≥4.5:1 on sunken */
+}
+
+.textarea:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Invalid: color change PLUS a border-weight delta (non-color signal). */
+.textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+  border-width: 2px;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 0.875rem;
+}
+
+.error::before {
+  content: "⚠ "; /* decorative; the message text is the primary signal */
+}
