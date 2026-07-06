@@ -26,7 +26,7 @@ from engines.base import EngineInfo, GenerationRequest, Precision  # noqa: E402 
 dev = ["pytest>=8.0", "httpx>=0.27", "openapi-spec-validator>=0.7", "ruff>=0.6"]
 # Torch-free CPU test deps: let the image/video artifact-encoder tests run in CI
 # instead of skipping for a missing numpy. Pins mirror the `oracle` extra.
-test-cpu = ["numpy>=1.26", "pillow>=10.0", "imageio>=2.34", "imageio-ffmpeg>=0.5"]
+test-cpu = ["numpy>=1.26", "pillow>=10.0", "imageio>=2.34", "imageio-ffmpeg>=0.5", "safetensors>=0.4"]
 ```
 Then: `uv lock` (regenerates `uv.lock`).
 

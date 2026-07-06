@@ -31,8 +31,9 @@ during CPU collection, silent schema drift).
 - Fix the two `ruff` errors in `tests/` (`F541` stray f-string;
   `E402` intentional stub-before-import → inline `# noqa: E402`).
 - Add a torch-free `[dependency-groups] test-cpu` (`numpy`, `pillow`, `imageio`,
-  `imageio-ffmpeg`) so the three currently-skipped artifact-encoder tests actually
-  execute in CI (anti-hollow-pass); regenerate `uv.lock`.
+  `imageio-ffmpeg`, `safetensors`) so the currently-skipped artifact-encoder and
+  checkpoint-writer tests actually execute in CI (anti-hollow-pass); regenerate
+  `uv.lock`.
 - Add `tests/conftest.py` that auto-skips `@pytest.mark.gpu` tests unless
   `COSMOS3_ENABLE_GPU_TESTS` is set, and keep `-m "not gpu"` in CI; document the
   "gpu modules must guard heavy imports" convention and the manual GPU command.
@@ -104,8 +105,8 @@ Affected code / APIs / systems: no runtime source, schema content, or public API
 behavior changes. `openapi.json` is regenerated only to prove it is unchanged.
 
 Dependency impact: `test-cpu` group adds `numpy`, `pillow`, `imageio`,
-`imageio-ffmpeg` (torch-free, CPU test-only; versions already present in the
-`oracle` extra). No production dependency and no third-party GitHub Action beyond
+`imageio-ffmpeg`, `safetensors` (torch-free, CPU test-only; versions already
+present in the `oracle` extra). No production dependency and no third-party GitHub Action beyond
 the pinned `astral-sh/setup-uv`, `pnpm/action-setup`, `actions/setup-node`,
 `actions/checkout`.
 

@@ -229,7 +229,7 @@ def test_default_gen_timeout_inv_p3_4():
 
     source = inspect.getsource(gen_client.work)
     # The default is the second argument to os.environ.get("COSMOS3_GEN_TIMEOUT", "<value>")
-    assert '"2400"' in source, f"Expected default '2400' in work() source; INV-P3-4 violated"
+    assert '"2400"' in source, "Expected default '2400' in work() source; INV-P3-4 violated"
 
 
 def test_work_timeout_raises(tmp_path, monkeypatch):

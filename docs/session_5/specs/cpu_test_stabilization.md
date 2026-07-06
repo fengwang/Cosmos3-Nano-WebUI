@@ -39,16 +39,17 @@ THEN collection SHALL succeed with no import error.
 ### Requirement: A torch-free CPU test dependency group makes encoder tests execute
 
 The project MUST define a `test-cpu` dependency group containing only torch-free
-packages (`numpy`, `pillow`, `imageio`, `imageio-ffmpeg`) so the image/video
-artifact-encoder tests execute in CI instead of being skipped for a missing
-dependency. `uv.lock` MUST be regenerated to include the group.
+packages (`numpy`, `pillow`, `imageio`, `imageio-ffmpeg`, `safetensors`) so the
+image/video artifact-encoder and checkpoint-writer tests execute in CI instead of
+being skipped for a missing dependency. `uv.lock` MUST be regenerated to include
+the group.
 
 #### Scenario: Encoder tests run under the test-cpu group
 
 WHEN the suite runs with the `test-cpu` group installed
-THEN the artifact-encoder tests in `tests/api/test_artifact_encoders.py` and
+THEN the artifact-encoder/writer tests in `tests/api/test_artifact_encoders.py` and
 `tests/checkpoint_prep/test_writer_format.py` SHALL execute rather than skip for a
-missing `numpy`.
+missing test dependency (`numpy`/`safetensors`).
 
 #### Scenario: The group stays torch-free
 

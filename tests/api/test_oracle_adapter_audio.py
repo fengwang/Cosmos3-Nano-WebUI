@@ -43,7 +43,8 @@ def _stub_gpu_modules(monkeypatch):
     monkeypatch.setattr(adapter, "_frames_to_float", lambda v: list(v))
 
 
-from engines.base import EngineInfo, GenerationRequest, Precision
+# noqa placement: this import is intentionally after the sys.modules stubs above.
+from engines.base import EngineInfo, GenerationRequest, Precision  # noqa: E402
 
 
 _INFO = EngineInfo("diffusers_oracle", Precision.NVFP4, "/model")

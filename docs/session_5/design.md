@@ -38,9 +38,10 @@ inference, `README.md`, and Docker/Compose render checks (no `deploy/` yet → S
   `test-cpu` and never `--extra oracle`, keeping torch out. *Alternative:* system
   Python + `pip` (rejected — host is 3.14, no lockfile determinism).
 - **D-3 · CPU test extra to defeat hollow pass.** `numpy`/`pillow`/`imageio`/
-  `imageio-ffmpeg` are all torch-free and already pinned in the `oracle` extra;
-  adding them as a `test-cpu` dependency group turns three `importorskip` skips
-  into real executions (`EV-MIG-IMPORT-COMPLETE`). *Alternative:* accept the skips
+  `imageio-ffmpeg`/`safetensors` are all torch-free and already pinned in the
+  `oracle` extra; adding them as a `test-cpu` dependency group turns every
+  dependency-gated `importorskip` skip into a real execution — the CPU suite goes
+  from 467 passed / 3 skipped to 471 passed / 0 skipped (`EV-MIG-IMPORT-COMPLETE`). *Alternative:* accept the skips
   (rejected — weakens the gate); *Alternative:* add them to `dev` (rejected —
   keeps the host loop minimal and states intent).
 - **D-4 · `next build` before `typecheck`.** `webui/tsconfig.json` includes
