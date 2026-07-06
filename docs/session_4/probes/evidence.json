@@ -1,0 +1,962 @@
+{
+  "base_repos": [
+    {
+      "card_state": "populated",
+      "gated": false,
+      "has_transformer": true,
+      "has_vision_encoder": true,
+      "license": "other",
+      "n_files": 67,
+      "private": false,
+      "reachability": "reachable",
+      "readme_size": 43813,
+      "repo_id": "nvidia/Cosmos3-Nano",
+      "revision": "fea6e03ac3d7884b4105ed8ee79fc480fca70965",
+      "revision_hfapi": "fea6e03ac3d7884b4105ed8ee79fc480fca70965"
+    },
+    {
+      "reachability": "not_found",
+      "repo_id": "wfen/Cosmos3-Nano",
+      "revision": null
+    }
+  ],
+  "context": {
+    "full_file_hash": true,
+    "hf_hub_version": "1.21.0",
+    "mount_root": "/data/models",
+    "probe": "docs/session_4/probes/verify_hf_checkpoints.py"
+  },
+  "drift": [
+    {
+      "evidence": {
+        "fp8": {
+          "discovery": "satisfied",
+          "precision_from_config": "unknown",
+          "quant_config_crosscheck": "match",
+          "quant_recipe": "fp8_blockwise_mixed"
+        },
+        "not_loadable_via_oracle": [
+          "wfen/Cosmos3-Nano-FP8-Blockwise",
+          "wfen/Cosmos3-Nano-NVFP4-Blockwise"
+        ],
+        "nvfp4": {
+          "discovery": "missing",
+          "header_precision": "unknown",
+          "presence": {
+            "config.json": true,
+            "modelopt_state.pt": false,
+            "safetensors": true
+          },
+          "quant_config_public": false
+        }
+      },
+      "id": "D1",
+      "severity": "high",
+      "summary": "imported in-process diffusers_oracle engine cannot load+verify the current public checkpoints as-is (FP8 recipe is not exact 'fp8'; NVFP4 lacks modelopt_state.pt + quantization_config.json). Default generation engine is vllm_omni (separate container loader) \u2014 verify there in S6/S8."
+    },
+    {
+      "evidence": {
+        "declared_base_model": [
+          "nvidia/Cosmos3-Nano"
+        ],
+        "not_found_convention_name": [
+          "wfen/Cosmos3-Nano"
+        ],
+        "public_base": [
+          "nvidia/Cosmos3-Nano"
+        ]
+      },
+      "id": "D2",
+      "severity": "low",
+      "summary": "BF16 base IS public but under a different repo id than the runtime's default dir name \u2014 document the public base repo id so reasoning/action resolve"
+    },
+    {
+      "evidence": {
+        "wfen/Cosmos3-Nano-FP8-Blockwise": [
+          "_s2_postfix.md",
+          "_s2_rerun.md",
+          "_s2_verify.md",
+          "load_checkpoint.py",
+          "load_quantized.py"
+        ],
+        "wfen/Cosmos3-Nano-NVFP4-Blockwise": [
+          "transformer/producer_provenance.json"
+        ]
+      },
+      "id": "D3",
+      "severity": "low",
+      "summary": "public repos ship dev-scratch / build-provenance / loader-script files (recommend out-of-band HF-side cleanup; contents not read here)"
+    },
+    {
+      "evidence": {
+        "fp8_card": "populated",
+        "fp8_readme_size": 4387,
+        "nvfp4_card": "stub",
+        "nvfp4_readme_size": 62
+      },
+      "id": "D4",
+      "severity": "medium",
+      "summary": "NVFP4 model card is stub (62 bytes) \u2014 R-04"
+    }
+  ],
+  "repos": [
+    {
+      "base_model": [
+        "nvidia/Cosmos3-Nano"
+      ],
+      "card_state": "populated",
+      "granularity": "blockwise-128x128",
+      "header_probe": {
+        "crosscheck": "match",
+        "file": "transformer/diffusion_pytorch_model.safetensors",
+        "header_precision": "fp8",
+        "header_tensor_count": 1246,
+        "local_sha256": "ea275d5b0bad2e832d27a467a9241734caa070803d52689cce7c43c1c98c5c5a",
+        "public_lfs_sha256": "ea275d5b0bad2e832d27a467a9241734caa070803d52689cce7c43c1c98c5c5a",
+        "public_size": 19478503280,
+        "verified_for_public": true
+      },
+      "license": "openmdw-1.0",
+      "local_mount": "/data/models/Cosmos3-Nano-FP8-Blockwise",
+      "manifest": {
+        ".gitattributes": {
+          "lfs_sha256": null,
+          "size": 1923
+        },
+        "BIAS.md": {
+          "lfs_sha256": "1d65943c20dac47c4250b5a4a71266c001f6c85a17dad556ad00dbfc2a8115a9",
+          "size": 4720
+        },
+        "EXPLAINABILITY.md": {
+          "lfs_sha256": "7d9e73df359fc9c0fcffdc18045018f55f124e5a6b6f71268a93d63c56e1a997",
+          "size": 3189
+        },
+        "PRIVACY.md": {
+          "lfs_sha256": "0298f236e550d4064cd8d83babad8dfc791295bba602210ca6c8106a993ca699",
+          "size": 1215
+        },
+        "README.md": {
+          "lfs_sha256": null,
+          "size": 4387
+        },
+        "SAFETY.md": {
+          "lfs_sha256": "b59cf989cb66eb3b1c5e0692d04c42b9a39751801259b225733ab9493e08f03b",
+          "size": 3677
+        },
+        "_s2_postfix.md": {
+          "lfs_sha256": "59f66244bab8c69e7a2afcb45b59216b4239b15acc58a83036056fededccac3f",
+          "size": 235
+        },
+        "_s2_rerun.md": {
+          "lfs_sha256": "59f66244bab8c69e7a2afcb45b59216b4239b15acc58a83036056fededccac3f",
+          "size": 235
+        },
+        "_s2_verify.md": {
+          "lfs_sha256": "78b7ed0c0ddc37a67f0ff494a416c2f1acc57f686d3b6d28a6fb3241dcb52eba",
+          "size": 403
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16-NOREGRESS/artifact.mp4": {
+          "lfs_sha256": "23c6b7297b6767942dee2c0f87797d14719d591b14b7ea955df30662663c21c8",
+          "size": 1026754
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16-NOREGRESS/server_log.txt": {
+          "lfs_sha256": "35d9c90c3d8adf8643f8e6ec08774e9027f3b0423b728c3e59277999d41f06d6",
+          "size": 43872
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16-NOREGRESS/vram.csv": {
+          "lfs_sha256": "72bf2211cbed1471ffdb9365f70e8c5139f6c96a5167fc1dada6f4e38885c42a",
+          "size": 740
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC02/artifact.mp4": {
+          "lfs_sha256": "7dc69c032a5e039e49c4b4df4dd0c53b08a816f7a77cb570f98a19abcc9f4c95",
+          "size": 715995
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC02/server_log.txt": {
+          "lfs_sha256": "5bd850ca73f78ba5c0ae8490f3f7ae50e950da98f499e27835902724e7788af3",
+          "size": 46904
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC02/vram.csv": {
+          "lfs_sha256": "1c1ec1d0d2a828e73cebaabf2e1e1fe1dab6627086fd8572a616fc576dab17be",
+          "size": 780
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC05/artifact.mp4": {
+          "lfs_sha256": "dd44a86b7828543e9bc281f36b38f7960735f957e78e61efcee1b6786f245add",
+          "size": 977307
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC05/server_log.txt": {
+          "lfs_sha256": "9311f46cda2022815dbd4bd5aea1c7caff831ca3930710476149e3614a7b43db",
+          "size": 44420
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC05/vram.csv": {
+          "lfs_sha256": "6dffd66f734adedcc8375e6268be52c6bcec4b50cf26ca77b6b149f71dfee066",
+          "size": 781
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC06/artifact.mp4": {
+          "lfs_sha256": "c990b2fb09a55627fe727b475a9863c04da36cefcc301b93222b06160a279970",
+          "size": 815900
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC06/server_log.txt": {
+          "lfs_sha256": "2f5f3931a6c87960f8a2bbf8e1451f2094c4e3a8a433bd43cdb1a68821a726a8",
+          "size": 40586
+        },
+        "assets/FP8-Examples/EV-P5-S2-BF16REF-EC06/vram.csv": {
+          "lfs_sha256": "e3035cd06bfe9a0ddbacf58873b5b536a78ef8ffda09aab8335cdb844ec85379",
+          "size": 739
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-720-189-EXPLORE/artifact.mp4": {
+          "lfs_sha256": "0cec9acb199efed5206e4308355d8b13052173d9d326ff0a2dfd59b88899ff2e",
+          "size": 9223446
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-720-189-EXPLORE/server_log.txt": {
+          "lfs_sha256": "cb76191d3250fd6545008f89ea7b56f8b57a365e45fc9e304ebd5f28d785e6ba",
+          "size": 43337
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-720-189-EXPLORE/vram.csv": {
+          "lfs_sha256": "4e80a4087c3682d718d43cdfa056f1f09eaa6794dcfef80ef30e3fb4c47e3878",
+          "size": 13205
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01-SEALED/artifact.mp4": {
+          "lfs_sha256": "76f18f110482249373bb8c2f7e1765a3be9afde80adb680df0f4e70ea16f1392",
+          "size": 1021791
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01-SEALED/ffprobe.json": {
+          "lfs_sha256": "51c213cdab6d545c1b611d49894008061f75f2d28945831d8d5bc9db887d3a3f",
+          "size": 2521
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01-SEALED/server_log.txt": {
+          "lfs_sha256": "88ff635b7a7a714d414834e6c3cecae2b4993f9b456e066a57bae9f9238c89ee",
+          "size": 43304
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01-SEALED/vram.csv": {
+          "lfs_sha256": "898fe51f53537bd61a0a761a49548433f3283889644f5fe9504d7c5260e1f582",
+          "size": 737
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01/artifact.mp4": {
+          "lfs_sha256": "c0275cc049885bceca08420331d6f215bc4eda4d89ec79f49a2c3ad8afa08348",
+          "size": 1021791
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01/server_log.txt": {
+          "lfs_sha256": "c0e93b79855c107695fced73294e9f12cefd777eee176793f3f2154ed009c68c",
+          "size": 44090
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC01/vram.csv": {
+          "lfs_sha256": "a42b57eba57c7af2300c07fac6481a6fea44f26aec7ad8b6d104ef9610692c00",
+          "size": 741
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC02-SEALED/artifact.mp4": {
+          "lfs_sha256": "eb0657c6d9def0e2b19519b9f91f5af5f62ff4cca03c950bd116773bd827db0f",
+          "size": 731062
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC02-SEALED/server_log.txt": {
+          "lfs_sha256": "119e8e7b29a886b1f2ab050567941b541369456630b20d500c80abfd7a069e3f",
+          "size": 47122
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC02-SEALED/vram.csv": {
+          "lfs_sha256": "1be7194f48b5efaf8f6832ebcf827ae966b7c36ddd66181c157b78140d6d35be",
+          "size": 782
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC02/artifact.mp4": {
+          "lfs_sha256": "49a7959c4a146d2f4da7d3af1ab5ff7e293f6944bcc4a9686b927ef46983f426",
+          "size": 731062
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC02/server_log.txt": {
+          "lfs_sha256": "ca901028605f2a2a1612272e9482a61345f14c4fa0286df35f902302c52aa68a",
+          "size": 47908
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC02/vram.csv": {
+          "lfs_sha256": "79aa3269e183255b311011f165be9674328fe4d0e8a16d8368b2d1e62c85fe45",
+          "size": 782
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC05-SEALED/artifact.mp4": {
+          "lfs_sha256": "99ad34bc9247eedf21c6d020c59373d44832eaf552ab15d66181026b2641f26e",
+          "size": 983015
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC05-SEALED/server_log.txt": {
+          "lfs_sha256": "7408baf559a71e03fe993aa55f68bd7a294b9fb1cdf9406407ae6c9d093629d8",
+          "size": 44638
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC05-SEALED/vram.csv": {
+          "lfs_sha256": "d23534486133f0ea0eddb47bcaa5ce53fd1f3709cac3bcf45638a0d1a1152cfe",
+          "size": 740
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC05/artifact.mp4": {
+          "lfs_sha256": "eeb95a5039e8186c79795697b7565bb48342d90afa66e89ee0597c3ceef9498b",
+          "size": 983015
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC05/server_log.txt": {
+          "lfs_sha256": "00d679a3e372664b17e2db84ae9b334cb56f6c255e68108524654d366feee2be",
+          "size": 45424
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC05/vram.csv": {
+          "lfs_sha256": "42ebdaeb826a7d8f0f9278e64ddee7a27deb3a91b6c51ac52c12497aaf282e68",
+          "size": 739
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC06-SEALED/artifact.mp4": {
+          "lfs_sha256": "f103c860ba9fc027da48d6e7d42ac64812415b3961cffa217f934778f7b36aae",
+          "size": 801790
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC06-SEALED/server_log.txt": {
+          "lfs_sha256": "6f0d2b06e91f5784c932c6d6809be2364ab04a8712edbf4fd3eb025306c26678",
+          "size": 40804
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC06-SEALED/vram.csv": {
+          "lfs_sha256": "9f39971f05e7de111476bb7acedc7ce1b1a4acd6f1425e4328d1ec66c413153c",
+          "size": 740
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC06/artifact.mp4": {
+          "lfs_sha256": "159e9209344b87f14b312e7a1c9f6038f0919b413093599463780d46b13ac480",
+          "size": 801790
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC06/server_log.txt": {
+          "lfs_sha256": "d20dd4a636630db77835f327ce082da07d7c8277a6214b1bd61fbc8798354f04",
+          "size": 41590
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-EC06/vram.csv": {
+          "lfs_sha256": "57c504678e16061ab5f4f8d19208af959fd1eca3cbdda632076ab9ab34120708",
+          "size": 738
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-SMOKE/artifact.mp4": {
+          "lfs_sha256": "c0275cc049885bceca08420331d6f215bc4eda4d89ec79f49a2c3ad8afa08348",
+          "size": 1021791
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-SMOKE/server_log.txt": {
+          "lfs_sha256": "0a25054c66e22fe5855d55dd150839676ef27eff72a36ec3e706731c2118f508",
+          "size": 44090
+        },
+        "assets/FP8-Examples/EV-P5-S2-FP8-SMOKE/vram.csv": {
+          "lfs_sha256": "77afbd61243772e1ef43152ee5cd098f3728990606ad055e0e5ede53868d635c",
+          "size": 739
+        },
+        "assets/example_action_fd_agibotworld_4chunk_output.mp4": {
+          "lfs_sha256": "9b01266b6cd27478514133b00ada9c33db3f9444167f09942c11f880c629c8c0",
+          "size": 672918
+        },
+        "assets/example_action_fd_agibotworld_action_chunks.json": {
+          "lfs_sha256": "ba8408f727f9c77d4450b239069f81e9cdd9d099bf05da7f33f5bfb4cb2d55cd",
+          "size": 48386
+        },
+        "assets/example_action_fd_agibotworld_first_frame.png": {
+          "lfs_sha256": "78b7288846b05c2265f4aa9a31b7aa905d75e0154c2126adcf8472432a81053c",
+          "size": 637580
+        },
+        "assets/example_action_id_av_0_input.mp4": {
+          "lfs_sha256": "ff205f86ae169031c0e12c8c6bc8aabe24aeb44b84a16cba977669b29912f5fc",
+          "size": 1125838
+        },
+        "assets/example_action_id_av_0_output.json": {
+          "lfs_sha256": "0c6a6fe8f1bddd1e119a37e66a168b82ef62e4ee99c024370d2d25c80ee83a24",
+          "size": 15976
+        },
+        "assets/example_action_id_av_0_output.png": {
+          "lfs_sha256": "bc0adf920602d9c1ecd0a2e2c1d370ac0b5af22eaddf7d9e1a75efca268e6823",
+          "size": 135678
+        },
+        "assets/example_action_id_av_1_input.mp4": {
+          "lfs_sha256": "169e65cee76ef7c6366987a8e4c8e4ec6f803f5e624ba2ef39ba1f0c672925aa",
+          "size": 1639407
+        },
+        "assets/example_action_id_av_1_output.json": {
+          "lfs_sha256": "5ee587d25fb6e5fe5f54febaa63d7890c029b141f2eed047b1b7ee93877fde3e",
+          "size": 15704
+        },
+        "assets/example_action_id_av_1_output.png": {
+          "lfs_sha256": "056ff91da285cb32e267d5e2115e7a3f7085bd26dd2d903457082b002fffa769",
+          "size": 133968
+        },
+        "assets/example_i2v_input.jpg": {
+          "lfs_sha256": "1de51eb5c6d51ec97aa3351a6685717b0253e36073eb9cdd3ef65affa115a4e2",
+          "size": 860765
+        },
+        "assets/example_i2v_output.mp4": {
+          "lfs_sha256": "35f776ae09a63f3dc050ef3924c298748ceeaef186107b8901ec10b3da320e89",
+          "size": 22843643
+        },
+        "assets/example_i2v_prompt.json": {
+          "lfs_sha256": "baa77ef7ae92c889a96ff0402db283ff07d9da881d31abfa8b986f8481cb8273",
+          "size": 9176
+        },
+        "assets/example_i2vs_output.mp4": {
+          "lfs_sha256": "5ef623a93fe7ef813e3ca3a3037428a0f93a7146595d848ce497cd40d7fa1a2e",
+          "size": 17843192
+        },
+        "assets/example_reasoning_input.png": {
+          "lfs_sha256": "6686b937bdb28e2c9804c435bd63a7ab56ac1531ffc9b482f2b8a75aed8770f5",
+          "size": 230656
+        },
+        "assets/example_reasoning_prompt.json": {
+          "lfs_sha256": "fb6fbd57e5af6b09960d9960c709e1b422faf299a4b34139d212c7fccc488348",
+          "size": 151
+        },
+        "assets/example_t2v_diffusers_output.mp4": {
+          "lfs_sha256": "b630246f9bc9bed4598b5676f4b0b688e27f68f7a10246e233c8a934e699467c",
+          "size": 1541990
+        },
+        "assets/example_t2v_output.mp4": {
+          "lfs_sha256": "8da069632812e3214a51672257c78c5d345b6694d4877d536a0bb3287269ec88",
+          "size": 9163599
+        },
+        "assets/example_t2v_prompt.json": {
+          "lfs_sha256": "61c9c4b46b6787d967cc509a2bf323766e70bf5ecf40e09a739362beac135677",
+          "size": 7710
+        },
+        "assets/example_t2v_prompt_short.txt": {
+          "lfs_sha256": "cc739831cb4ce9c8de022522c0486943e7c5565978d6fae4f99836be2c380e73",
+          "size": 46
+        },
+        "assets/example_t2vs_output.mp4": {
+          "lfs_sha256": "3cc8ac15acd0a448a1fcbd072fad9d465c0dace760efd8e2be1e9a7b9f89af0c",
+          "size": 4053521
+        },
+        "assets/example_t2vs_prompt.json": {
+          "lfs_sha256": "bb23395fe07806a1af6d1dd57299816924b79f306bc789a05f1fb1176f0ecf67",
+          "size": 8885
+        },
+        "assets/negative_prompt.json": {
+          "lfs_sha256": "7a60bd0c1335641cddd8b3ae66de767d2282f08861324f0ebe850e613af6a3a1",
+          "size": 15379
+        },
+        "chat_template.json": {
+          "lfs_sha256": "5c72a170d2a4a1a3bc5adad2e689ae28138a9700e5b8c96c0266331e86c0acce",
+          "size": 5499
+        },
+        "checkpoint.json": {
+          "lfs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "size": 2
+        },
+        "config.json": {
+          "lfs_sha256": "c32f2468a54542c21946bc8eab6172b911dcec9a7193a94c023ea2d4073bcda6",
+          "size": 8166
+        },
+        "generation_config.json": {
+          "lfs_sha256": "8469742d1fce0de951c8909b26a2c0c0d8490837ce476efb114da9e0cefc4d44",
+          "size": 269
+        },
+        "images/benchmark-action-1.png": {
+          "lfs_sha256": "11772abc8515d29e62403d12a19194308e513d323852de9c7878a1006a3660ee",
+          "size": 101013
+        },
+        "images/benchmark-overall.png": {
+          "lfs_sha256": "25425f6be1f1f2099c484f3e887b420d18728de1f79e4600770461ef94ed44c7",
+          "size": 268890
+        },
+        "images/benchmark-reasoning.png": {
+          "lfs_sha256": "ba95a3b243fc23c644e12dd8b22794af7002a1ee5a469322dbe1a55f080a12b4",
+          "size": 2683196
+        },
+        "images/benchmark-visual-audio.png": {
+          "lfs_sha256": "2faab808cd9871de94c099ccc4bca428206814d818224879726d54e5a80b2578",
+          "size": 366106
+        },
+        "load_checkpoint.py": {
+          "lfs_sha256": "0871bcc9e3856d25a9cdc8cc54e23740474b11d6168e1cda251d0268fc3df3ea",
+          "size": 6880
+        },
+        "load_quantized.py": {
+          "lfs_sha256": "fea5bdd3fea2d4be48e4257e9fab65c8d295cec40f2e4802f5b88cd20d6cd68c",
+          "size": 3019
+        },
+        "merges.txt": {
+          "lfs_sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+          "size": 1671839
+        },
+        "model.safetensors.index.json": {
+          "lfs_sha256": "43bdea0b60472d7b4f74f280d5eb508ec5e895f24287af8d2ecf2d0e2738708f",
+          "size": 112969
+        },
+        "model_index.json": {
+          "lfs_sha256": "90088a6638deb68418d795971ad48e6d5aa3f7764d69f3c62bbca9e8f3485bcd",
+          "size": 502
+        },
+        "preprocessor_config.json": {
+          "lfs_sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+          "size": 390
+        },
+        "quantization_config.json": {
+          "lfs_sha256": "29f62c6181aa37ec12aad13dc8a36076992ebd14cd7ecf6c8254e52cb21f1530",
+          "size": 1164
+        },
+        "quantizer_map_diff.json": {
+          "lfs_sha256": "47eddf1e14c73bd5da9158bbbcfaf82aa65244b8545222b899feb50664512d04",
+          "size": 597
+        },
+        "scheduler/scheduler_config.json": {
+          "lfs_sha256": "3e25a6a5b472e77ba45cb17a4956e70ff922b996e4f9bf421f56e7b19d1359ec",
+          "size": 884
+        },
+        "sound_tokenizer/config.json": {
+          "lfs_sha256": "a8194162a0126753981aa81054ab14382f01776fcc56e96cde4867a87bf4e8da",
+          "size": 1310
+        },
+        "sound_tokenizer/diffusion_pytorch_model.safetensors": {
+          "lfs_sha256": "9d4c61cde38acfb0cad9048a140c3533750277a8462b19dc08450d9fe1ad9879",
+          "size": 1892409600
+        },
+        "text_tokenizer/added_tokens.json": {
+          "lfs_sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+          "size": 707
+        },
+        "text_tokenizer/chat_template.jinja": {
+          "lfs_sha256": "3636d0f0bd6bef02654cdffdc447b79cb2cef8ab02cc75267345946291a489e4",
+          "size": 5292
+        },
+        "text_tokenizer/merges.txt": {
+          "lfs_sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size": 1671853
+        },
+        "text_tokenizer/special_tokens_map.json": {
+          "lfs_sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "size": 613
+        },
+        "text_tokenizer/tokenizer.json": {
+          "lfs_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+          "size": 11422654
+        },
+        "text_tokenizer/tokenizer_config.json": {
+          "lfs_sha256": "355f2b4e5bad7b01f11ef6cb68ebc176f61b95c3276092ea225b1bea0e01e95c",
+          "size": 5404
+        },
+        "text_tokenizer/vocab.json": {
+          "lfs_sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833
+        },
+        "tokenizer.json": {
+          "lfs_sha256": "a5d85b6dcc535e6b93115a9ef287e6132fdbf30270da6218194ba742261173c7",
+          "size": 7032403
+        },
+        "tokenizer_config.json": {
+          "lfs_sha256": "c2da771801886ad9ae98181793ffd3dfb7f1af30f6f7c6a4e15d7dbba52e2399",
+          "size": 10868
+        },
+        "transformer/config.json": {
+          "lfs_sha256": "282862cf9c42a257dbd2f00e41b5ef65c3aacfb693ad1f8ab28b05a02e1b9ffe",
+          "size": 1383
+        },
+        "transformer/diffusion_pytorch_model.safetensors": {
+          "lfs_sha256": "ea275d5b0bad2e832d27a467a9241734caa070803d52689cce7c43c1c98c5c5a",
+          "size": 19478503280
+        },
+        "transformer/modelopt_state.pt": {
+          "lfs_sha256": "86990e8a5fd74483d1ef577c89d4346b2897314f85616df6724771c7eeee9f90",
+          "size": 670423
+        },
+        "vae/config.json": {
+          "lfs_sha256": "1d3312edfb30b8486720ea29f3532f89c5b5fc05cc571d7664c6f5162effc23e",
+          "size": 1750
+        },
+        "vae/diffusion_pytorch_model.safetensors": {
+          "lfs_sha256": "230496cb59ff85bc9c040487737c4062480cb61c71e697b197b4c30142f2a0da",
+          "size": 1409400600
+        },
+        "video_preprocessor_config.json": {
+          "lfs_sha256": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13",
+          "size": 385
+        },
+        "vision_encoder/config.json": {
+          "lfs_sha256": "6b8457bba07f3ec61199a47e88f2ec3d9af57247b86e69cd7464b70307f069f4",
+          "size": 509
+        },
+        "vision_encoder/model.safetensors": {
+          "lfs_sha256": "b0c0f719fcf5f2cdadb676701477c236020713657976592ad046583707a6a95a",
+          "size": 1152811416
+        },
+        "vocab.json": {
+          "lfs_sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833
+        }
+      },
+      "n_files": 111,
+      "oracle_loadable": false,
+      "precision_from_config": "unknown",
+      "quant_config_crosscheck": "match",
+      "quant_recipe": "fp8_blockwise_mixed",
+      "quantization_config_public": true,
+      "reachability": "reachable",
+      "readme_size": 4387,
+      "repo_id": "wfen/Cosmos3-Nano-FP8-Blockwise",
+      "revision_consistent": true,
+      "revision_hfapi": "4e181f996abf03f3425298ef692e6e5e56fd46a4",
+      "revision_ls_remote": "4e181f996abf03f3425298ef692e6e5e56fd46a4",
+      "self_containment": {
+        "dirs": {
+          "scheduler": true,
+          "sound_tokenizer": true,
+          "text_tokenizer": true,
+          "vae": true,
+          "vision_encoder": true
+        },
+        "files": {
+          "config.json": true,
+          "generation_config.json": true,
+          "model_index.json": true
+        },
+        "self_contained": true
+      },
+      "top_level": [
+        ".gitattributes",
+        "BIAS.md",
+        "EXPLAINABILITY.md",
+        "PRIVACY.md",
+        "README.md",
+        "SAFETY.md",
+        "_s2_postfix.md",
+        "_s2_rerun.md",
+        "_s2_verify.md",
+        "assets",
+        "chat_template.json",
+        "checkpoint.json",
+        "config.json",
+        "generation_config.json",
+        "images",
+        "load_checkpoint.py",
+        "load_quantized.py",
+        "merges.txt",
+        "model.safetensors.index.json",
+        "model_index.json",
+        "preprocessor_config.json",
+        "quantization_config.json",
+        "quantizer_map_diff.json",
+        "scheduler",
+        "sound_tokenizer",
+        "text_tokenizer",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "transformer",
+        "vae",
+        "video_preprocessor_config.json",
+        "vision_encoder",
+        "vocab.json"
+      ],
+      "transformer_discovery": {
+        "presence": {
+          "config.json": true,
+          "modelopt_state.pt": true,
+          "safetensors": true
+        },
+        "state": "satisfied"
+      },
+      "transformer_files": [
+        "transformer/config.json",
+        "transformer/diffusion_pytorch_model.safetensors",
+        "transformer/modelopt_state.pt"
+      ]
+    },
+    {
+      "base_model": [
+        "nvidia/Cosmos3-Nano"
+      ],
+      "card_state": "stub",
+      "granularity": "",
+      "header_probe": {
+        "crosscheck": "match",
+        "file": "transformer/model.safetensors",
+        "header_precision": "unknown",
+        "header_tensor_count": 1246,
+        "local_sha256": "8c3e1aa3360a867410e78d2b8c922f4732ebc9ebc8bd8bdb5f95e1297f8026cb",
+        "public_lfs_sha256": "8c3e1aa3360a867410e78d2b8c922f4732ebc9ebc8bd8bdb5f95e1297f8026cb",
+        "public_size": 14719504288,
+        "verified_for_public": true
+      },
+      "license": "openmdw-1.0",
+      "local_mount": "/data/models/Cosmos3-Nano-NVFP4-Blockwise",
+      "manifest": {
+        ".gitattributes": {
+          "lfs_sha256": null,
+          "size": 1776
+        },
+        "BIAS.md": {
+          "lfs_sha256": "1d65943c20dac47c4250b5a4a71266c001f6c85a17dad556ad00dbfc2a8115a9",
+          "size": 4720
+        },
+        "EXPLAINABILITY.md": {
+          "lfs_sha256": "7d9e73df359fc9c0fcffdc18045018f55f124e5a6b6f71268a93d63c56e1a997",
+          "size": 3189
+        },
+        "PRIVACY.md": {
+          "lfs_sha256": "0298f236e550d4064cd8d83babad8dfc791295bba602210ca6c8106a993ca699",
+          "size": 1215
+        },
+        "README.md": {
+          "lfs_sha256": null,
+          "size": 62
+        },
+        "SAFETY.md": {
+          "lfs_sha256": "b59cf989cb66eb3b1c5e0692d04c42b9a39751801259b225733ab9493e08f03b",
+          "size": 3677
+        },
+        "assets/example_action_fd_agibotworld_action_chunks.json": {
+          "lfs_sha256": "ba8408f727f9c77d4450b239069f81e9cdd9d099bf05da7f33f5bfb4cb2d55cd",
+          "size": 48386
+        },
+        "assets/example_action_id_av_0_output.json": {
+          "lfs_sha256": "0c6a6fe8f1bddd1e119a37e66a168b82ef62e4ee99c024370d2d25c80ee83a24",
+          "size": 15976
+        },
+        "assets/example_action_id_av_1_output.json": {
+          "lfs_sha256": "5ee587d25fb6e5fe5f54febaa63d7890c029b141f2eed047b1b7ee93877fde3e",
+          "size": 15704
+        },
+        "assets/example_i2v_input.jpg": {
+          "lfs_sha256": "1de51eb5c6d51ec97aa3351a6685717b0253e36073eb9cdd3ef65affa115a4e2",
+          "size": 860765
+        },
+        "assets/example_i2v_prompt.json": {
+          "lfs_sha256": "baa77ef7ae92c889a96ff0402db283ff07d9da881d31abfa8b986f8481cb8273",
+          "size": 9176
+        },
+        "assets/example_reasoning_prompt.json": {
+          "lfs_sha256": "fb6fbd57e5af6b09960d9960c709e1b422faf299a4b34139d212c7fccc488348",
+          "size": 151
+        },
+        "assets/example_t2v_prompt.json": {
+          "lfs_sha256": "61c9c4b46b6787d967cc509a2bf323766e70bf5ecf40e09a739362beac135677",
+          "size": 7710
+        },
+        "assets/example_t2v_prompt_short.txt": {
+          "lfs_sha256": "cc739831cb4ce9c8de022522c0486943e7c5565978d6fae4f99836be2c380e73",
+          "size": 46
+        },
+        "assets/example_t2vs_prompt.json": {
+          "lfs_sha256": "bb23395fe07806a1af6d1dd57299816924b79f306bc789a05f1fb1176f0ecf67",
+          "size": 8885
+        },
+        "assets/negative_prompt.json": {
+          "lfs_sha256": "7a60bd0c1335641cddd8b3ae66de767d2282f08861324f0ebe850e613af6a3a1",
+          "size": 15379
+        },
+        "assets/nvfp4-forward_dynamics.mp4": {
+          "lfs_sha256": "49820c25767322716bbf41ca4468b98939c31d3e17607dba1c16f8107773769d",
+          "size": 628708
+        },
+        "assets/nvfp4-i2v.mp4": {
+          "lfs_sha256": "ad10e92e96405d3337b8c0ace9afa8a5c1cc13b1c8813c9716980ee06457231a",
+          "size": 2354183
+        },
+        "assets/nvfp4-t2v-flagship.mp4": {
+          "lfs_sha256": "1d4c011990253d1ee94b8f14cf675c1eb80bc789a45531009a6615a69a02133b",
+          "size": 9086281
+        },
+        "assets/nvfp4-t2v_audio.mp4": {
+          "lfs_sha256": "58c61f8d34366b214b501fb3da3e9af35ca822009de772c681eb6f6ba85dd672",
+          "size": 711869
+        },
+        "assets/nvfp4_t2i.png": {
+          "lfs_sha256": "99929ca03ab6dc73dc70a60172e7c9d9d5ce5db6f0562f62551be0493967a2ea",
+          "size": 3147861
+        },
+        "assets/nvfp4_t2v_baseline.mp4": {
+          "lfs_sha256": "4e60b4fb2e6024796693538b2ddff00138ed8564abbbcf2af936f22ea4663dd3",
+          "size": 3806724
+        },
+        "assets/nvfp4_t2v_fast.mp4": {
+          "lfs_sha256": "e01fe7dae81acccb72f96e92c894b4b4d8e2544617b2a83cf83c60acfb9cc524",
+          "size": 1024488
+        },
+        "chat_template.json": {
+          "lfs_sha256": "5c72a170d2a4a1a3bc5adad2e689ae28138a9700e5b8c96c0266331e86c0acce",
+          "size": 5499
+        },
+        "checkpoint.json": {
+          "lfs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "size": 2
+        },
+        "config.json": {
+          "lfs_sha256": "c32f2468a54542c21946bc8eab6172b911dcec9a7193a94c023ea2d4073bcda6",
+          "size": 8166
+        },
+        "generation_config.json": {
+          "lfs_sha256": "8469742d1fce0de951c8909b26a2c0c0d8490837ce476efb114da9e0cefc4d44",
+          "size": 269
+        },
+        "images/benchmark-action-1.png": {
+          "lfs_sha256": "11772abc8515d29e62403d12a19194308e513d323852de9c7878a1006a3660ee",
+          "size": 101013
+        },
+        "images/benchmark-overall.png": {
+          "lfs_sha256": "25425f6be1f1f2099c484f3e887b420d18728de1f79e4600770461ef94ed44c7",
+          "size": 268890
+        },
+        "images/benchmark-reasoning.png": {
+          "lfs_sha256": "ba95a3b243fc23c644e12dd8b22794af7002a1ee5a469322dbe1a55f080a12b4",
+          "size": 2683196
+        },
+        "images/benchmark-visual-audio.png": {
+          "lfs_sha256": "2faab808cd9871de94c099ccc4bca428206814d818224879726d54e5a80b2578",
+          "size": 366106
+        },
+        "merges.txt": {
+          "lfs_sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+          "size": 1671839
+        },
+        "model.safetensors.index.json": {
+          "lfs_sha256": "43bdea0b60472d7b4f74f280d5eb508ec5e895f24287af8d2ecf2d0e2738708f",
+          "size": 112969
+        },
+        "model_index.json": {
+          "lfs_sha256": "90088a6638deb68418d795971ad48e6d5aa3f7764d69f3c62bbca9e8f3485bcd",
+          "size": 502
+        },
+        "preprocessor_config.json": {
+          "lfs_sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+          "size": 390
+        },
+        "scheduler/scheduler_config.json": {
+          "lfs_sha256": "3e25a6a5b472e77ba45cb17a4956e70ff922b996e4f9bf421f56e7b19d1359ec",
+          "size": 884
+        },
+        "sound_tokenizer/config.json": {
+          "lfs_sha256": "a8194162a0126753981aa81054ab14382f01776fcc56e96cde4867a87bf4e8da",
+          "size": 1310
+        },
+        "sound_tokenizer/diffusion_pytorch_model.safetensors": {
+          "lfs_sha256": "9d4c61cde38acfb0cad9048a140c3533750277a8462b19dc08450d9fe1ad9879",
+          "size": 1892409600
+        },
+        "text_tokenizer/added_tokens.json": {
+          "lfs_sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+          "size": 707
+        },
+        "text_tokenizer/chat_template.jinja": {
+          "lfs_sha256": "3636d0f0bd6bef02654cdffdc447b79cb2cef8ab02cc75267345946291a489e4",
+          "size": 5292
+        },
+        "text_tokenizer/merges.txt": {
+          "lfs_sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size": 1671853
+        },
+        "text_tokenizer/special_tokens_map.json": {
+          "lfs_sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "size": 613
+        },
+        "text_tokenizer/tokenizer.json": {
+          "lfs_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+          "size": 11422654
+        },
+        "text_tokenizer/tokenizer_config.json": {
+          "lfs_sha256": "355f2b4e5bad7b01f11ef6cb68ebc176f61b95c3276092ea225b1bea0e01e95c",
+          "size": 5404
+        },
+        "text_tokenizer/vocab.json": {
+          "lfs_sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833
+        },
+        "tokenizer.json": {
+          "lfs_sha256": "a5d85b6dcc535e6b93115a9ef287e6132fdbf30270da6218194ba742261173c7",
+          "size": 7032403
+        },
+        "tokenizer_config.json": {
+          "lfs_sha256": "c2da771801886ad9ae98181793ffd3dfb7f1af30f6f7c6a4e15d7dbba52e2399",
+          "size": 10868
+        },
+        "transformer/config.json": {
+          "lfs_sha256": "d1ed91f3c34d5901e8c7ab292622d2380bc6455b05c61d917db2c1795dd09cab",
+          "size": 1453
+        },
+        "transformer/model.safetensors": {
+          "lfs_sha256": "8c3e1aa3360a867410e78d2b8c922f4732ebc9ebc8bd8bdb5f95e1297f8026cb",
+          "size": 14719504288
+        },
+        "transformer/nvfp4_blockwise_mixed_v1.json": {
+          "lfs_sha256": "98485b929c744ae53903d0e02c1e5977d9ddc6a757b48da1608e8a8edc5e530b",
+          "size": 51434
+        },
+        "transformer/producer_provenance.json": {
+          "lfs_sha256": "6c18ce6f72a1864deb76cdb30924fa3edf08087bb59e2322d695630521260604",
+          "size": 396
+        },
+        "vae/config.json": {
+          "lfs_sha256": "1d3312edfb30b8486720ea29f3532f89c5b5fc05cc571d7664c6f5162effc23e",
+          "size": 1750
+        },
+        "vae/diffusion_pytorch_model.safetensors": {
+          "lfs_sha256": "230496cb59ff85bc9c040487737c4062480cb61c71e697b197b4c30142f2a0da",
+          "size": 1409400600
+        },
+        "video_preprocessor_config.json": {
+          "lfs_sha256": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13",
+          "size": 385
+        },
+        "vision_encoder/config.json": {
+          "lfs_sha256": "6b8457bba07f3ec61199a47e88f2ec3d9af57247b86e69cd7464b70307f069f4",
+          "size": 509
+        },
+        "vision_encoder/model.safetensors": {
+          "lfs_sha256": "b0c0f719fcf5f2cdadb676701477c236020713657976592ad046583707a6a95a",
+          "size": 1152811416
+        },
+        "vocab.json": {
+          "lfs_sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833
+        }
+      },
+      "n_files": 57,
+      "oracle_loadable": false,
+      "precision_from_config": "unknown",
+      "quant_config_crosscheck": "not_probed",
+      "quant_recipe": null,
+      "quantization_config_public": false,
+      "reachability": "reachable",
+      "readme_size": 62,
+      "repo_id": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+      "revision_consistent": true,
+      "revision_hfapi": "b5c9332efbaefa72c99890b1b1150da12ca9256c",
+      "revision_ls_remote": "b5c9332efbaefa72c99890b1b1150da12ca9256c",
+      "self_containment": {
+        "dirs": {
+          "scheduler": true,
+          "sound_tokenizer": true,
+          "text_tokenizer": true,
+          "vae": true,
+          "vision_encoder": true
+        },
+        "files": {
+          "config.json": true,
+          "generation_config.json": true,
+          "model_index.json": true
+        },
+        "self_contained": true
+      },
+      "top_level": [
+        ".gitattributes",
+        "BIAS.md",
+        "EXPLAINABILITY.md",
+        "PRIVACY.md",
+        "README.md",
+        "SAFETY.md",
+        "assets",
+        "chat_template.json",
+        "checkpoint.json",
+        "config.json",
+        "generation_config.json",
+        "images",
+        "merges.txt",
+        "model.safetensors.index.json",
+        "model_index.json",
+        "preprocessor_config.json",
+        "scheduler",
+        "sound_tokenizer",
+        "text_tokenizer",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "transformer",
+        "vae",
+        "video_preprocessor_config.json",
+        "vision_encoder",
+        "vocab.json"
+      ],
+      "transformer_discovery": {
+        "presence": {
+          "config.json": true,
+          "modelopt_state.pt": false,
+          "safetensors": true
+        },
+        "state": "missing"
+      },
+      "transformer_files": [
+        "transformer/config.json",
+        "transformer/model.safetensors",
+        "transformer/nvfp4_blockwise_mixed_v1.json",
+        "transformer/producer_provenance.json"
+      ]
+    }
+  ]
+}
