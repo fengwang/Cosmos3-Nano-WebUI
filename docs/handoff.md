@@ -2,63 +2,81 @@
 
 ## State Snapshot
 
-- Session: MIG-S1, Public Repo Inventory and Migration Scope
-- Branch: `session-1`
-- Last completed checkpoint before handoff write: `c569b4f`
+- Session: MIG-S2, vLLM-Omni Patch Rebase and Public Pin
+- Branch: WebUI repo `session-2`; vLLM-Omni fork branch `mig-s2-cosmos3-quant-pin`
+- Final public fork commit: `697035018b70cef76b974a909d23371a9984c3f2`
+- Public tag: `cosmos3-nano-webui-mig-s2`
+- Public install target:
+  `pip install "git+https://github.com/fengwang/vllm-omni.git@cosmos3-nano-webui-mig-s2"`
 - Changed files:
-  - `docs/session_1/**`
-  - `docs/evidence_map.md`
-  - `docs/risk_register.md`
-  - `docs/eval_seed_cases.md`
-  - `docs/handoff.md`
+  - WebUI repo: `docs/session_2/**`, `docs/evidence_map.md`,
+    `docs/risk_register.md`, `docs/eval_corpus/**`, `docs/handoff.md`
+  - External fork: Cosmos3 checkpoint adapters, quantization config hooks,
+    Cosmos3 load guards, and matching tests under the Session 2 blast radius
 - Checks run:
-  - `rtk git status --short --branch`
-  - `rtk git remote -v`
-  - `rtk rg --files`
-  - WebUI `git ls-remote` probe with noninteractive SSH options
-  - vLLM-Omni `git ls-remote` probe with noninteractive SSH options
-  - fallback private-reference scan
-  - `rg --files` scans for model/media extensions, artifact path fragments, archives, caches, and legacy submodule paths
-  - required-file and required-heading checks for Session 1 docs
-  - placeholder marker scan
-  - `git diff --check`
+  - Fork `rtk .venv-mig-s2/bin/python -m compileall vllm_omni`
+  - Fork expanded targeted pytest: `118 passed, 22 warnings`
+  - Fork `rtk git diff --check`
+  - Public remote `git ls-remote` for branch and tag
+  - WebUI private-detail scrub scan for Session 2 docs/evidence/handoff surfaces
 - Checks not run:
-  - Application tests, because no runtime source exists or changed in this session.
-  - Docker checks, because Docker is out of scope for `MIG-S1`.
-  - GPU or checkpoint validation, because those are `MIG-S4` and `MIG-S8` gates.
-  - Sharded review and adversarial verification, because Session 1 remained low risk.
-  - `docs/eval_corpus/**` write, because it is outside the Session 1 blast radius; the eval seed was added to `docs/eval_seed_cases.md`.
-- Current status: `GATE-MIG-S1-SCOPE` is satisfied by the inventory, import manifest, exclusion manifest, scrub checklist, evidence updates, and this handoff.
+  - GPU inference and VRAM/performance checks; deferred to `MIG-S8`
+  - Hugging Face checkpoint file-layout/runtime probes; deferred to `MIG-S4`
+  - Docker build or clean install from the public tag; deferred to `MIG-S6`
+  - Full vLLM-Omni test suite; Session 2 used contract-targeted deterministic
+    tests only
+- Current status: `GATE-MIG-S2-VLLM` is satisfied after public branch/tag
+  verification, deterministic checks, sharded review, adversarial verification,
+  and evidence/risk updates.
 
 ## Narrative Context
 
-Session 1 locked the public migration baseline and documented what later sessions may import or must exclude. The repo is still a small seed tree with blueprint docs, an empty `README.md`, `misc/logo.png`, and the new `docs/session_1/**` artifacts. No source, Docker, workflow, model, media, or README migration happened in this session. The main operational output for `MIG-S3` is the import/exclusion manifest pair plus the scrub checklist.
+Session 2 rebased the owner-authorized Cosmos3 vLLM-Omni patch line onto the
+public fork and published it as a stable tag. The branch preserves the eight
+selected patch commits and adds one review-fix commit for NVFP4 sidecar
+preflight at the loader boundary. No WebUI runtime source, Docker workflow, or
+model weights were imported. Public docs were scrubbed so source provenance is
+recorded only in public-safe terms.
 
 ## Decision Log
 
 | Decision | Chosen | Rejected | Reason | Contract Ref |
 |---|---|---|---|---|
-| Handoff file | Write `docs/handoff.md` | Keep handoff only under `docs/session_1/` | User explicitly amended the blast radius. | User clarification; `docs/session_1/execution_contract.md` |
-| Artifact layout | Separate `inventory.md`, `import_manifest.md`, `exclusion_manifest.md`, and `scrub_checklist.md` | One combined scope file | Later sessions need direct operator-facing inputs. | `docs/session_1/brainstorming.md` |
-| Commit policy | Commit after each task checkpoint | One final commit or no commits | User selected checkpoint commits. | `docs/session_1/brainstorming.md` |
-| Scrub scan design | Content scan for private refs, file-path scans for artifacts and excluded paths | Broad content scans for every exclusion | Broad scans matched policy docs instead of file paths. | `docs/session_1/failure_arbiter.md` |
-| Review routing | Deterministic checks plus self-review | Sharded review and adversarial verification | Session risk stayed low. | `docs/session_1_contract.yaml` |
+| Patch history | Preserve the eight patch commits and add a review-fix commit | Squash into one commit | Traceability matters for a high-risk dependency pin. | `docs/session_2/brainstorming.md` |
+| Public pin | Branch `mig-s2-cosmos3-quant-pin` plus tag `cosmos3-nano-webui-mig-s2` | Local-only branch or mutable branch-only dependency | Later Docker/build work needs a stable public ref. | `docs/session_2/specs/public_fork_patch_pin.md` |
+| Test path disposition | Use actual preserved path `tests/model_executor/quantization/test_nvfp4_blockwise_config.py` | Treat stale contract path as a code failure | Session plan allows exact test paths to move; failure classified as AMBIGUITY. | `docs/session_2/failure_arbiter.md` |
+| Public provenance | Record owner-authorized eight-commit descriptor, not private source identifiers | Publish private source path/branch/source hashes | PRD and project contract forbid private evidence in public docs. | `docs/project_contract.md` INV-1 |
 
 ## Next Priority Queue
 
-1. `MIG-S2`: rebase or merge the Cosmos3 vLLM-Omni patch line into `git@github.com:fengwang/vllm-omni.git` and produce a public pin.
-2. `MIG-S3`: use `docs/session_1/import_manifest.md`, `docs/session_1/exclusion_manifest.md`, and `docs/session_1/scrub_checklist.md` for curated source import.
-3. `MIG-S4`: verify FP8 and NVFP4 Hugging Face metadata, license, file layout, and runtime assumptions before Docker or README depend on them.
+1. `MIG-S3`: import the curated API/WebUI source using the Session 1 manifests
+   and the vLLM pin from this handoff.
+2. `MIG-S4`: probe FP8/NVFP4 Hugging Face checkpoint metadata, file layout, and
+   compatibility against the pinned fork.
+3. `MIG-S6`: build Docker/Compose from the public pin and classify any clean
+   install or dependency failure before editing product code.
 
 ## Warnings And Gotchas
 
-- Environment issues: `$PRIVATE_REF_PATTERN` is unset in the current shell. Use the fallback scan in `docs/session_1/scrub_checklist.md`, then extend it with known private names in later sessions.
-- Known failing tests: none. No application test suite exists in the current public seed repo.
-- Deferred risks: source import, vLLM-Omni patch pin, HF checkpoint compatibility, CPU CI, Docker/Compose, README/hygiene, and manual GPU gates remain open in later sessions.
-- Files future sessions must not casually edit: `README.md`, `.github/**`, Docker/Compose files, dependency manifests, `api/**`, `webui/**`, `deploy/**`, `schemas/**`, `tools/**`, model weights, generated media, caches, archives, and private evidence.
+- Environment issues: the exact YAML-listed NVFP4 test path
+  `tests/diffusion/quantization/test_nvfp4_blockwise_config.py` is stale in the
+  preserved patch; the actual passing path is
+  `tests/model_executor/quantization/test_nvfp4_blockwise_config.py`.
+- Known failing tests: the exact stale-path pytest command exits with pytest
+  code 4 and is classified as AMBIGUITY. The actual targeted suite passed.
+- Deferred risks: public checkpoint compatibility, Docker clean install, GPU
+  runtime, VRAM, and performance claims remain unverified.
+- Files future sessions must not casually edit: the vLLM-Omni public tag, Session
+  2 evidence files, dependency install instructions, Docker/Compose files,
+  model weights, generated media, caches, archives, and private evidence.
 
 ## Eval Seeds
 
-- Missed check: none. No user or verifier caught an issue after the agent missed it.
-- New regression test candidate: `EV-MIG-SCRUB-COMMAND-SANITY` in `docs/eval_seed_cases.md`.
-- Instruction update candidate: define `$PRIVATE_REF_PATTERN` in the environment before running the exact session-contract scrub command, or use the Session 1 fallback command when the variable is unset.
+- Missed check: none after final review; two issues were caught before handoff.
+- New regression test candidate:
+  `docs/eval_corpus/mig_s2_private_source_scrub.md`
+- New regression test candidate:
+  `docs/eval_corpus/mig_s2_nvfp4_preflight.md`
+- Instruction update candidate: public migration sessions that touch external
+  private source must use placeholders in committed docs and record only public
+  fork commit/tag evidence.
