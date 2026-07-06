@@ -35,6 +35,8 @@ import subprocess
 import sys
 
 # Reuse the runtime's pure, torch-free safetensors header parser (no new dependency).
+# Don't write .pyc into the imported tools/ tree (keep the source tree clean).
+sys.dont_write_bytecode = True
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(_REPO_ROOT / "tools"))
 # Resolved at runtime via the sys.path insert above (static analyzers can't follow it).
