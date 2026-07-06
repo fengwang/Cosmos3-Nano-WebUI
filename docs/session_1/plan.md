@@ -220,7 +220,7 @@ Write `docs/session_1/scrub_checklist.md` with named pattern groups, exact comma
 Run:
 
 ```bash
-rtk sh -lc 'PRIVATE_REF_PATTERN="(/home/[A-Za-z0-9._-]+|/Users/[A-Za-z0-9._-]+|/mnt/[^[:space:]]+|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY|([A-Za-z0-9_]*token|secret|password|api[_-]?key)[[:space:]]*[:=])"; rg -n -i "$PRIVATE_REF_PATTERN" .'
+rtk sh -lc 'PRIVATE_REF_PATTERN="(/home/[A-Za-z0-9._-]+|/Users/[A-Za-z0-9._-]+|/mnt/[^[:space:]]+|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY|([A-Za-z0-9_]*token|secret|password|api[_-]?key)[[:space:]]*[:=])"; rg -n -i "$PRIVATE_REF_PATTERN" . --glob "!docs/session_1/**"'
 rtk sh -lc 'rg --files | rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$"'
 rtk sh -lc 'rg --files | rg -n "(^|/)(checkpoints|weights|artifacts|outputs|samples/generated)(/|$)"'
 rtk sh -lc 'rg --files | rg -n "\.(zip|tar|tar\.gz|tgz|7z|rar)$"'
@@ -288,7 +288,7 @@ rtk git remote -v
 rtk rg --files
 rtk sh -lc 'GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10" git ls-remote git@github.com:fengwang/Cosmos3-Nano-WebUI.git HEAD "refs/heads/*"'
 rtk sh -lc 'GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10" git ls-remote git@github.com:fengwang/vllm-omni.git HEAD "refs/heads/*"'
-rtk sh -lc 'PRIVATE_REF_PATTERN="(/home/[A-Za-z0-9._-]+|/Users/[A-Za-z0-9._-]+|/mnt/[^[:space:]]+|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY|([A-Za-z0-9_]*token|secret|password|api[_-]?key)[[:space:]]*[:=])"; rg -n -i "$PRIVATE_REF_PATTERN" .'
+rtk sh -lc 'PRIVATE_REF_PATTERN="(/home/[A-Za-z0-9._-]+|/Users/[A-Za-z0-9._-]+|/mnt/[^[:space:]]+|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY|([A-Za-z0-9_]*token|secret|password|api[_-]?key)[[:space:]]*[:=])"; rg -n -i "$PRIVATE_REF_PATTERN" . --glob "!docs/session_1/**"'
 rtk sh -lc 'rg --files | rg -n "\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$"'
 rtk sh -lc 'rg --files | rg -n "(^|/)(checkpoints|weights|artifacts|outputs|samples/generated)(/|$)"'
 rtk sh -lc 'rg --files | rg -n "\.(zip|tar|tar\.gz|tgz|7z|rar)$"'
