@@ -1,0 +1,1438 @@
+{
+  "components": {
+    "schemas": {
+      "ActionBody": {
+        "description": "A typed action request (forward_dynamics/inverse_dynamics/policy). The route fixes the mode.",
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional served-checkpoint label; single-checkpoint deployments serve the deployed checkpoint implicitly. If given, must equal the deployed label (else 422).",
+            "title": "Checkpoint"
+          },
+          "chunk_size": {
+            "description": "Action transition count (the 16\u2013400 rollout window).",
+            "title": "Chunk Size",
+            "type": "integer"
+          },
+          "domain_name": {
+            "description": "Embodiment domain (e.g. 'agibotworld' 29-D, 'av' 9-D).",
+            "title": "Domain Name",
+            "type": "string"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InlineMedia"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inline conditioning image/video (base64)."
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trusted-volume conditioning image path (FD/policy).",
+            "title": "Image Path"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional instruction (policy).",
+            "title": "Prompt"
+          },
+          "raw_actions": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Forward-dynamics driving tensor [T, raw_dim].",
+            "title": "Raw Actions"
+          },
+          "resolution_tier": {
+            "default": 480,
+            "description": "Conditioning resolution tier \u2208 {256,480,704,720}.",
+            "title": "Resolution Tier",
+            "type": "integer"
+          },
+          "seed": {
+            "default": 123,
+            "description": "Deterministic seed (INV-10).",
+            "title": "Seed",
+            "type": "integer"
+          },
+          "video_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trusted-volume conditioning video path (ID).",
+            "title": "Video Path"
+          },
+          "view_point": {
+            "default": "ego_view",
+            "description": "Camera view point.",
+            "title": "View Point",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain_name",
+          "chunk_size"
+        ],
+        "title": "ActionBody",
+        "type": "object"
+      },
+      "ErrorModel": {
+        "description": "Structured error body for the standard HTTP error contract (E4).",
+        "properties": {
+          "code": {
+            "description": "Machine-readable error code, e.g. 'invalid_input'.",
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional structured context.",
+            "title": "Details"
+          },
+          "message": {
+            "description": "Human-readable error message.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorModel",
+        "type": "object"
+      },
+      "GenerationBody": {
+        "description": "A typed generation request (t2i/t2v/i2v/t2v_audio). The route fixes the mode + mode-specifics.",
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional served-checkpoint label; single-checkpoint deployments serve the deployed checkpoint implicitly. If given, must equal the deployed label (else 422).",
+            "title": "Checkpoint"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Frame height (\u2208 the resolution families).",
+            "title": "Height"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InlineMedia"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inline conditioning image (base64; i2v)."
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trusted-volume conditioning image path (i2v).",
+            "title": "Image Path"
+          },
+          "negative_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional negative prompt.",
+            "title": "Negative Prompt"
+          },
+          "num_frames": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Frame count (t2i is forced to 1); \u2264 the public cap.",
+            "title": "Num Frames"
+          },
+          "num_inference_steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Denoising steps.",
+            "title": "Num Inference Steps"
+          },
+          "prompt": {
+            "description": "The generation prompt.",
+            "title": "Prompt",
+            "type": "string"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Square resolution \u2208 {256,480,720} (default 480).",
+            "title": "Resolution"
+          },
+          "seed": {
+            "default": 123,
+            "description": "Deterministic seed (INV-10).",
+            "title": "Seed",
+            "type": "integer"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Frame width (\u2208 the resolution families).",
+            "title": "Width"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "GenerationBody",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthStatus": {
+        "description": "Health payload for the liveness/readiness endpoints (G3/RK-07).",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional human-readable context.",
+            "title": "Detail"
+          },
+          "status": {
+            "description": "'live' | 'warming' | 'ready'.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthStatus",
+        "type": "object"
+      },
+      "InlineMedia": {
+        "description": "Optional inline conditioning media for a job (base64 \u2014 the dep-free upload path; S6).\n\nThe production multipart upload via the webui BFF is S7/S8; S6 validates either this inline blob\nor a trusted-volume path carried in ``params``.",
+        "properties": {
+          "data_base64": {
+            "description": "Base64-encoded conditioning media bytes.",
+            "title": "Data Base64",
+            "type": "string"
+          },
+          "kind": {
+            "description": "'image' | 'video' | 'audio'.",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data_base64"
+        ],
+        "title": "InlineMedia",
+        "type": "object"
+      },
+      "Job": {
+        "description": "An async job record (202 + job id + SSE + artifact fetch; INV-5).\n\nSchema stub only in S1 \u2014 no job *endpoints* exist yet (those are S6).",
+        "properties": {
+          "artifact_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Artifact location once succeeded.",
+            "title": "Artifact Url"
+          },
+          "created_at": {
+            "description": "ISO-8601 creation timestamp.",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Populated when status is 'failed'."
+          },
+          "id": {
+            "description": "Opaque job identifier.",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Public mode, e.g. 't2i' / 't2v' / 'i2v' / 'reason' / 'action'.",
+            "title": "Mode",
+            "type": "string"
+          },
+          "precision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The served checkpoint precision ('nvfp4'/'fp8'), reported on success (S7).",
+            "title": "Precision"
+          },
+          "progress": {
+            "default": 0.0,
+            "description": "Fractional progress in [0, 1].",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "trajectory_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Action trajectory location (FD/policy rollout + ID), when present (S7).",
+            "title": "Trajectory Url"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "mode",
+          "created_at"
+        ],
+        "title": "Job",
+        "type": "object"
+      },
+      "JobStatus": {
+        "description": "Lifecycle states for an async media/action job (INV-5).",
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobStatus",
+        "type": "string"
+      },
+      "JobSubmit": {
+        "description": "A media/action job submission (INV-5).",
+        "properties": {
+          "media": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InlineMedia"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional inline conditioning media (base64)."
+          },
+          "mode": {
+            "description": "Job mode: t2i/t2v/i2v/t2v_audio or forward_dynamics/inverse_dynamics/policy.",
+            "title": "Mode",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "description": "Mode-specific params (prompt, resolution, num_frames, embodiment, conditioning paths).",
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "JobSubmit",
+        "type": "object"
+      },
+      "ReasoningBody": {
+        "description": "A typed reasoning request (text+image/video \u2192 text, streamed as SSE).",
+        "properties": {
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trusted-volume conditioning image path (EC-R2).",
+            "title": "Image Path"
+          },
+          "max_output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Output token budget. Omit/null = bounded only by the backend context window (\u2264 max_context_tokens \u2212 prompt). If supplied, it must fit the context window.",
+            "title": "Max Output Tokens"
+          },
+          "prompt": {
+            "description": "The reasoning prompt.",
+            "title": "Prompt",
+            "type": "string"
+          },
+          "video_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trusted-volume conditioning video path (EC-R3).",
+            "title": "Video Path"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "ReasoningBody",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Cosmos3-Nano Serving API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/action/forward_dynamics": {
+      "post": {
+        "operationId": "forward_dynamics_v1_action_forward_dynamics_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forward Dynamics",
+        "tags": [
+          "action"
+        ]
+      }
+    },
+    "/v1/action/inverse_dynamics": {
+      "post": {
+        "operationId": "inverse_dynamics_v1_action_inverse_dynamics_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Inverse Dynamics",
+        "tags": [
+          "action"
+        ]
+      }
+    },
+    "/v1/action/policy": {
+      "post": {
+        "operationId": "policy_v1_action_policy_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Policy",
+        "tags": [
+          "action"
+        ]
+      }
+    },
+    "/v1/generation/i2v": {
+      "post": {
+        "operationId": "i2v_v1_generation_i2v_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "I2V",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/v1/generation/t2i": {
+      "post": {
+        "operationId": "t2i_v1_generation_t2i_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "T2I",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/v1/generation/t2v": {
+      "post": {
+        "operationId": "t2v_v1_generation_t2v_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "T2V",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/v1/generation/t2v_audio": {
+      "post": {
+        "operationId": "t2v_audio_v1_generation_t2v_audio_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "T2V Audio",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/v1/health/live": {
+      "get": {
+        "operationId": "live_v1_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/health/ready": {
+      "get": {
+        "operationId": "ready_v1_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/jobs": {
+      "post": {
+        "operationId": "submit_job_v1_jobs_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobSubmit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "get_job_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/artifact": {
+      "get": {
+        "operationId": "get_artifact_v1_jobs__job_id__artifact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Artifact",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "operationId": "cancel_job_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/events": {
+      "get": {
+        "operationId": "stream_events_v1_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Events",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/trajectory": {
+      "get": {
+        "operationId": "get_trajectory_v1_jobs__job_id__trajectory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Trajectory",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/reason": {
+      "post": {
+        "operationId": "reason_v1_reason_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasoningBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reason",
+        "tags": [
+          "reasoning"
+        ]
+      }
+    }
+  }
+}
