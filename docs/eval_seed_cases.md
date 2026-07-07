@@ -38,10 +38,28 @@ list + defaults in `docs/model_setup.md`), e.g.:
 | EV-MIG-README-LINKS | Confirm public docs links. | README, docs, issue templates. | Internal links and public external links resolve or are clearly marked. **Satisfied (`MIG-S7`):** all 10 `README.md` relative link/`src` targets tracked (`git ls-files`), anchors match headings; the CI badge + `security/policy`/`discussions` links resolve post-publish (at-publish item in `docs/release_checklist.md`). | MIG-S7 |
 | EV-MIG-LICENSE-HYGIENE | Confirm hygiene files. | `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, issue/PR templates, `docs/release_checklist.md`. | Files exist and match MIT/public-beta scope: MIT scoped to repo code (weights `openmdw-1.0`/`other`); `SECURITY.md` uses private reporting (no public-issue disclosure); templates request no sensitive data (`blank_issues_enabled:false`). **Satisfied (`MIG-S7`)**; also landed the X-1 auth fix (WebUI→`X-API-Key`, vitest 209) + `.gitignore` hardening. Workflow seeds: `docs/eval_corpus/mig_s7_review_injection_rubber_stamp.md`, `…forbidden_claims_scope.md`, `…stale_sibling_comment_after_fix.md`. | MIG-S7 |
 
+## MIG-S8 re-confirmation (2026-07-07)
+
+The deterministic cases above were re-run green on `session-8` for the release gate:
+`EV-MIG-SCRUB` / `-SCRUB-COMMAND-SANITY` / `-DOCS-SCRUB` (committed scanner + broad-scan
+human gate clean), `EV-MIG-PY-UNIT` (`pytest -m "not gpu"` = 485 passed), `EV-MIG-WEBUI-UNIT`
+(vitest 209), `EV-MIG-SCHEMA-SYNC` (in the pytest run), `EV-MIG-COMPOSE-RENDER` (fp8+nvfp4
+`config` exit 0 / 0-byte stderr). Evidence: `docs/session_8/outputs/deterministic_checks.md`.
+`EV-MIG-REPO-TREE`, `EV-MIG-IMPORT-COMPLETE`, `EV-MIG-VLLM-FORK`, `EV-MIG-HF-*`,
+`EV-MIG-README-LINKS`, `EV-MIG-LICENSE-HYGIENE` remain satisfied from their owning sessions.
+
 ## Manual GPU Release Gates
 
 Manual GPU cases are required before public beta GO unless `MIG-S8` explicitly
 marks a case beta-limited.
+
+**`MIG-S8` status (2026-07-07):** every case below is **NOT-YET-RUN** and is marked
+**beta-limited** (owner decision to defer GPU). They are the standing manual gate for a
+post-publish GPU session. A valid run MUST use vLLM-Omni commit
+`697035018b70cef76b974a909d23371a9984c3f2` and checkpoint revisions FP8
+`4e181f996abf03f3425298ef692e6e5e56fd46a4` / NVFP4
+`b5c9332efbaefa72c99890b1b1150da12ca9256c` (otherwise the evidence is invalid); see
+`docs/session_8/outputs/gate_record.md`.
 
 | ID | Purpose | Checkpoint | Request shape | Expected properties | Gate |
 |---|---|---|---|---|---|
