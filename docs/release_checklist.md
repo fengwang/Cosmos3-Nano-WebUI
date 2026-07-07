@@ -79,5 +79,7 @@ commit, request shape, artifact metadata, pass/fail (`EV-MIG-GPU-*`).
 ## 9. Release mechanics
 
 - [ ] Repo `About`, topics, and description set; unused GitHub features hidden.
+- [ ] Enable GitHub **Private vulnerability reporting** (Settings → Code security) so
+      `SECURITY.md`'s advisory flow and the issue-template security redirect resolve.
 - [ ] Tag + release notes summarizing beta scope and known limitations.
 - [ ] Owner records **GO / NO-GO** with the evidence bundle.

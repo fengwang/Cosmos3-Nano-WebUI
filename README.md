@@ -118,8 +118,9 @@ at the checkpoint you serve.
 > weights are not MIT** — the FP8/NVFP4 checkpoints are `openmdw-1.0` and the base is
 > `other`. These are the model owners' licenses; review them before use.
 
-Full details — every environment variable, the per-mode compatibility matrix, mount
-layout, and drift caveats — are in **[`docs/model_setup.md`](docs/model_setup.md)**.
+**[`docs/model_setup.md`](docs/model_setup.md) is the source of truth** for the pinned
+revisions and licenses above (shown here as a snapshot), plus every environment variable,
+the per-mode compatibility matrix, mount layout, and drift caveats.
 
 ## Development
 
@@ -157,7 +158,8 @@ This is an honest early beta. Known limits, each tracked in
 - **vLLM-Omni image build is heavy (CUDA).** It installs a pinned public fork commit; its
   build and exact serve entrypoint are confirmed at the manual gate.
 - **Auth is off by default.** Set `COSMOS3_API_KEY` to require an `X-API-Key` on the
-  job/artifact routes (the WebUI forwards it end to end). The API container mounts the
+  generation, jobs, action, and reasoning routes — health and metrics stay open (the
+  WebUI forwards it end to end). The API container mounts the
   host Docker socket to drive the generation container — ports bind `127.0.0.1` by
   default; keep it that way until you have enabled auth and network controls (R-16).
 - **NVFP4 model card is a stub** upstream — use [`docs/model_setup.md`](docs/model_setup.md)

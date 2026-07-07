@@ -44,8 +44,9 @@ Out of scope (report upstream to the respective project):
 ## Deployment notes that affect security
 
 - **Authentication is off by default.** Set `COSMOS3_API_KEY` to require an
-  `X-API-Key` on the job/artifact routes. Enable it (and network controls)
-  before exposing the API beyond a trusted local network.
+  `X-API-Key` on the generation, jobs, action, and reasoning routes (health and
+  metrics stay exempt). Enable it (and network controls) before exposing the API
+  beyond a trusted local network.
 - **Loopback by default.** The Compose stacks publish ports on `127.0.0.1`
   (`BIND_ADDR`); change this deliberately.
 - **Docker socket privilege.** The API container mounts the host Docker socket

@@ -36,6 +36,7 @@ session_contract:
       - docs/handoff.md             # Session End Protocol
       - docs/eval_corpus/**         # Eval Harvest
       - docs/session_7_contract.yaml # this amendment
+      - .env.example                # S7-A2: stale X-1 comment (see amendments)
     forbidden_files:
       - runtime source files (except the three X-1 files named in allowed_files)
       - model weight files
@@ -107,4 +108,14 @@ session_contract:
         CODE_OF_CONDUCT.md are standard beta hygiene for a repo now inviting external
         contributions. Mirrors the S4 FA-4 / S5 D10 / S6 allowed_files amendment
         precedent. Full basis: docs/session_7/{brainstorming,design}.md.
+    - id: S7-A2
+      date: 2026-07-07
+      approved_by: owner (Feng) - pending review; direct consequence of S7-A1/X-1
+      change: >
+        Add .env.example to allowed_files to fix a now-stale comment: it stated
+        "enabling COSMOS3_API_KEY currently breaks the WebUI->API proxy", which the
+        X-1 fix (S7-A1) falsifies. Leaving it would make a public tracked file
+        contradict the README and evidence map (invariant: README/public claims match
+        evidence). Caught by the S7 sharded review (correctness F2). Comment-only edit;
+        no variable/default changed.
 

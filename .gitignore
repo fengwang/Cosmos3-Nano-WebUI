@@ -24,7 +24,7 @@ node_modules/
 dist/
 build/
 
-# ── Model weights & generated media (INV-2) — misc/logo.png stays tracked (.png) ──
+# ── Model weights & generated media (INV-2) — no image rule, so misc/logo.png stays tracked ──
 models/
 *.safetensors
 *.pt
