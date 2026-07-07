@@ -27,11 +27,23 @@ session_contract:
       - docs/session_7/**
       - docs/evidence_map.md
       - docs/risk_register.md
+      # ── Amendment (owner-approved 2026-07-07); see `amendments:` below ──
+      - CODE_OF_CONDUCT.md
+      - .gitignore
+      - webui/lib/proxy.ts          # X-1 fix (narrow exception to "runtime source files")
+      - webui/lib/proxy.test.ts     # X-1 regression tests
+      - webui/lib/proxyFetch.test.ts # X-1 regression tests
+      - docs/handoff.md             # Session End Protocol
+      - docs/eval_corpus/**         # Eval Harvest
+      - docs/session_7_contract.yaml # this amendment
     forbidden_files:
-      - runtime source files
+      - runtime source files (except the three X-1 files named in allowed_files)
       - model weight files
       - Docker publishing workflows
       - vLLM-Omni fork source
+      - api/** (the X-API-Key contract is honored, not changed — INV-9)
+      - schemas/openapi.json
+      - pyproject.toml / uv.lock / package.json (no new dependency — INV-10)
   invariants:
     - README claims match public evidence or are marked as manual/beta validation.
     - Repo code license is not conflated with model license.
@@ -74,4 +86,25 @@ session_contract:
     - EV-MIG-README-LINKS
     - EV-MIG-LICENSE-HYGIENE
     - EV-MIG-SCRUB
+  amendments:
+    - id: S7-A1
+      date: 2026-07-07
+      approved_by: owner (Feng)
+      change: >
+        Extend blast_radius.allowed_files to permit the X-1 fix and the two extra
+        hygiene items decided during brainstorming, plus the Session End / Eval
+        Harvest artifacts the literal list omitted.
+      added:
+        - webui/lib/proxy.ts, webui/lib/proxy.test.ts, webui/lib/proxyFetch.test.ts
+        - .gitignore
+        - CODE_OF_CONDUCT.md
+        - docs/handoff.md, docs/eval_corpus/**, docs/session_7_contract.yaml
+      rationale: >
+        X-1: the WebUI BFF sent `Authorization: Bearer <key>` while the API enforces
+        `X-API-Key`, so enabling COSMOS3_API_KEY broke the WebUI->API proxy (prior
+        handoff, pre-existing). The fix is confined to the WebUI client and preserves
+        INV-9 (the public API request shape is unchanged). The .gitignore hardening and
+        CODE_OF_CONDUCT.md are standard beta hygiene for a repo now inviting external
+        contributions. Mirrors the S4 FA-4 / S5 D10 / S6 allowed_files amendment
+        precedent. Full basis: docs/session_7/{brainstorming,design}.md.
 
