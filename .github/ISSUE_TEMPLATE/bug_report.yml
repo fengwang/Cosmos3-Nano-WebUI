@@ -1,0 +1,84 @@
+name: Bug report
+description: Report something that is broken or behaves unexpectedly.
+title: "[Bug]: "
+labels: ["bug", "awaiting triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! This project is a **beta / research preview**.
+
+        ⚠️ **Do not paste secrets, API keys, tokens, or private file paths.**
+        Redact them from any logs before submitting.
+        For security vulnerabilities, use the [security policy](../security/policy) instead of a public issue.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed any secrets, tokens, and private paths from the details below.
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps (or a small snippet) that reproduce the behavior.
+      placeholder: |
+        1. Bring up the fp8 stack with `make up-fp8`
+        2. POST /v1/generation/t2i with ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - API
+        - WebUI
+        - Deploy / Docker / Compose
+        - Docs
+        - Other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: checkpoint
+    attributes:
+      label: Checkpoint label (if relevant)
+      options:
+        - "not applicable"
+        - fp8
+        - nvfp4
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, GPU model + driver/CUDA, Docker/Compose versions, commit SHA. No secrets.
+      placeholder: |
+        OS: Arch Linux
+        GPU: RTX 5090, driver 5xx.xx
+        Docker: 29.x, Compose: 5.x
+        Commit: <short sha>
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste relevant log output. Redact tokens, keys, and private paths.
+      render: shell
