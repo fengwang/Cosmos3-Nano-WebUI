@@ -47,6 +47,10 @@ human gate clean), `EV-MIG-PY-UNIT` (`pytest -m "not gpu"` = 486 passed; S8-A2 a
 `config` exit 0 / 0-byte stderr). Evidence: `docs/session_8/outputs/deterministic_checks.md`.
 `EV-MIG-REPO-TREE`, `EV-MIG-IMPORT-COMPLETE`, `EV-MIG-VLLM-FORK`, `EV-MIG-HF-*`,
 `EV-MIG-README-LINKS`, `EV-MIG-LICENSE-HYGIENE` remain satisfied from their owning sessions.
+Workflow seeds (S8): `docs/eval_corpus/mig_s8_scanner_abspath_blindspot.md` (scanner
+pattern+root blind spot; run an independent wider scan at the release gate) and
+`docs/eval_corpus/mig_s8_broken_scan_silent_pass.md` (a `2>/dev/null` scan with an invalid
+regex reports "clean"; record command+exit code and prove-it-can-fail).
 
 ## Manual GPU Release Gates
 
