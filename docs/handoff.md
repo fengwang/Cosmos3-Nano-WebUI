@@ -2,115 +2,128 @@
 
 ## State Snapshot
 
-- Session: MIG-S4, Hugging Face Checkpoint Verification and Model Setup Docs
-- Branch: WebUI repo `session-4` (local commits only; not pushed)
-- Last commit: `docs(s4): adversarial verification (PASS), FA-4 contract amendment, handoff`
-- Changed files (docs-only):
-  - Refining pack: `docs/session_4/{brainstorming,proposal,design,tasks,plan,execution_contract}.md`,
-    `docs/session_4/specs/*.md` (4 capabilities)
-  - Verification: `docs/session_4/probes/verify_hf_checkpoints.py` (torch-free probe) +
-    `probes/{evidence.json,summary.md}`, `docs/session_4/hf_verification.md`
-  - Contract/drift: `docs/model_setup.md` (new authoritative contract),
-    `docs/session_4/drift_report.md`, `docs/session_4/failure_arbiter.md`
-  - Review/verify: `docs/session_4/{sharded_review,adversarial_verification}.md`
-  - Updates: `docs/evidence_map.md`, `docs/risk_register.md` (R-01/R-03/R-04),
-    `docs/eval_seed_cases.md`, `docs/eval_corpus/mig_s4_{base_model_publication_premise,nvfp4_loader_layout_drift}.md`
-  - Contract amendment: `docs/session_4_contract.yaml` (FA-4: added `docs/eval_corpus/**` to `allowed_files`)
-- Checks run (host `python3` + `huggingface_hub` 1.21.0; live HF network + local `/data/models` mount):
-  - `git ls-remote` FP8 + NVFP4 `HEAD` == `HfApi.model_info().sha` (consistent revisions)
-  - `verify_hf_checkpoints.py --check` = OK (16 pure-core spec assertions)
-  - Full probe = exit 0; `local == public` sha256 gate = **match** for both transformer shards + FP8 quant config
-  - Canonical private-value regression over `docs/session_4/**` + `docs/model_setup.md` + edited shared docs = clean
-  - Torch-free guard: probe imports neither `torch` nor `diffusers`
-  - Sharded review (5 axes): no Critical/High; all Medium/Low fixed
-  - Fresh-context adversarial verifier: **PASS** (independently reproduced revisions, D1, base-public, SHA gate)
+- Session: MIG-S5, CPU-Only CI and Test Stabilization
+- Branch: WebUI repo `session-5` (local commits only; not pushed)
+- Last commit at close: `docs(s5): review, adversarial verification, evidence/risk, handoff`
+- Workflow added: `.github/workflows/ci.yml` — one workflow, two parallel
+  `ubuntu-latest` jobs: **`python`** (lint + CPU tests + schema/scrub gates) and
+  **`webui`** (schema sync + build + lint + typecheck + unit tests).
+- Changed files (all within the amended `allowed_files`):
+  - New: `.github/workflows/ci.yml`, `tests/conftest.py`,
+    `tests/test_private_ref_scan.py`, `tests/test_gpu_marker_policy.py`
+  - Edited: `tests/api/test_gen_ipc.py` (F541), `tests/api/test_oracle_adapter_audio.py`
+    (E402 noqa), `pyproject.toml` (`test-cpu` group), `uv.lock` (regenerated)
+  - Docs: `docs/session_5/**` (refining pack + `local_checks.md` +
+    `failure_arbiter.md` + `sharded_review.md` + `adversarial_verification.md`),
+    `docs/evidence_map.md`, `docs/risk_register.md` (R-05/R-10/R-14),
+    `docs/eval_seed_cases.md`, `docs/eval_corpus/mig_s5_*.md`, `docs/handoff.md`
+  - Contract: `docs/session_5_contract.yaml` (D10 `allowed_files` + FA-2
+    `deterministic_checks` amendments — **owner review requested**)
+- Checks run (host: `uv 0.11.25` provisioning Python 3.12; `pnpm 11.3.0`, Node
+  present; live network for installs):
+  - `uv run ruff check api tests` = **0**
+  - `uv sync --frozen --group test-cpu` (torch-free) then `uv run pytest -m "not gpu"`
+    = **485 passed / 0 skipped** (was 467 passed / 3 numpy-skipped)
+  - `pytest -q` (no marker filter) = 0 (conftest guard skips any `gpu` test)
+  - WebUI: `pnpm install --frozen-lockfile`; `pnpm gen:api` + `git diff --exit-code
+    lib/api/schema.d.ts` (in sync); `pnpm build` → `pnpm lint` → `pnpm typecheck` →
+    `pnpm test` (**vitest 208 passed / 39 files**) — all 0
+  - `uv run python tests/test_private_ref_scan.py` = **clean (0 findings)**
+  - Schema drift proven to fail CI on **both** layers (adversarial verifier injected
+    drift into `openapi.json` → `test_openapi.py` failed; type-affecting change →
+    `gen:api` diff failed; both reverted)
+  - Sharded review (5 axes): **no Critical/High**; Medium/Low fixed
+  - Fresh-context adversarial verifier: **PASS** (reproduced all checks; tree left clean)
 - Checks not run (correctly out of scope):
-  - GPU inference / VRAM / serving load on RTX 5090 — `MIG-S8`
-  - Actual `vllm_omni` container load of the public checkpoints — `MIG-S6`/`MIG-S8`
-  - Docker/Compose build+render — `MIG-S6`; CPU-only GitHub Actions — `MIG-S5`
-  - No torch/diffusers checkpoint load (docs-only session)
-- Current status: **`GATE-MIG-S4-HF` is satisfied.** Both public checkpoint revisions + license
-  recorded, layout + runtime assumptions documented against the imported loader code, and every
-  drift (D1–D4) dispositioned with a routed risk row before Docker/README depend on it.
+  - The GitHub-hosted Actions run itself (no push; first real run on `MIG-S6`/`MIG-S8`)
+  - GPU inference / RTX 5090 (manual gate, `MIG-S8`; R-05 still open)
+  - Docker/Compose render checks (no `deploy/` yet → `MIG-S6`, `EV-MIG-COMPOSE-RENDER`)
+  - Playwright e2e (not part of CPU CI this session)
+- Current status: **`GATE-MIG-S5-CI` is satisfied.** CPU-only public CI exists and is
+  secret/CUDA/weight/self-hosted-free (INV-5), CPU lint + tests pass non-hollow, both
+  schema-sync layers fail on drift, GPU tests are isolated, and the private-reference
+  scan is clean — all reproduced by an independent adversarial verifier.
 
 ## Narrative Context
 
-Session 4 verified the two public HF generation checkpoints and the declared BF16 base against the
-imported runtime's loader contract, using a committed torch-free probe whose local header/recipe
-findings are gated to `local == public` LFS sha256. Verification **corrected two premises** the
-brainstorming had assumed: the BF16 base `nvidia/Cosmos3-Nano` is in fact public and ungated (so
-reasoning + action/forward_dynamics are publicly backed, not beta-limited for missing weights —
-FA-1), and the in-process `diffusers_oracle` engine cannot load+verify **either** current public
-checkpoint as-is (FP8 recipe `fp8_blockwise_mixed` ≠ the exact `"fp8"` the code requires; NVFP4
-ships a vLLM-Omni-native export without `modelopt_state.pt`/`quantization_config.json` — D1/FA-2).
-The default generation engine is `vllm_omni` (a separate container loader), so D1 is scoped to the
-in-process path and routed to S6/S8. `docs/model_setup.md` is the authoritative setup contract S6/S7
-consume.
+Session 5 built the CPU-only quality gate from scratch (`.github/` did not exist).
+It fixed the one broken deterministic check (`ruff check tests` → 2 errors), added a
+torch-free `test-cpu` dependency group so previously-skipped artifact-encoder /
+writer tests actually execute (defeating the "hollow pass" adversarial case), added
+a `tests/conftest.py` guard + `-m "not gpu"` so GPU tests can never run or break
+collection in CPU CI, and added a committed `tests/test_private_ref_scan.py`
+(pure-scan + pytest gate + CLI) for secret/private-path/weight detection. The WebUI
+job must `next build` before `typecheck` (Next generates CSS-module type
+declarations at build time) — a contract SPEC_GAP that was classified and amended.
 
 ## Decision Log
 
 | Decision | Chosen | Rejected | Reason | Contract Ref |
 |---|---|---|---|---|
-| Verification method | Executable torch-free probe as single evidence source; HF metadata authoritative + local header probes SHA-gated | Ad-hoc transcribed commands; full torch/diffusers load | Reproducible for a HIGH gate; describes the *public* artifact; in scope (no GPU) | `docs/session_4/design.md` D1/D2 |
-| Base-model backing | Reasoning/action publicly backed by `nvidia/Cosmos3-Nano` (residual limit GPU-unverified) | Mark beta-limited for "non-public base" | Evidence: base is public/ungated (FA-1 refuted the premise) | `failure_arbiter.md` FA-1; `drift_report.md` D2 |
-| D1 in-process oracle incompatibility | Document + route to `vllm_omni`/GPU gates; no engine fix | Edit engine code to accept `fp8_blockwise_mixed` | Docs-only blast radius; default engine is `vllm_omni` | `failure_arbiter.md` FA-2; `drift_report.md` D1; R-03 |
-| NVFP4 empty card | Compensate in `model_setup.md`; recommend external HF card follow-up | Draft/push HF model-card content | HF write out of repo scope; card is a 62-byte stub (D4) | Q_D; `drift_report.md` D4; R-04 |
-| `docs/eval_corpus/**` blast radius | Amend `session_4_contract.yaml` `allowed_files` | Move seeds under `docs/session_4/` | Reconcile with Session End Protocol + S2/S3 convention (FA-4) | `failure_arbiter.md` FA-4; `adversarial_verification.md` |
-| Commit behavior | Local commits at clean checkpoints on `session-4`; no push | Push | Mirrors S3 (Q_E) | brainstorming.md Q_E |
-
-## Handoff To Later Sessions (S4 required outputs)
-
-- **HF repo revisions (pin these):** FP8 `wfen/Cosmos3-Nano-FP8-Blockwise` @
-  `4e181f996abf03f3425298ef692e6e5e56fd46a4`; NVFP4 `wfen/Cosmos3-Nano-NVFP4-Blockwise` @
-  `b5c9332efbaefa72c99890b1b1150da12ca9256c`; base `nvidia/Cosmos3-Nano` @
-  `fea6e03ac3d7884b4105ed8ee79fc480fca70965` (public, ungated).
-- **License notes:** model weights `openmdw-1.0` (FP8/NVFP4), base `other`; **separate** from the
-  repo's MIT code license (INV-7). README (S7) must not describe weights as MIT.
-- **Expected local env vars + mount layout:** see `docs/model_setup.md` §4–§5 (`COSMOS3_MODEL_DIR`,
-  `COSMOS3_CHECKPOINT_LABEL`, `COSMOS3_REASONER_MODEL_DIR`, `COSMOS3_BASE_ACTION_DIR`,
-  `COSMOS3_GEN_ENGINE`, …; `/data/models/<Repo>` convention, configurable).
-- **Drift report:** `docs/session_4/drift_report.md` (D1 high → S6/S8; D2/D3 low; D4 medium → S7).
+| CI topology | One `ci.yml`, two parallel jobs | Split files / one sequential job | Single status, parallel, minimal duplication | `design.md` D-1 |
+| Python toolchain | `uv`-provisioned 3.12, `--frozen --group test-cpu` | System Python + pip | Host is 3.14; lockfile determinism (R-10) | `design.md` D-2 |
+| Anti-hollow-pass | Torch-free `test-cpu` group (+`safetensors`) | Accept the skips | 485/0 skipped; encoder+writer tests run | `design.md` D-3; FA-2 |
+| WebUI order | `build` before `typecheck` | Contract's literal order (no build) | typecheck needs Next CSS-module types (verified) | `failure_arbiter.md` FA-2 |
+| Schema sync | Two existing torch-free layers | New export tooling | `test_openapi.py` + `gen:api` diff both exist | `design.md` D-5 |
+| Scrub home | `tests/test_private_ref_scan.py` (pure fn + CLI) | `tools/**` (out of blast radius); inline YAML `rg`; gitleaks | Blast-radius-legal, testable, no 3rd-party action | `design.md` D-6 |
+| GPU isolation | conftest guard + `-m "not gpu"` | CI flag only | Two independent mechanisms | `design.md` D-7 |
+| Node in CI | 22 LTS | Match host (26) | Reproducible; lockfile drives resolution | brainstorming defaults |
+| Contract edits | Amend `session_5_contract.yaml` (D10 + FA-2), flag for owner | Leave protocol/contract gaps | Session End Protocol + FA-2 need it; S4 FA-4 precedent | `failure_arbiter.md` FA-2 |
 
 ## Next Priority Queue
 
-1. `MIG-S5`: CPU-only GitHub Actions from the imported tree (Python `compileall`/`import app.main`/
-   `pytest -m "not gpu"`, OpenAPI schema-sync, WebUI lint/typecheck/vitest with `next build` first),
-   plus `EV-MIG-DOCS-SCRUB`/`EV-MIG-IMPORT-COMPLETE`. Optionally run `verify_hf_checkpoints.py --check`
-   as a CPU gate (torch-free, no downloads).
-2. `MIG-S6`: local-build Docker/Compose from the pinned vLLM-Omni fork with external checkpoint
-   mounts. **Must resolve D1**: validate that the default `vllm_omni` container loader
-   (`load_quantized.py`) actually loads the public FP8 **and** NVFP4 artifacts — the in-process
-   `diffusers_oracle` engine does not. Consume `docs/model_setup.md` for env/mount/revisions.
-3. `MIG-S7`: README + hygiene. Use `docs/model_setup.md` verbatim for the external-weights setup,
-   the correct base id (`nvidia/Cosmos3-Nano`, not `wfen/Cosmos3-Nano`), license separation, and the
-   per-mode compatibility matrix (mark reasoning/action GPU-unverified, not weight-blocked).
-4. `MIG-S8`: GPU release gates for the full surface + review whether D1 needs an engine fix or an
-   in-process-oracle "FP8-modelopt-only" caveat.
+1. `MIG-S6` (Docker/Compose): once `deploy/` exists, add a render-only
+   `EV-MIG-COMPOSE-RENDER` job to `ci.yml` (Compose config render, no private paths,
+   no baked weights). **Must resolve S4 drift D1** (validate the default `vllm_omni`
+   container loader against the public FP8 **and** NVFP4 checkpoints). Consume
+   `docs/model_setup.md` for env/mount/revisions.
+2. `MIG-S7` (README + hygiene): re-run the scrub (`tests/test_private_ref_scan.py`)
+   over README/hygiene content; keep model license (`openmdw-1.0`) separate from repo
+   MIT; use the correct base id `nvidia/Cosmos3-Nano`. Consider a `.gitignore`
+   hygiene pass (see gotcha below) — needs a contract amendment (out of S5 radius).
+3. `MIG-S8` (release gate): run manual GPU gates for the full surface; review R-05
+   (CPU-green-while-GPU-broken); run the broad S1 lexical scan + lockfile-URL
+   credential scan as the human-reviewed gate; review whether to SHA-pin CI actions.
 
 ## Warnings And Gotchas
 
-- Environment: host Python is 3.14; the probe is torch-free and runs on host `python3` +
-  `huggingface_hub` 1.21.0. The full probe sha256s ~34 GB (~80s) **only** when `/data/models` is
-  populated; in CI with no mount it costs nothing and downloads nothing. Use `--check` for the pure
-  gate and `--no-hash` to skip the SHA gate.
-- Deferred risks: NVFP4/FP8 **serving** compatibility via `vllm_omni` (D1 → S6/S8); Docker build (S6);
-  CI (S5); GPU runtime/VRAM/perf (S8). R-05 (CPU-CI-green-while-GPU-broken) still open.
-- External-repo hygiene (D3): the public FP8 repo ships `_s2_*.md` + loader scripts and NVFP4 ships
-  `producer_provenance.json` — recommend owner HF-side cleanup; do not cite their contents.
-- Files future sessions must not casually edit: `schemas/openapi.json`, public API route/request
-  shapes (INV-9), `pyproject.toml`/`uv.lock`; do not name dev-only checkpoint variants or host paths
-  in public docs; do not edit the imported engine code to "fix" D1 outside a contracted session.
-- Contract note: `session_4_contract.yaml` `allowed_files` was amended (FA-4) to add
-  `docs/eval_corpus/**` — a change-controlled file was touched; owner may review/keep the amendment.
+- **Environment:** host `python3` is 3.14 but the project pins `>=3.12,<3.13` — always
+  use `uv` (never host Python). WebUI: `pnpm typecheck` FAILS unless `pnpm build` ran
+  first (CSS-module types). CI pins Node 22; local dev on newer Node is fine.
+- **CI first run:** `ci.yml` has not executed on GitHub Actions yet (no push). The
+  first real run happens on `MIG-S6`/`MIG-S8`; action major-tag pins (`@v4`/`@v5`)
+  should be confirmed to resolve then.
+- **Scanner scope:** `tests/test_private_ref_scan.py` walks the working tree (not
+  `git ls-files`) and excludes `.venv`/`node_modules`/`.next`/`__pycache__`/lockfiles/
+  `.tsbuildinfo`. It catches high-confidence secret *values* + private absolute paths +
+  weight files; the **broad lexical name-assignment scan and lockfile-URL credential
+  scan remain a human-reviewed `MIG-S8` gate** (`$PRIVATE_REF_PATTERN` is unset —
+  ENVIRONMENT, per S1).
+- **Repo hygiene gap (out of S5 blast radius):** the root `.gitignore` does not cover
+  `.venv/`, `__pycache__/`, `node_modules/`; local check runs create these. Only
+  explicit `git add <path>` was used this session. A `.gitignore` pass is a candidate
+  for `MIG-S7` (needs a contract amendment).
+- **Deferred risks:** R-05 (CPU-CI-green-while-GPU-broken) still **open** → S8;
+  D1 (vllm_omni checkpoint load) → S6; Docker build/render → S6.
+- **Files future sessions must not casually edit:** `schemas/openapi.json` (regenerate
+  only, never hand-edit — INV-9 public API shape), public API route/request shapes,
+  `pyproject.toml`/`uv.lock` pins. Do not name private paths/hosts/dev-variants in any
+  scanned doc (the CI scrub will fail).
+- **Contract note:** `session_5_contract.yaml` was amended twice (D10 `allowed_files`;
+  FA-2 `deterministic_checks` adding `pnpm build`) — change-controlled file touched;
+  **owner may review/keep** (mirrors S4 FA-4).
 
 ## Eval Seeds
 
-- Missed-premise (caught by evidence, refuting the design): base-model publication was assumed
-  non-public without checking the declared `base_model` id — `docs/eval_corpus/mig_s4_base_model_publication_premise.md`.
-- New regression candidate: public checkpoint layout/recipe vs the imported loader contract
-  (exact-`"fp8"` recipe + required sidecars) — `docs/eval_corpus/mig_s4_nvfp4_loader_layout_drift.md`
-  (extends EV-MIG-HF-FP8/NVFP4-METADATA).
-- Instruction-update candidate: verification sessions MUST derive facts (base id, recipe) from the
-  artifact's own metadata and check them against the actual loader code, not assume from a single
-  repo-id guess; and MUST keep a session's contract `allowed_files` in sync with the Session End
-  Protocol's required output paths.
+- New regression candidates (added to `docs/eval_corpus/`):
+  - `mig_s5_scrub_scanner_self_match.md` — a scrub scanner must not flag its own /
+    prior sessions' pattern documentation (TEST_BUG; tighten pattern + exclude
+    scanner/checklist + concat fixtures).
+  - `mig_s5_next_typecheck_needs_build.md` — Next.js `typecheck` requires a prior
+    `build` (SPEC_GAP; order build before typecheck in contract + CI).
+  - `mig_s5_hollow_gate_and_marker_coverage.md` — an "absence" gate and an unmarked
+    marker guard both need explicit coverage assertions.
+- Instruction-update candidate (REVIEW.md / project contract template): (a) for a
+  Next.js app, `build` precedes `tsc` typecheck; (b) a committed scrub scanner MUST be
+  sanity-tested against its own pattern docs; (c) a gate whose green state is "no
+  findings" MUST assert it actually ran (walked files / catches a planted positive).
