@@ -7,8 +7,9 @@
 
 FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04
 
-# MIG-S2 immutable pin: tag cosmos3-nano-webui-mig-s2 == commit 697035018b70cef76b974a909d23371a9984c3f2
-ARG VLLM_OMNI_REF=cosmos3-nano-webui-mig-s2
+# MIG-S2 immutable pin: commit SHA (a tag can be force-moved; the commit cannot).
+# Commit 697035018b70cef76b974a909d23371a9984c3f2 == tag cosmos3-nano-webui-mig-s2.
+ARG VLLM_OMNI_REF=697035018b70cef76b974a909d23371a9984c3f2
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

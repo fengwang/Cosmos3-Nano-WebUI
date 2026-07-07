@@ -41,8 +41,10 @@ THEN the produced image SHALL be torch-free.
 #### Scenario: Reasoning layer available on request
 
 WHEN `docker build -f deploy/api.Dockerfile --build-arg WITH_REASONING=1` is invoked
-THEN the Dockerfile SHALL select a CUDA-capable base and install the vLLM reasoning
-stack so the in-container `vllm serve` subprocess can run (GPU validation is `MIG-S8`).
+THEN the Dockerfile SHALL select a CUDA-capable base, install the `oracle` extra
+(torch), and install vLLM (pinned `0.23.0`, the version the reasoner code references)
+so the in-container `vllm serve` subprocess can run. The GPU build and torch/vLLM/CUDA
+compatibility are validated at `MIG-S8` (vLLM is a build-time install, not in `uv.lock`).
 
 ### Requirement: vLLM-Omni image renders but its build is a release gate
 

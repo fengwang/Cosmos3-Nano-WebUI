@@ -67,5 +67,5 @@ to the code, never the reverse.
   pinned public artifacts (base images, the vLLM-Omni fork tag, `uv`/`pnpm` frozen
   installs) at build time; none is added to `pyproject.toml`/`package.json`.
 - **Systems**: introduces a documented docker-socket privilege on the api container
-  (R-06-adjacent) and a single-GPU serialized reasoning⊕generation runtime whose GPU
-  behavior is the S8 gate.
+  (tracked as risk **R-16**) and a single-GPU serialized reasoning⊕generation runtime
+  whose GPU behavior is the S8 gate.

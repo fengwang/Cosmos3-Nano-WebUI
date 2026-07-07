@@ -8,6 +8,8 @@ services:
     environment:
       COSMOS3_VLLM_BIN: ${COSMOS3_VLLM_BIN:-vllm}                       # reasoner subprocess binary
       COSMOS3_REASONER_MODEL_DIR: ${COSMOS3_REASONER_MODEL_DIR:-/models/base}
+      # Consumed only by the in-process diffusers action engine (COSMOS3_GEN_ENGINE=diffusers),
+      # not the reasoner; shares this same BF16 base mount for action / forward_dynamics.
       COSMOS3_BASE_ACTION_DIR: ${COSMOS3_BASE_ACTION_DIR:-/models/base/transformer}
     volumes:
       # BF16 base (nvidia/Cosmos3-Nano) for the reasoner/action tower, read-only.

@@ -5,7 +5,11 @@
 .PHONY: help build build-api build-webui config config-fp8 config-nvfp4 \
         up-fp8 up-nvfp4 up-fp8-reasoning down health smoke scan
 
-COMPOSE ?= docker compose
+# Compose's project dir is deploy/ (first -f), so it would look for deploy/.env and
+# ignore a repo-root .env. Auto-pass a repo-root .env when present (no-op when absent —
+# the inline ${VAR:-default} defaults then apply, so `make config-*` still renders).
+ENV_FILE := $(wildcard .env)
+COMPOSE ?= docker compose $(if $(ENV_FILE),--env-file $(ENV_FILE),)
 FP8    := -f deploy/docker-compose.fp8.yml
 NVFP4  := -f deploy/docker-compose.nvfp4.yml
 REASON := -f deploy/docker-compose.reasoning.yml
