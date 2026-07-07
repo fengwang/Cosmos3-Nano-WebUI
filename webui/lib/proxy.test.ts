@@ -21,7 +21,7 @@ describe("buildUpstreamUrl", () => {
 });
 
 describe("filterForwardHeaders", () => {
-  it("strips hop-by-hop + host and injects auth when a key is given", () => {
+  it("strips hop-by-hop + host and injects X-API-Key when a key is given", () => {
     const incoming = new Headers({
       host: "webui:3000",
       connection: "keep-alive",
@@ -35,13 +35,20 @@ describe("filterForwardHeaders", () => {
     expect(out.get("content-length")).toBeNull();
     expect(out.get("content-type")).toBe("application/json");
     expect(out.get("x-request-id")).toBe("abc");
-    expect(out.get("authorization")).toBe("Bearer secret");
+    // The API enforces X-API-Key (api/app/auth.py), not Authorization: Bearer (X-1).
+    expect(out.get("x-api-key")).toBe("secret");
+    expect(out.get("authorization")).toBeNull();
   });
 
-  it("omits auth when no key is configured", () => {
+  it("omits the API key header when no key is configured", () => {
     const out = filterForwardHeaders(new Headers({ "content-type": "text/plain" }));
-    expect(out.get("authorization")).toBeNull();
+    expect(out.get("x-api-key")).toBeNull();
     expect(out.get("content-type")).toBe("text/plain");
+  });
+
+  it("overwrites a client-supplied X-API-Key with the server key (no spoofing)", () => {
+    const out = filterForwardHeaders(new Headers({ "x-api-key": "attacker" }), "server");
+    expect(out.get("x-api-key")).toBe("server");
   });
 });
 

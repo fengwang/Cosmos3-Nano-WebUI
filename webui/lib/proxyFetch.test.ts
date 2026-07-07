@@ -44,7 +44,7 @@ describe("forward (BFF proxy Action)", () => {
       fetchImpl as unknown as typeof fetch,
     );
     const sent = new Headers(captured?.headers);
-    expect(sent.get("authorization")).toBe("Bearer s3cret");
+    expect(sent.get("x-api-key")).toBe("s3cret");
     expect(JSON.stringify([...res.headers])).not.toContain("s3cret");
     expect(await res.text()).not.toContain("s3cret");
   });

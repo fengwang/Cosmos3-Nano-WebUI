@@ -27,14 +27,16 @@ export function buildUpstreamUrl(base: string, segments: string[], search: strin
 
 /**
  * Headers to send upstream: drop hop-by-hop + host, and inject the server-side API
- * key (the browser never holds it). Returns a new Headers — caller's input untouched.
+ * key on the `X-API-Key` header the API enforces (api/app/auth.py) — the browser never
+ * holds it, and `set` overwrites any client-supplied value so it cannot be spoofed.
+ * Returns a new Headers — caller's input untouched.
  */
 export function filterForwardHeaders(incoming: Headers, apiKey?: string): Headers {
   const out = new Headers();
   incoming.forEach((value, key) => {
     if (!HOP_BY_HOP.has(key.toLowerCase())) out.set(key, value);
   });
-  if (apiKey) out.set("authorization", `Bearer ${apiKey}`);
+  if (apiKey) out.set("x-api-key", apiKey);
   return out;
 }
 
