@@ -24,6 +24,14 @@ session_contract:
       - docs/eval_seed_cases.md
       - docs/handoff.md
       - docs/release_checklist.md
+      # Amendment S8-A1 (owner-approved 2026-07-07, FA-2): scrub /workspace local
+      # absolute paths from prior-session docs (public cleanliness, INV-1).
+      - docs/session_2/**
+      - docs/session_3/**
+      - docs/session_4/**
+      # Amendment S8-A2 (owner-approved 2026-07-07, FA-3): patch the committed scanner
+      # to add the /workspace path class + .webm so the gate catches this class.
+      - tests/test_private_ref_scan.py
     forbidden_files:
       - runtime source files except owner-approved release fixes
       - model weight files

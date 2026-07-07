@@ -7,7 +7,7 @@ Conventions:
 
 ```bash
 SRC=<PRIVATE_SOURCE_REPO>   # owner-provided; real path redacted from public docs
-DST=/workspace/github.repo/Cosmos3-Nano-WebUI
+DST=/path/to/Cosmos3-Nano-WebUI
 # Session 3 private-reference pattern (fallback; $PRIVATE_REF_PATTERN unset):
 S3_PAT='10\.[0-9]+\.[0-9]+\.[0-9]+|/home/[^ ]+|/data/home_[^ ]+|/workspace/[^ ]+|-wfen|-dist|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|BEGIN [A-Z ]*PRIVATE KEY'  # + operator-supplied private repo/codename literals
 ```

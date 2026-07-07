@@ -42,7 +42,7 @@ list + defaults in `docs/model_setup.md`), e.g.:
 
 The deterministic cases above were re-run green on `session-8` for the release gate:
 `EV-MIG-SCRUB` / `-SCRUB-COMMAND-SANITY` / `-DOCS-SCRUB` (committed scanner + broad-scan
-human gate clean), `EV-MIG-PY-UNIT` (`pytest -m "not gpu"` = 485 passed), `EV-MIG-WEBUI-UNIT`
+human gate clean), `EV-MIG-PY-UNIT` (`pytest -m "not gpu"` = 486 passed; S8-A2 added 1 test), `EV-MIG-WEBUI-UNIT`
 (vitest 209), `EV-MIG-SCHEMA-SYNC` (in the pytest run), `EV-MIG-COMPOSE-RENDER` (fp8+nvfp4
 `config` exit 0 / 0-byte stderr). Evidence: `docs/session_8/outputs/deterministic_checks.md`.
 `EV-MIG-REPO-TREE`, `EV-MIG-IMPORT-COMPLETE`, `EV-MIG-VLLM-FORK`, `EV-MIG-HF-*`,

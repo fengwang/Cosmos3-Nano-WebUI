@@ -64,7 +64,7 @@ public or after the GPU session).
 - [ ] `.github/workflows/ci.yml` passes on the release commit (push/PR):
       Python (ruff + `pytest -m "not gpu"` incl. schema + scrub gates) and WebUI
       (schema sync + build + lint + typecheck + test). **At-publish** — nothing pushed;
-      all local equivalents green (S8 #2–#9: ruff 0, pytest 485, vitest 209).
+      all local equivalents green (S8 #2–#9: ruff 0, pytest 486, vitest 209).
 - [x] No secrets, CUDA, or self-hosted runner introduced (`permissions: contents: read`)
       (S5; re-read S8).
 

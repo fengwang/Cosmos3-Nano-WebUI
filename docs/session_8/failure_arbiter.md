@@ -1,62 +1,57 @@
 # Failure Arbiter - MIG-S8
 
-Classifications raised during the S8 release gate (sharded review). No product-code fix is
-applied without owner approval; out-of-radius fixes need a blast-radius amendment.
+Classifications raised during the S8 release gate (sharded review). Out-of-radius fixes were
+applied only under owner-approved blast-radius amendments (S8-A1, S8-A2). Local checkout paths
+are written here in a redacted `/workspace/…` form so this doc does not itself carry a literal
+local path (the same discipline the scrub enforces).
 
-## FA-1 — S8 check #15 abspath sub-scan was silently broken (TEST_BUG)
+## FA-1 — S8 check #15 abspath sub-scan was silently broken (TEST_BUG) — RESOLVED
 
-- **Failing command:** the `deterministic_checks.md` #15 "absolute non-placeholder path
-  scan": `... rg -nH "(/home/[a-z]|/Users/|/root/|/workspace/github\.repo/(?!Cosmos3-Nano-WebUI))" ... 2>/dev/null`.
-- **Symptom:** reported "clean", but a counterexample exists (`/workspace/github.repo/vllm-omni`
-  in `evidence_map.md:21`), surfaced by the security + tests reviewers.
-- **Root cause:** `rg` uses the Rust regex engine, which does **not** support look-around;
-  the `(?!Cosmos3-Nano-WebUI)` negative lookahead makes the pattern invalid, `rg` exits 2,
-  and `2>/dev/null` swallows the error → the loop produced no output → false "clean".
-- **Category:** **TEST_BUG** (the check contradicted reality by construction; not a product
-  defect). Not BUG (no product code involved), not ENVIRONMENT (deterministic mis-authoring),
-  not AMBIGUITY (the intent was clear).
-- **Allowed next action:** re-run a valid scan (no look-around; post-filter the sanctioned
-  `/path/to/` and the repo's own `Cosmos3-Nano-WebUI` self-path), record the exact commands +
-  exit codes, and reflect the true result in #15. Fix the in-radius leak it exposed.
-- **Forbidden next action:** editing product code; leaving #15 as an unreproducible prose
-  "clean". Both addressed.
+- **Failing command:** the `deterministic_checks.md` #15 "absolute non-placeholder path scan"
+  used an `rg` alternation that included a **negative look-around** on the workspace-path class,
+  run with `2>/dev/null`.
+- **Symptom:** reported "clean", but a counterexample existed (a `/workspace/…` local path in
+  `evidence_map.md:21`), surfaced by the security + tests reviewers.
+- **Root cause:** `rg` uses the Rust regex engine, which does **not** support look-around; the
+  look-around made the pattern invalid, `rg` exited 2, and `2>/dev/null` swallowed the error →
+  the loop produced no output → a false "clean".
+- **Category:** **TEST_BUG** (the check contradicted reality by construction; no product code).
+  Not BUG, not ENVIRONMENT (deterministic mis-authoring), not AMBIGUITY (intent was clear).
+- **Resolution:** #15 rewritten as #15a/#15b/#15c with exact commands + exit codes (no
+  look-around; post-filter the sanctioned `/path/to/`, the public `/home/runner`, and the repo
+  self-path). The corrected scan found the in-radius leak (fixed) and the out-of-radius set (FA-2).
 
-## FA-2 — `/workspace/…` local paths in OUT-OF-RADIUS historical docs (SPEC_GAP / blast-radius)
+## FA-2 — `/workspace/…` local paths in OUT-OF-RADIUS historical docs (SPEC_GAP) — RESOLVED via S8-A1
 
-- **Finding:** the ground-truth scan (valid regex) shows **24** `/workspace/github.repo/…`
-  occurrences in **8 out-of-radius files**: `docs/session_2/**` = 22 (the `vllm-omni` sibling
-  checkout — execution_contract 8, failure_arbiter 4, brainstorming 4, proposal 2, plan 2,
-  design 1, specs/session_evidence_handoff 1), and `docs/session_3/plan.md` + `docs/session_4/plan.md`
-  = 2 (this repo's own checkout `/workspace/github.repo/Cosmos3-Nano-WebUI`). These are tracked
-  public files that will ship at publish. (`/home/runner` in `.github`/docs is the public GitHub
-  Actions runner home, not private; `/data/home_<user>`-class user paths are **absent** from the tree.)
-- **Category:** **SPEC_GAP** — the S8 `blast_radius.allowed_files` does **not** include
-  `docs/session_{2,3,4}/**`, yet INV-1 / `project_contract.md` §6 forbid private absolute
-  paths / local-only artifact references in public docs. The release gate found a
-  public-cleanliness issue in files it is not authorized to edit.
-- **Sensitivity:** low — `/workspace/github.repo/...` exposes a local checkout layout, no
-  username/host/secret (contrast a real user-home mount of the scanner's `private_mount` class
-  — a `/data/home_<user>`-style path — which is **absent** from the tree).
-- **Allowed next action:** stop and route to the owner (below). Do **not** edit
-  `docs/session_{2,3,4}/**` without an owner-approved blast-radius amendment.
-- **Owner decision required (GO condition):**
-  - (a) approve a blast-radius amendment to scrub `/workspace/...` → a public phrasing across
-    the historical session docs (mechanical; re-verify after), **or**
-  - (b) accept `/workspace/...` as non-sensitive / non-blocking for beta (record the
-    interpretation; still recommend the scanner gap in FA-3 be closed).
-- **Recommendation:** (a) for a clean public release; the fix is trivial and removes the
-  class entirely.
+- **Finding:** the corrected scan showed **24** `/workspace/…` occurrences in **8 out-of-radius
+  files**: `docs/session_2/**` = 22 (the `vllm-omni` sibling checkout — execution_contract 8,
+  failure_arbiter 4, brainstorming 4, proposal 2, plan 2, design 1, specs/session_evidence_handoff
+  1), plus `docs/session_3/plan.md` + `docs/session_4/plan.md` = 2 (this repo's own checkout).
+  These are tracked public files that ship at publish. (`/home/runner` in `.github`/docs is the
+  public GitHub Actions runner home, not private; `/data/home_<user>`-class user paths are
+  **absent** from the tree.)
+- **Category:** **SPEC_GAP** — the base S8 `blast_radius.allowed_files` did **not** include
+  `docs/session_{2,3,4}/**`, yet INV-1 / `project_contract.md` §6 forbid local absolute paths in
+  public docs. The release gate found a public-cleanliness issue in files it could not edit.
+- **Sensitivity:** low — a `/workspace/…` checkout path exposes a local directory layout, no
+  username/host/secret (contrast the scanner's `private_mount` class — a `/data/home_<user>`-style
+  path — which is **absent** from the tree).
+- **Resolution:** owner approved amendment **S8-A1** (2026-07-07); the sibling-checkout paths were
+  rewritten repo-relative (`vllm-omni`) and this repo's own path to the sanctioned
+  `/path/to/Cosmos3-Nano-WebUI` placeholder across the 8 files. Re-scan clean. The regex-doc lines
+  (`/workspace/[^/]+`) in `session_3/scrub_report.md`/`plan.md` are intentionally left — `[` is
+  not a path char, so they are not real paths and do not match the scanner.
 
-## FA-3 — committed scanner misses the `/workspace/` path class and `.webm` (SPEC_GAP / product code)
+## FA-3 — committed scanner missed the `/workspace/` path class and `.webm` (SPEC_GAP) — RESOLVED via S8-A2
 
-- **Finding:** `tests/test_private_ref_scan.py` `PRIVATE_PATH_PATTERNS` covers `/home/`,
-  `/Users/`, `/mnt/`, `/data/home` but **not** `/workspace/`; `WEIGHT_MEDIA_EXTS` omits
-  `.webm`. So the committed gate (#12) is clean by construction for these classes.
-- **Category:** **SPEC_GAP** in a product-code test — out of the S8 docs-only blast radius.
-- **Impact:** currently no active miss beyond FA-2 (0 `.webm` files exist; the only
-  `/workspace/` leaks are FA-1/FA-2, now handled in-radius + routed). But the automated gate
-  will not catch a future `/workspace/` or `.webm` leak.
-- **Allowed next action:** record a recommendation + eval seed for the owner to add a
-  `/workspace/[A-Za-z0-9._/-]+` pattern (post-filtering the repo self-path) and `.webm` to the
-  scanner. Do **not** edit the scanner this session (product code).
-- **Forbidden next action:** editing `tests/test_private_ref_scan.py` without owner approval.
+- **Finding:** `tests/test_private_ref_scan.py` `PRIVATE_PATH_PATTERNS` covered `/home/`,
+  `/Users/`, `/mnt/`, and the `/data/home…` user-mount class but **not** `/workspace/`;
+  `WEIGHT_MEDIA_EXTS` omitted `.webm`. So the committed gate (#12) was clean by construction for
+  these classes — the blind spot that let FA-1/FA-2 through.
+- **Category:** **SPEC_GAP** in a product-code test — out of the base S8 docs-only blast radius.
+- **Resolution:** owner approved amendment **S8-A2** (2026-07-07); added a `workspace_path`
+  pattern (`/workspace/[A-Za-z0-9._/-]+`) + `.webm` to the scanner, with RED-before-GREEN unit
+  tests (`test_private_paths_caught_with_correct_rule` asserts `workspace_path`;
+  `test_workspace_ellipsis_form_not_flagged` asserts the `/workspace/…` and `/workspace/[^/]+`
+  doc forms are **not** flagged). The scanner now catches this class going forward. Eval seed:
+  `docs/eval_corpus/mig_s8_scanner_abspath_blindspot.md`.

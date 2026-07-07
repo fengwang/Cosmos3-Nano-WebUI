@@ -34,7 +34,7 @@ WebUI repo:
 
 Public vLLM-Omni fork:
 
-- Local checkout: `/workspace/github.repo/vllm-omni`
+- Local checkout: `vllm-omni`
 - Remote: `git@github.com:fengwang/vllm-omni.git`
 - Branch: `main`
 - State: clean at startup
@@ -57,7 +57,7 @@ Baseline checks:
 - Fork `rtk python -m compileall vllm_omni`: passed.
 - Fork targeted pytest command: failed before collection because the global
   Python environment lacks `aenum`, which is declared in
-  `/workspace/github.repo/vllm-omni/requirements/common.txt`.
+  `vllm-omni/requirements/common.txt`.
 
 ## Clarifications
 
@@ -68,7 +68,7 @@ Baseline checks:
 3. Public names: owner selected branch `mig-s2-cosmos3-quant-pin` and tag
    `cosmos3-nano-webui-mig-s2`.
 4. Test environment: owner selected an isolated venv at
-   `/workspace/github.repo/vllm-omni/.venv-mig-s2`.
+   `vllm-omni/.venv-mig-s2`.
 5. History policy: owner selected preserving the 8 patch commits.
 
 ## Approaches Considered
@@ -113,7 +113,7 @@ Decision: fallback only.
 
 ## Approved Design
 
-Use `/workspace/github.repo/vllm-omni` as the public fork checkout. Create branch
+Use `vllm-omni` as the public fork checkout. Create branch
 `mig-s2-cosmos3-quant-pin` from `origin/main` at
 `d4a869fe5e2edd49af48026051948c8d1018d727`. Cherry-pick the eight authorized
 local commits in order, preserving commit boundaries while omitting private

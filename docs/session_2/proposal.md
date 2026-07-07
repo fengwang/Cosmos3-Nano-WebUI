@@ -13,7 +13,7 @@ patch was rebased and checked against the current fork base.
 
 ## Agreed Changes
 
-- Use `/workspace/github.repo/vllm-omni` as the public fork checkout.
+- Use `vllm-omni` as the public fork checkout.
 - Use the owner-authorized local historical checkout and eight-commit range as
   the patch source, without recording private source path, branch, or source
   hashes in public docs.
@@ -21,7 +21,7 @@ patch was rebased and checked against the current fork base.
   at `d4a869fe5e2edd49af48026051948c8d1018d727`.
 - Resolve conflicts only in Cosmos3, checkpoint adapter, quantization, and
   matching test surfaces.
-- Use `/workspace/github.repo/vllm-omni/.venv-mig-s2` for targeted deterministic
+- Use `vllm-omni/.venv-mig-s2` for targeted deterministic
   tests.
 - Publish public branch `mig-s2-cosmos3-quant-pin` and tag
   `cosmos3-nano-webui-mig-s2`.

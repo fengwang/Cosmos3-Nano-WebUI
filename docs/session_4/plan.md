@@ -5,7 +5,7 @@ Input: `tasks.md` (what), `design.md` (how), `specs/*.md` (scenarios → asserti
 
 Verification environment: host `python3` with `huggingface_hub` 1.21.0 (probing tool
 only; the runtime's 3.12 pin is not required for torch-free metadata/header probes).
-All commands run from the repo root `/workspace/github.repo/Cosmos3-Nano-WebUI`.
+All commands run from the repo root `/path/to/Cosmos3-Nano-WebUI`.
 
 ## Task 1 — Verification probe (TDD)
 

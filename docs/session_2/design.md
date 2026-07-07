@@ -8,7 +8,7 @@ Risk: high
 
 The public WebUI repo is a seed migration repo and does not contain vLLM-Omni
 source. Session 2 therefore operates on the external public fork checkout at
-`/workspace/github.repo/vllm-omni`, while recording evidence in this repo. The
+`vllm-omni`, while recording evidence in this repo. The
 authorized Cosmos3 patch line lives in a private/local historical checkout and
 must be replayed into the public fork.
 

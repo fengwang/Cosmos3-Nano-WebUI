@@ -17,7 +17,7 @@ rtk git remote -v
 rtk git log --oneline -n 20
 ```
 
-4. In `/workspace/github.repo/vllm-omni`, run:
+4. In `vllm-omni`, run:
 
 ```bash
 rtk git status --short --branch
@@ -33,7 +33,7 @@ rtk python -m compileall vllm_omni
 
 Micro-steps:
 
-1. In `/workspace/github.repo/vllm-omni`, fetch the public fork:
+1. In `vllm-omni`, fetch the public fork:
 
 ```bash
 rtk git fetch origin

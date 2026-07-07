@@ -71,7 +71,7 @@ EXCLUDE_SUFFIXES = frozenset({".tsbuildinfo"})
 
 # Model-weight / generated-media file extensions (S1 checklist set). Detected by the
 # committed file's extension, not by text mentions of the extension.
-WEIGHT_MEDIA_EXTS = frozenset({".safetensors", ".pt", ".pth", ".ckpt", ".mp4", ".mov", ".avi"})
+WEIGHT_MEDIA_EXTS = frozenset({".safetensors", ".pt", ".pth", ".ckpt", ".mp4", ".mov", ".avi", ".webm"})
 
 # Allowed placeholder path prefixes (contract-sanctioned examples).
 ALLOWED_PLACEHOLDER_PREFIXES = ("/path/to/",)
@@ -90,13 +90,18 @@ SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 # Private absolute-path patterns. Each requires a real name component after the
 # root, which (like `/home/[a-z]` failing to match because `[` is not a path char)
 # lets these skip the *documented* scrub patterns in prior sessions' scan docs
-# (`/data/home'`, `/data/home_[^ ]+`) while still catching a real leaked path.
-# `/home/runner` is the GitHub Actions runner home and is not private.
+# (`/data/home'`, `/data/home_[^ ]+`, `/workspace/[^/]+`) while still catching a real
+# leaked path. `/home/runner` is the GitHub Actions runner home and is not private.
+# `workspace_path` catches the dev-container checkout root (`/workspace/<name>`), added
+# in MIG-S8 (S8-A2, FA-3): its absence was a scan blind spot that let local checkout
+# paths ship. Docs that must name the class use a `/workspace/…` (ellipsis) form, which
+# does not match because `…` is not a path char.
 PRIVATE_PATH_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("home_path", re.compile(r"/home/(?!runner\b)[A-Za-z0-9._-]+")),
     ("users_path", re.compile(r"/Users/[A-Za-z0-9._-]+")),
     ("mnt_path", re.compile(r"/mnt/[A-Za-z0-9._-]+")),
     ("private_mount", re.compile(r"/data/home[_/][A-Za-z0-9][A-Za-z0-9._/-]*")),
+    ("workspace_path", re.compile(r"/workspace/[A-Za-z0-9._/-]+")),
 )
 
 ALL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (*SECRET_PATTERNS, *PRIVATE_PATH_PATTERNS)
@@ -206,6 +211,14 @@ def test_private_paths_caught_with_correct_rule():
     assert "users_path" in _rules(scan_text("x", "/Users/" + "bob/dev"))
     assert "mnt_path" in _rules(scan_text("x", "/mnt/" + "share/secret"))
     assert "private_mount" in _rules(scan_text("x", "/data/home" + "_someone/models"))
+    assert "workspace_path" in _rules(scan_text("x", "/workspace/" + "github.repo/vllm-omni"))
+
+
+def test_workspace_ellipsis_form_not_flagged():
+    # Docs may name the class with an ellipsis (…) without tripping the scanner.
+    assert scan_text("x", "the /workspace/… checkout") == []
+    # A regex-doc form (`/workspace/[^/]+`) also skips: `[` is not a path char.
+    assert scan_text("x", "pattern /workspace/[^/]+ private") == []
 
 
 def test_runner_home_not_flagged():
@@ -215,6 +228,7 @@ def test_runner_home_not_flagged():
 def test_weight_media_file_detected_by_extension():
     assert is_weight_media("models/unet.safetensors")
     assert is_weight_media("clips/demo.mp4")
+    assert is_weight_media("clips/demo.webm")
     assert not is_weight_media("misc/logo.png")
     assert not is_weight_media("docs/notes.md")
 

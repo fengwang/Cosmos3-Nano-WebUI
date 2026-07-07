@@ -56,5 +56,5 @@ for those commands are environment/scope evidence, not product failures.
 WHEN `rtk python -m compileall vllm_omni` is run from the WebUI repo and
 `vllm_omni` does not exist
 THEN the failure SHALL be classified as ENVIRONMENT/scope
-AND the same check SHALL be run from `/workspace/github.repo/vllm-omni`.
+AND the same check SHALL be run from `vllm-omni`.
 

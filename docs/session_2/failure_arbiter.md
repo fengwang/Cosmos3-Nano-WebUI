@@ -25,7 +25,7 @@ Evidence:
 - The WebUI seed repo does not contain `vllm_omni`.
 - Session 2 contract scopes fork source checks to the external vLLM-Omni fork
   repository.
-- The same command run from `/workspace/github.repo/vllm-omni` passed at baseline.
+- The same command run from `vllm-omni` passed at baseline.
 
 Why other categories do not fit:
 
@@ -37,7 +37,7 @@ Why other categories do not fit:
 
 Allowed next action:
 
-- Run fork source checks from `/workspace/github.repo/vllm-omni`.
+- Run fork source checks from `vllm-omni`.
 
 Forbidden next action:
 
@@ -74,7 +74,7 @@ Why other categories do not fit:
 
 Allowed next action:
 
-- Run targeted pytest from `/workspace/github.repo/vllm-omni` after patch import.
+- Run targeted pytest from `vllm-omni` after patch import.
 
 Forbidden next action:
 
@@ -99,7 +99,7 @@ Category: ENVIRONMENT
 Evidence:
 
 - `vllm_omni/patch.py` imports `aenum`.
-- `/workspace/github.repo/vllm-omni/requirements/common.txt` declares
+- `vllm-omni/requirements/common.txt` declares
   `aenum==3.1.16`.
 - The global Python environment does not have that dependency installed.
 

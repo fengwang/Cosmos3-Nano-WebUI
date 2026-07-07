@@ -9,14 +9,14 @@ Status: Active before implementation
 
 External vLLM-Omni fork checkout:
 
-- `/workspace/github.repo/vllm-omni/vllm_omni/diffusion/model_loader/checkpoint_adapters/**`
-- `/workspace/github.repo/vllm-omni/vllm_omni/diffusion/model_loader/diffusers_loader.py`
-- `/workspace/github.repo/vllm-omni/vllm_omni/diffusion/models/cosmos3/**`
-- `/workspace/github.repo/vllm-omni/vllm_omni/quantization/**`
-- `/workspace/github.repo/vllm-omni/tests/diffusion/model_loader/**`
-- `/workspace/github.repo/vllm-omni/tests/diffusion/models/cosmos3/**`
-- `/workspace/github.repo/vllm-omni/tests/diffusion/quantization/**`
-- `/workspace/github.repo/vllm-omni/tests/model_executor/quantization/**` only if required to preserve the selected patch's test taxonomy.
+- `vllm-omni/vllm_omni/diffusion/model_loader/checkpoint_adapters/**`
+- `vllm-omni/vllm_omni/diffusion/model_loader/diffusers_loader.py`
+- `vllm-omni/vllm_omni/diffusion/models/cosmos3/**`
+- `vllm-omni/vllm_omni/quantization/**`
+- `vllm-omni/tests/diffusion/model_loader/**`
+- `vllm-omni/tests/diffusion/models/cosmos3/**`
+- `vllm-omni/tests/diffusion/quantization/**`
+- `vllm-omni/tests/model_executor/quantization/**` only if required to preserve the selected patch's test taxonomy.
 
 WebUI repo:
 
