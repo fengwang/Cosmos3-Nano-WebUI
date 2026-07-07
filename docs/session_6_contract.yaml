@@ -28,6 +28,12 @@ session_contract:
       - docs/evidence_map.md
       - docs/risk_register.md
       - docs/eval_seed_cases.md
+      # MIG-S6 amendment (owner review; mirrors S4 FA-4 / S5 D10): the Session End
+      # Protocol requires writing the handoff, eval seeds, and this contract note,
+      # which the literal list above omits.
+      - docs/handoff.md
+      - docs/eval_corpus/**
+      - docs/session_6_contract.yaml
     forbidden_files:
       - model weight files
       - generated media files
