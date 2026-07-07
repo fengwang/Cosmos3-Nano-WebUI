@@ -75,6 +75,9 @@ public or after the GPU session).
 - [x] `api` (lean) and `webui` images build from public inputs (S6).
 - [ ] `deploy/vllm-omni.Dockerfile` builds from the pinned fork commit
       (`697035018b70…`) — **manual gate (heavy/CUDA), deferred to the GPU session**.
+      Command: `docker compose -f deploy/docker-compose.fp8.yml build vllm-omni`
+      (image `cosmos3-nano-vllm-omni:local`; or
+      `docker build -f deploy/vllm-omni.Dockerfile -t cosmos3-nano-vllm-omni:local .`).
 - [ ] Confirm the vLLM-Omni image's real serve entrypoint (the `CMD` is a best-effort
       guess overridable via Compose `command:`) — **manual gate, deferred**.
 
@@ -82,7 +85,9 @@ public or after the GPU session).
 
 Record for each: hardware, driver/CUDA, checkpoint repo + revision, vLLM-Omni
 commit, request shape, artifact metadata, pass/fail (`EV-MIG-GPU-*`). A valid run MUST use
-vLLM-Omni `697035018b70…` + FP8 `4e181f99…` / NVFP4 `b5c9332e…`.
+vLLM-Omni `697035018b70…` + FP8 `4e181f99…` / NVFP4 `b5c9332e…` + BF16 base
+`nvidia/Cosmos3-Nano` @ `fea6e03a…`. GPU marker run:
+`COSMOS3_ENABLE_GPU_TESTS=1 uv run pytest -m gpu`; then the per-mode `EV-MIG-GPU-*` smokes.
 
 - [ ] `t2v`, `t2v_audio`, `i2v`, `t2i` generation on the served checkpoint.
 - [ ] `reasoning` on the BF16 base.

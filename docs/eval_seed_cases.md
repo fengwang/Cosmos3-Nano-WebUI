@@ -58,8 +58,9 @@ marks a case beta-limited.
 post-publish GPU session. A valid run MUST use vLLM-Omni commit
 `697035018b70cef76b974a909d23371a9984c3f2` and checkpoint revisions FP8
 `4e181f996abf03f3425298ef692e6e5e56fd46a4` / NVFP4
-`b5c9332efbaefa72c99890b1b1150da12ca9256c` (otherwise the evidence is invalid); see
-`docs/session_8/outputs/gate_record.md`.
+`b5c9332efbaefa72c99890b1b1150da12ca9256c`, and (for reasoning + action/forward_dynamics)
+BF16 base `nvidia/Cosmos3-Nano` @ `fea6e03ac3d7884b4105ed8ee79fc480fca70965` (otherwise the
+evidence is invalid); see `docs/session_8/outputs/gate_record.md`.
 
 | ID | Purpose | Checkpoint | Request shape | Expected properties | Gate |
 |---|---|---|---|---|---|

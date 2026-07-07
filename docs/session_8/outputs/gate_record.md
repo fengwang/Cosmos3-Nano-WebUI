@@ -9,7 +9,7 @@ Date: 2026-07-07 · Branch: `session-8` (not pushed; `origin/main` = seed `c3983
 | `GATE-MIG-S1-SCOPE` | **PASS** | `docs/session_1/{inventory,import_manifest,exclusion_manifest,scrub_checklist}.md`; baseline scans clean (`evidence_map.md`) |
 | `GATE-MIG-S2-VLLM` | **PASS** | Fork branch/tag `cosmos3-nano-webui-mig-s2` = `697035018b70cef76b974a909d23371a9984c3f2` (public `git ls-remote`); S2 targeted tests 118 passed |
 | `GATE-MIG-S3-IMPORT` | **PASS** | 296 files curated; `compileall api`=0, torch-free `import app.main`=0, `pytest -m "not gpu"` = 485 passed; private-ref/weight/legacy scans clean |
-| `GATE-MIG-S4-HF` | **PASS** (metadata verified; drift documented) | Revisions FP8 `4e181f99…` / NVFP4 `b5c9332e…`; license `openmdw-1.0`; self-contained; local==public sha; drift D1/D2/D4 in `docs/session_4/drift_report.md` |
+| `GATE-MIG-S4-HF` | **PASS** (metadata verified; drift documented) | Revisions FP8 `4e181f99…` / NVFP4 `b5c9332e…`; license `openmdw-1.0`; self-contained; local==public sha; drift D1–D4 in `docs/session_4/drift_report.md` |
 | `GATE-MIG-S5-CI` | **PASS** (config verified + locally green; hosted run at-publish) | `.github/workflows/ci.yml`; `deterministic_checks.md` #2–#9 (ruff 0, pytest 485, vitest 209, build/lint/typecheck green); schema-sync gates proven to fail on drift |
 | `GATE-MIG-S6-DOCKER` | **PASS** (render + lean builds; vllm-omni image = S8 gate) | `deterministic_checks.md` #10/#11 (compose fp8/nvfp4 exit 0, 0-byte stderr); api+webui `docker build` exit 0; external `:ro` mounts, loopback default |
 | `GATE-MIG-S7-PUBLIC` | **PASS** | `README.md` (190 lines, evidence-qualified) + `LICENSE`/`SECURITY.md`/`CONTRIBUTING.md`/`CODE_OF_CONDUCT.md` + templates + `release_checklist.md`; 10 README links resolve; X-1 fixed (`INV-9`) |
@@ -24,7 +24,7 @@ pins/revisions or the evidence is invalid:
 - vLLM-Omni fork commit: `697035018b70cef76b974a909d23371a9984c3f2`
 - FP8 checkpoint `wfen/Cosmos3-Nano-FP8-Blockwise` @ `4e181f996abf03f3425298ef692e6e5e56fd46a4`
 - NVFP4 checkpoint `wfen/Cosmos3-Nano-NVFP4-Blockwise` @ `b5c9332efbaefa72c99890b1b1150da12ca9256c`
-- BF16 base `nvidia/Cosmos3-Nano` (reasoning + action/forward_dynamics)
+- BF16 base `nvidia/Cosmos3-Nano` @ `fea6e03ac3d7884b4105ed8ee79fc480fca70965` (reasoning + action/forward_dynamics)
 
 Cases deferred: `EV-MIG-GPU-FP8-T2V`, `-FP8-T2V-AUDIO`, `-FP8-I2V`, `-FP8-T2I`, `-FP8-FD`,
 `-NVFP4-SURFACE`, `-REASONING`, `-JOBS-SSE`, `-ARTIFACTS` (see `eval_seed_cases.md`).
@@ -34,6 +34,15 @@ commit, request shape, artifact metadata, pass/fail (`NFR-6`).
 **Drift D1** (open beta limitation, routed to the GPU session): the in-process
 `diffusers_oracle` cannot load+verify either current public checkpoint as-is; the default
 engine is the `vllm_omni` container path, whose real serve compatibility is unverified.
+
+**Drift D3** (external, owner follow-up): the public HF checkpoint repos ship dev-scratch
+(`_s2_*`) / provenance / loader-script files (`docs/session_4/drift_report.md` D3; R-01).
+This is external to this repo (a Hugging-Face-side cleanup), not a tracked-file leak here —
+recorded so it is not lost from the release bundle.
+
+**Literal deferred commands** (for the GPU session): the vLLM-Omni image build is in
+`docs/release_checklist.md` §6; the GPU marker run (`COSMOS3_ENABLE_GPU_TESTS=1 pytest -m gpu`)
+and the `EV-MIG-GPU-*` smokes are in §7.
 
 ## Recommended verdict and rule
 
@@ -49,7 +58,7 @@ GO rule (D-6) — all clauses hold, each backed by evidence:
 | Compose fp8+nvfp4 render clean | ✅ | `deterministic_checks.md` #10/#11 |
 | `LICENSE` + hygiene present & correct | ✅ | `GATE-MIG-S7-PUBLIC`; three-way license separation |
 | Every runtime claim evidence-qualified | ✅ | `evidence_review.md`; README per-mode GPU-unverified (S7) |
-| No unowned release-blocking risk | ✅ | reconciled `risk_register.md` (R-05/R-08/R-13/R-16 carry owner beta-limited dispositions) |
+| No unowned release-blocking risk | ✅ | reconciled `risk_register.md`: R-01 (mitigated via S8 re-scan), R-05/R-08/R-13/R-16 (owner beta-limited dispositions); no risk left open+unowned |
 | GPU surface marked beta-limited | ✅ | this record + README + `acceptance_matrix.md` FR-9/NFR-6 |
 | Every PRD MUST covered | ✅ | `acceptance_matrix.md` (16 MUSTs; 0 NO-GO) |
 

@@ -24,7 +24,9 @@ the JUnit XML are authoritative**. The pytest count is taken from JUnit
 | 12 | Private-ref scan | `uv run python tests/test_private_ref_scan.py` | **clean (0 findings)**; `SCAN_ROOTS = api, webui, tests, schemas, docs, .github` (covers `docs/session_8/**`) | PASS |
 | 13 | Weight/media (tracked) | `git ls-files \| rg -i '\.(safetensors\|pt\|pth\|ckpt\|mp4\|mov\|avi\|webm)$'` | empty (no tracked weight/media) | PASS |
 | 14 | Weight/media (tree) | `rg --files \| rg -i '\.(safetensors\|pt\|pth\|ckpt\|mp4\|mov\|avi)$'` | empty | PASS |
-| 15 | S8 broad-scan human gate (S5 FA-3) | lockfile `://user:pass@` scan; absolute non-placeholder path scan; private host/codename scan over tracked tree | clean — only `feng.wang1@hexagon.com` in `SECURITY.md`/`CODE_OF_CONDUCT.md`, the **intended public maintainer contact** (R-01), not a private reference | PASS |
+| 15a | S8 lockfile URL credential scan | `rg -n "://[^/[:space:]]+:[^/[:space:]]+@" uv.lock webui/pnpm-lock.yaml` | **exit 1** (no `user:pass@` in any lockfile URL) | PASS |
+| 15b | S8 absolute local-path scan (corrected) | `git ls-files \| while read f; do rg -noH "/(home\|Users\|root\|workspace\|mnt\|data/home)/[A-Za-z0-9._/-]+" "$f"; done`, post-filtering `/path/to/`, `/home/runner` (public GH runner), and the repo self-path | **In-radius surface CLEAN** after fixing `evidence_map.md:21` (`/workspace/github.repo/vllm-omni` → public phrasing). **24 out-of-radius** hits in `docs/session_{2,3,4}/**` routed to owner (FA-2) | PASS (in-radius) / FA-2 (out-of-radius) |
+| 15c | S8 private host/codename scan | `rg -niH "\b(internal\|corp\|intranet)\.[a-z]\|\.local\b\|hexagon\.com"` over tracked tree | **exit 1** besides the **intended public** `feng.wang1@hexagon.com` in `SECURITY.md`/`CODE_OF_CONDUCT.md` (R-01) | PASS |
 
 ## Checks not run (recorded with reason)
 
@@ -39,7 +41,16 @@ the JUnit XML are authoritative**. The pytest count is taken from JUnit
 
 - No runtime source, schema, or dependency pin was edited; the checks are read-only /
   render-only. `uv.lock` and `pnpm-lock.yaml` are unchanged (frozen installs; `INV-10`).
-- No deterministic check failed, so the Failure Arbiter was not invoked for a check failure
-  this session (see `failure_arbiter.md` for any classification that arises during review).
+- All 14 numbered CPU checks (#1–#14) passed. During sharded review, the original #15
+  "absolute non-placeholder path scan" was found **silently broken** — it used an `rg`
+  negative look-around `(?!Cosmos3-Nano-WebUI)`, unsupported by `rg`'s Rust regex engine, so
+  `rg` exited 2 and `2>/dev/null` swallowed the error → false "clean" (classified **TEST_BUG**,
+  `failure_arbiter.md` FA-1). Corrected above (#15a/#15b/#15c with exact commands + exit codes).
+  The corrected scan surfaced a real `/workspace/…` local path in `evidence_map.md:21`
+  (**fixed in-radius**) and 24 out-of-radius hits (**FA-2**, routed to owner). No other
+  deterministic check failed.
+- The committed scanner `tests/test_private_ref_scan.py` (#12) does not include a `/workspace/`
+  pattern class or `.webm` (FA-3, product-code recommendation for the owner) — it remains clean
+  by its current patterns; the manual #15b/#15c gates cover the residual classes this session.
 - Counts match the `MIG-S7` baseline (pytest 485, vitest 209), confirming no regression from
   the S7 close-out to the S8 release gate.
