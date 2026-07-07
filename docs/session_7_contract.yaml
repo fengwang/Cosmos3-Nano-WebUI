@@ -35,6 +35,7 @@ session_contract:
       - webui/lib/proxyFetch.test.ts # X-1 regression tests
       - docs/handoff.md             # Session End Protocol
       - docs/eval_corpus/**         # Eval Harvest
+      - docs/eval_seed_cases.md     # Eval Harvest (index rows for the S7 seeds)
       - docs/session_7_contract.yaml # this amendment
       - .env.example                # S7-A2: stale X-1 comment (see amendments)
     forbidden_files:
@@ -99,7 +100,7 @@ session_contract:
         - webui/lib/proxy.ts, webui/lib/proxy.test.ts, webui/lib/proxyFetch.test.ts
         - .gitignore
         - CODE_OF_CONDUCT.md
-        - docs/handoff.md, docs/eval_corpus/**, docs/session_7_contract.yaml
+        - docs/handoff.md, docs/eval_corpus/**, docs/eval_seed_cases.md, docs/session_7_contract.yaml
       rationale: >
         X-1: the WebUI BFF sent `Authorization: Bearer <key>` while the API enforces
         `X-API-Key`, so enabling COSMOS3_API_KEY broke the WebUI->API proxy (prior
