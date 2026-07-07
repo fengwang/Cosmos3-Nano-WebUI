@@ -1,0 +1,59 @@
+# Shared base for the FP8/NVFP4 local-build stacks (MIG-S6). Not used directly — the
+# fp8/nvfp4 files `include:` it and add the per-stack checkpoint mount + label.
+# Invoke as `docker compose -f deploy/docker-compose.fp8.yml <cmd>` (project directory
+# = deploy/), so `..` is the repo root (build context) and `../models` is <repo>/models.
+services:
+  webui:
+    build:
+      context: ..
+      dockerfile: deploy/webui.Dockerfile
+    image: cosmos3-nano-webui:local
+    environment:
+      API_INTERNAL_URL: http://api:8000        # server-side BFF target (service DNS)
+      COSMOS3_API_KEY: ${COSMOS3_API_KEY:-}
+    ports:
+      - "${WEBUI_PORT:-3000}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    image: cosmos3-nano-api:local
+    environment:
+      COSMOS3_GEN_ENGINE: ${COSMOS3_GEN_ENGINE:-vllm_omni}
+      COSMOS3_VLLM_OMNI_URL: http://vllm-omni:8000            # generation container URL
+      COSMOS3_GEN_CONTAINER: cosmos3-nano-webui-vllm-omni     # container it starts/stops
+      COSMOS3_CHECKPOINT_LABEL: ${COSMOS3_CHECKPOINT_LABEL:-fp8}
+      COSMOS3_API_KEY: ${COSMOS3_API_KEY:-}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # Confined docker-socket privilege so DockerCliController can start/stop the
+      # generation container (R-06). Fixed-verb, operator-config-name controller only.
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    # No `depends_on` health condition on vllm-omni: the api orchestrator owns its
+    # lifecycle (docker start on acquire, stop on evict); cold-start readiness is
+    # governed by COSMOS3_PLANE_READY_TIMEOUT, not by Compose (design D-7).
+
+  vllm-omni:
+    build:
+      context: ..
+      dockerfile: deploy/vllm-omni.Dockerfile
+    image: cosmos3-nano-vllm-omni:local
+    container_name: cosmos3-nano-webui-vllm-omni   # fixed name the api controls by
+    environment:
+      COSMOS3_MODEL_DIR: ${COSMOS3_MODEL_DIR:-/models/checkpoint}   # in-container mount target
+    restart: "no"                                   # orchestrator owns start/stop
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # The checkpoint bind-mount is added by the per-stack file (fp8 XOR nvfp4) so there
+    # is exactly one source per target (no list-merge duplication).

@@ -1,0 +1,15 @@
+# FP8 local-build stack (MIG-S6). Renders standalone under a single -f (includes the base).
+#   docker compose -f deploy/docker-compose.fp8.yml config
+#   make up-fp8
+include:
+  - docker-compose.base.yml
+
+services:
+  api:
+    environment:
+      COSMOS3_CHECKPOINT_LABEL: fp8
+  vllm-omni:
+    volumes:
+      # Operator-supplied FP8 checkpoint (download first — see .env.example), read-only.
+      # Default is <repo>/models/... (../ is relative to the deploy/ project dir).
+      - ${COSMOS3_FP8_DIR:-../models/Cosmos3-Nano-FP8-Blockwise}:/models/checkpoint:ro
