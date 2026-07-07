@@ -1,6 +1,37 @@
+# ── Local-only project files (retained from the seed) ──
 references/
 AGENTS.md
 CLAUDE.md
 ENVIRONMENTS.md
 REVIEW.md
 docs/agent_workflow/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.benchmarks/
+
+# ── Node / Next (webui/ also has its own .gitignore) ──
+node_modules/
+.next/
+*.tsbuildinfo
+
+# ── Build output ──
+dist/
+build/
+
+# ── Model weights & generated media (INV-2) — misc/logo.png stays tracked (.png) ──
+models/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.mp4
+*.webm
+
+# ── Local env overrides (never commit real secrets; .env.example is tracked) ──
+.env
