@@ -13,7 +13,7 @@ Date: 2026-07-07 · Branch: `session-8` (not pushed; `origin/main` = seed `c3983
 | `GATE-MIG-S5-CI` | **PASS** (config verified + locally green; hosted run at-publish) | `.github/workflows/ci.yml`; `deterministic_checks.md` #2–#9 (ruff 0, pytest 486, vitest 209, build/lint/typecheck green); schema-sync gates proven to fail on drift |
 | `GATE-MIG-S6-DOCKER` | **PASS** (render + lean builds; vllm-omni image = S8 gate) | `deterministic_checks.md` #10/#11 (compose fp8/nvfp4 exit 0, 0-byte stderr); api+webui `docker build` exit 0; external `:ro` mounts, loopback default |
 | `GATE-MIG-S7-PUBLIC` | **PASS** | `README.md` (190 lines, evidence-qualified) + `LICENSE`/`SECURITY.md`/`CONTRIBUTING.md`/`CODE_OF_CONDUCT.md` + templates + `release_checklist.md`; 10 README links resolve; X-1 fixed (`INV-9`) |
-| `GATE-MIG-S8-BETA` | **RECOMMENDED: GO (public beta / research preview)** — advisory, **owner ratifies** | This session: `acceptance_matrix.md` (14 PASS / 2 BETA-LIMITED / 0 NO-GO), `deterministic_checks.md` (all green), `evidence_review.md`, reconciled risk register (no unowned blocker) |
+| `GATE-MIG-S8-BETA` | **OWNER GO — public beta / research preview (ratified 2026-07-07)** | This session: `acceptance_matrix.md` (14 PASS / 2 BETA-LIMITED / 0 NO-GO), `deterministic_checks.md` (all green), `evidence_review.md`, reconciled risk register (no unowned blocker); adversarial verifier PASS. Owner ratified the recommended GO. |
 
 ## Manual GPU gate status (deferred — owner decision 1)
 
@@ -46,8 +46,10 @@ and the `EV-MIG-GPU-*` smokes are in §7.
 
 ## Recommended verdict and rule
 
-**Recommendation: GO for public beta / research preview — advisory; the owner records the
-binding GO/NO-GO.**
+**Recommendation: GO for public beta / research preview.**
+**OWNER DECISION (2026-07-07): GO — ratified.** The recommendation was accepted; the beta
+ships as a research preview with the GPU surface beta-limited (below). The owner did not take
+the "GPU-evidence-before-exposure" NO-GO lever.
 
 GO rule (D-6) — all clauses hold, each backed by evidence:
 

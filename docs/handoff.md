@@ -37,14 +37,15 @@
   - All GPU inference (`EV-MIG-GPU-*`) + the vLLM-Omni image build — deferred manual gate
     (owner decision; `INV-8`). GitHub-hosted CI run — at-publish (nothing pushed). Live
     `git ls-remote`/HF revision resolution — network (pins internally consistent).
-- Current status: **`GATE-MIG-S8-BETA` is ready for owner ratification with a recommended GO
-  (public beta / research preview).** Every PRD MUST is covered (14 PASS / 2 BETA-LIMITED /
-  0 NO-GO), claims tie to public evidence, no unowned release-blocking risk, GPU surface
-  honestly beta-limited.
+- Current status: **`GATE-MIG-S8-BETA` = OWNER GO (ratified 2026-07-07)** — public beta /
+  research preview. Every PRD MUST is covered (14 PASS / 2 BETA-LIMITED / 0 NO-GO), claims tie
+  to public evidence, no unowned release-blocking risk, GPU surface beta-limited. GO is
+  conditional on the standing GPU gate + at-publish items (below); the owner did not take the
+  "GPU-evidence-before-exposure" NO-GO lever.
 
-## Recommended verdict (owner ratifies)
+## Verdict — OWNER GO (ratified 2026-07-07)
 
-**GO for public beta / research preview** — advisory; the owner records the binding decision.
+**GO for public beta / research preview** — owner-ratified 2026-07-07 (recommended GO accepted).
 GO rule met on all 8 clauses (`gate_record.md`): scrub clean ∧ CPU checks green ∧ compose
 renders ∧ license/hygiene present ∧ every runtime claim evidence-qualified ∧ no unowned
 release-blocking risk ∧ GPU surface beta-limited ∧ every PRD MUST covered.

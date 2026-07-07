@@ -113,4 +113,5 @@ vLLM-Omni `697035018b70…` + FP8 `4e181f99…` / NVFP4 `b5c9332e…` + BF16 bas
 - [ ] Enable GitHub **Private vulnerability reporting** (Settings → Code security) so
       `SECURITY.md`'s advisory flow and the issue-template security redirect resolve.
 - [ ] Tag + release notes summarizing beta scope and known limitations.
-- [ ] Owner records **GO / NO-GO** with the evidence bundle (`docs/session_8/outputs/**`).
+- [x] Owner records **GO** (ratified 2026-07-07) with the evidence bundle
+      (`docs/session_8/outputs/**`) — public beta / research preview, GPU surface beta-limited.
