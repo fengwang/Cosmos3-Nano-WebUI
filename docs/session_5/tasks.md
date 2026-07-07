@@ -10,9 +10,9 @@ Derived from: `specs/*.md` (what) + `design.md` (how)
 - [ ] 1.2 Fix `E402` in `tests/api/test_oracle_adapter_audio.py` with an inline
       `# noqa: E402` + one-line reason (stub-before-import is intentional); add no
       global ignore — spec `cpu_test_stabilization`.
-- [ ] 1.3 Add `[dependency-groups] test-cpu = ["numpy","pillow","imageio","imageio-ffmpeg"]`
+- [ ] 1.3 Add `[dependency-groups] test-cpu = ["numpy","pillow","imageio","imageio-ffmpeg","safetensors"]`
       to `pyproject.toml`; run `uv lock` to regenerate `uv.lock` — spec
-      `cpu_test_stabilization`.
+      `cpu_test_stabilization`. (`safetensors` unlocks `test_writer_format.py`.)
 - [ ] 1.4 Verify: `uv run ruff check api tests` exits 0; `uv sync --frozen --group
       test-cpu` then `uv run pytest -m "not gpu"` runs the encoder tests (no numpy
       skip) and passes; `torch` absent.

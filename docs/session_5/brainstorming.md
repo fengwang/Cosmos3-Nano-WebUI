@@ -43,7 +43,7 @@ Baseline measured on the build host (repo-relative evidence only):
 | # | Question | Decision |
 |---|---|---|
 | Q1 | Run `next build` in CI (needed by typecheck's `.next/types`; validates bundle)? | **Yes — build first** (`gen:api → build → lint → typecheck → test`); verify empirically. |
-| Q2 | Add a torch-free CPU test extra so the 3 numpy-skipped encoder tests run? | **Yes** — add `numpy + pillow + imageio + imageio-ffmpeg` (mitigates hollow-pass, `EV-MIG-IMPORT-COMPLETE`). |
+| Q2 | Add a torch-free CPU test extra so the 3 numpy-skipped encoder tests run? | **Yes** — add `numpy + pillow + imageio + imageio-ffmpeg` (mitigates hollow-pass, `EV-MIG-IMPORT-COMPLETE`); `safetensors` added during implementation to also unlock `test_writer_format.py`. |
 | Q3 | How to implement the private-reference/secret scan (contract's 5th check)? | **Committed scrub script**, scoped to avoid self-match (`EV-MIG-SCRUB-COMMAND-SANITY`). |
 | Q4 | How much GPU forward-safety hardening? | **`tests/conftest.py` guard + CI `-m "not gpu"`** (defense-in-depth). |
 

@@ -11,12 +11,14 @@ documentation is a false positive. This module therefore (a) detects only
 mere presence of words like "token"/"secret" (which occur legitimately across the
 imported source: auth fields, TS `apiKey`, schema properties) — and (b) excludes
 its own source and `docs/session_1/scrub_checklist.md`, which define the patterns.
-The broader lexical name-assignment scan from the S1 checklist remains a
-human-reviewed release-gate step (S8), where matches are triaged, not auto-blocked.
+The broader lexical name-assignment scan from the S1 checklist, plus credential-in-
+URL detection inside the excluded lockfiles, remain a human-reviewed release-gate
+step (S8), where matches are triaged, not auto-blocked.
 
 Structure (ACD): `scan_text` / `is_weight_media` / `is_excluded` are pure
 Calculations; file reading in `scan_tree` and the `__main__` exit are the Actions
-at the edges.
+at the edges. `scan_tree(repo_root=...)` is parameterized so it can be exercised
+end-to-end against a synthetic tree.
 
 Run:
     uv run pytest tests/test_private_ref_scan.py       # gate (pass == clean)
@@ -63,6 +65,10 @@ EXCLUDE_RELPATHS = frozenset(
     }
 )
 
+# Generated-cache suffixes skipped from the content scan (never carry secrets;
+# e.g. TypeScript's incremental build info, which is a single huge line).
+EXCLUDE_SUFFIXES = frozenset({".tsbuildinfo"})
+
 # Model-weight / generated-media file extensions (S1 checklist set). Detected by the
 # committed file's extension, not by text mentions of the extension.
 WEIGHT_MEDIA_EXTS = frozenset({".safetensors", ".pt", ".pth", ".ckpt", ".mp4", ".mov", ".avi"})
@@ -70,12 +76,15 @@ WEIGHT_MEDIA_EXTS = frozenset({".safetensors", ".pt", ".pth", ".ckpt", ".mp4", "
 # Allowed placeholder path prefixes (contract-sanctioned examples).
 ALLOWED_PLACEHOLDER_PREFIXES = ("/path/to/",)
 
-# High-confidence secret *value* patterns.
+# High-confidence secret *value* patterns. `github_pat`/`github_fine_grained_pat`
+# are the token classes most likely to be pasted into a `.github/` workflow (R-14).
 SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("private_key_header", re.compile(r"BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY")),
     ("hf_token", re.compile(r"\bhf_[A-Za-z0-9]{20,}\b")),
     ("openai_key", re.compile(r"\bsk-[A-Za-z0-9]{20,}\b")),
     ("aws_access_key_id", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("github_pat", re.compile(r"\bghp_[A-Za-z0-9]{36}\b")),
+    ("github_fine_grained_pat", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{22,}\b")),
 )
 
 # Private absolute-path patterns. Each requires a real name component after the
@@ -86,8 +95,11 @@ SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 PRIVATE_PATH_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("home_path", re.compile(r"/home/(?!runner\b)[A-Za-z0-9._-]+")),
     ("users_path", re.compile(r"/Users/[A-Za-z0-9._-]+")),
+    ("mnt_path", re.compile(r"/mnt/[A-Za-z0-9._-]+")),
     ("private_mount", re.compile(r"/data/home[_/][A-Za-z0-9][A-Za-z0-9._/-]*")),
 )
+
+ALL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (*SECRET_PATTERNS, *PRIVATE_PATH_PATTERNS)
 
 
 @dataclass(frozen=True)
@@ -113,6 +125,8 @@ def is_excluded(rel_path: str) -> bool:
     posix = rel_path.replace(os.sep, "/")
     if posix in EXCLUDE_RELPATHS:
         return True
+    if Path(posix).suffix.lower() in EXCLUDE_SUFFIXES:
+        return True
     return any(part in EXCLUDE_DIR_NAMES for part in posix.split("/"))
 
 
@@ -125,7 +139,7 @@ def scan_text(rel_path: str, text: str) -> list[Finding]:
     """
     findings: list[Finding] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
-        for rule, pattern in (*SECRET_PATTERNS, *PRIVATE_PATH_PATTERNS):
+        for rule, pattern in ALL_PATTERNS:
             for m in pattern.finditer(line):
                 token = m.group(0)
                 if any(token.startswith(p) for p in ALLOWED_PLACEHOLDER_PREFIXES):
@@ -134,14 +148,13 @@ def scan_text(rel_path: str, text: str) -> list[Finding]:
     return findings
 
 
-def _iter_files(root: Path):
+def _iter_files(root: Path, repo_root: Path):
     """Action (edge): yield (rel_path, abs_path) for files under a scan root."""
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIR_NAMES]
         for name in filenames:
             abs_path = Path(dirpath) / name
-            rel = abs_path.relative_to(REPO_ROOT).as_posix()
-            yield rel, abs_path
+            yield abs_path.relative_to(repo_root).as_posix(), abs_path
 
 
 def scan_tree(repo_root: Path = REPO_ROOT) -> list[Finding]:
@@ -151,7 +164,7 @@ def scan_tree(repo_root: Path = REPO_ROOT) -> list[Finding]:
         root = repo_root / root_name
         if not root.exists():
             continue
-        for rel, abs_path in _iter_files(root):
+        for rel, abs_path in _iter_files(root, repo_root):
             if is_weight_media(rel):
                 findings.append(Finding(rel, 0, "weight_media_file", abs_path.suffix))
                 continue
@@ -172,20 +185,27 @@ def scan_tree(repo_root: Path = REPO_ROOT) -> list[Finding]:
 # (EV-MIG-SCRUB-COMMAND-SANITY).
 
 
+def _rules(findings: list[Finding]) -> set[str]:
+    return {f.rule for f in findings}
+
+
 def test_private_key_header_is_caught():
-    assert scan_text("x", "-----BEGIN " + "OPENSSH PRIVATE KEY-----")
+    assert "private_key_header" in _rules(scan_text("x", "-----BEGIN " + "OPENSSH PRIVATE KEY-----"))
 
 
-def test_hf_and_sk_and_aws_tokens_caught():
-    assert scan_text("x", "token=hf_" + "A" * 40)
-    assert scan_text("x", "key=sk-" + "A" * 40)
-    assert scan_text("x", "id=AKIA" + "ABCDEFGHIJKLMNOP")
+def test_secret_tokens_caught_with_correct_rule():
+    assert "hf_token" in _rules(scan_text("x", "token=hf_" + "A" * 40))
+    assert "openai_key" in _rules(scan_text("x", "key=sk-" + "A" * 40))
+    assert "aws_access_key_id" in _rules(scan_text("x", "id=AKIA" + "ABCDEFGHIJKLMNOP"))
+    assert "github_pat" in _rules(scan_text("x", "tok=ghp_" + "A" * 36))
+    assert "github_fine_grained_pat" in _rules(scan_text("x", "tok=github_pat_" + "A" * 30))
 
 
-def test_private_paths_caught():
-    assert scan_text("x", "cd /home/" + "alice/project")
-    assert scan_text("x", "/Users/" + "bob/dev")
-    assert scan_text("x", "/data/home" + "_someone/models")
+def test_private_paths_caught_with_correct_rule():
+    assert "home_path" in _rules(scan_text("x", "cd /home/" + "alice/project"))
+    assert "users_path" in _rules(scan_text("x", "/Users/" + "bob/dev"))
+    assert "mnt_path" in _rules(scan_text("x", "/mnt/" + "share/secret"))
+    assert "private_mount" in _rules(scan_text("x", "/data/home" + "_someone/models"))
 
 
 def test_runner_home_not_flagged():
@@ -203,11 +223,35 @@ def test_placeholder_not_flagged():
     assert scan_text("docs/x.md", "COSMOS3_MODEL_DIR=/path/to/Cosmos3-Nano-FP8-Blockwise") == []
 
 
-def test_scanner_and_checklist_are_excluded():
+def test_scanner_and_checklist_and_caches_are_excluded():
     assert is_excluded("tests/test_private_ref_scan.py")
     assert is_excluded("docs/session_1/scrub_checklist.md")
     assert is_excluded("api/app/__pycache__/main.pyc")
+    assert is_excluded("webui/tsconfig.tsbuildinfo")
     assert not is_excluded("api/app/main.py")
+
+
+def test_scan_tree_walks_a_nonempty_file_set():
+    # Guards against a hollow pass: if the walk silently visited nothing,
+    # test_clean_tree_has_no_findings would pass on zero coverage.
+    files = list(_iter_files(REPO_ROOT / "api", REPO_ROOT))
+    assert len(files) > 0
+    assert any(rel == "api/app/main.py" for rel, _ in files)
+
+
+def test_scan_tree_detects_a_planted_secret_end_to_end(tmp_path):
+    # End-to-end through the real Action (os.walk + read + scan) on a synthetic tree.
+    (tmp_path / "api").mkdir()
+    (tmp_path / "api" / "leak.py").write_text("OPENAI_KEY = 'sk-" + "A" * 40 + "'\n")
+    findings = scan_tree(tmp_path)
+    assert any(f.rule == "openai_key" and f.rel_path == "api/leak.py" for f in findings)
+
+
+def test_scan_tree_detects_planted_weight_file(tmp_path):
+    (tmp_path / "api").mkdir()
+    (tmp_path / "api" / "model.safetensors").write_bytes(b"\x00\x01")
+    findings = scan_tree(tmp_path)
+    assert any(f.rule == "weight_media_file" for f in findings)
 
 
 def test_clean_tree_has_no_findings():
