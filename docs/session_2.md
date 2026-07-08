@@ -1,4 +1,4 @@
-# Session 2 - vLLM-Omni Patch Rebase and GitHub Fork Pin
+# Session 2 - HF Checkpoint Index/LFS Fix and Re-Pin Sweep
 
 Contract: `docs/session_2_contract.yaml`
 Risk: high
@@ -6,65 +6,85 @@ Routing: branch_and_compare
 
 ## Objective
 
-Move the Cosmos3 vLLM-Omni patch line onto the public GitHub fork, verify it
-against the current fork base, and produce a public commit or tag that
-Cosmos3-Nano-WebUI can pin.
+Fix both `wfen/Cosmos3-Nano-FP8-Blockwise` and
+`wfen/Cosmos3-Nano-NVFP4-Blockwise` Hugging Face repos (remove the stale
+weight index, correct LFS tracking) and sweep every in-repo pinned reference
+to the resulting new revisions.
 
 ## Why This Session Exists
 
-The WebUI/API runtime depends on patched vLLM-Omni behavior for quantized
-Cosmos3 checkpoints. The public WebUI repo cannot depend on a private checkout or
-unpublished local patch. The patch must be rebased, tested, and pinned in the
-GitHub fork first.
+Both public checkpoints carry a stale top-level
+`model.safetensors.index.json` that references seven non-existent shards, and
+their small config/tokenizer files are LFS-tracked, so a plain `git clone`
+leaves those files as unresolved pointers. The post-GO GPU gate worked
+around this locally; a public operator following the README cannot. Fixing
+the HF repos changes their revision hashes, so every reference to the old
+pins in this repo must move together in the same session. Advances archived
+Phase-1 risk R-03 (`docs/archive/phase-1/risk_register.md`).
 
 ## In Scope
 
-1. Confirm the current GitHub fork base commit.
-2. Import the authorized Cosmos3 patch series into a working branch on the fork.
-3. Rebase or merge onto the current fork base.
-4. Resolve conflicts in Cosmos3 model, checkpoint adapter, and quantization
-   surfaces only.
-5. Run deterministic vLLM-Omni tests that do not require model weights, plus any
-   lightweight adapter probes available from public fixtures.
-6. Publish or prepare a branch, commit, or tag that the WebUI repo can pin.
-7. Record install instructions for consuming the fork from Docker/build config.
+1. Fresh clone of each of `wfen/Cosmos3-Nano-FP8-Blockwise` and
+   `wfen/Cosmos3-Nano-NVFP4-Blockwise`.
+2. `git rm` the top-level `model.safetensors.index.json` in each repo.
+3. Rewrite `.gitattributes` per the LFS rule from `docs/prd.md` Owner
+   Decision 4 (files >10 MB or non-plain-text use LFS; small plain-text
+   files use regular Git). Migrate the small files out of LFS
+   (`git lfs migrate export` or a `.gitattributes` change plus
+   `git add --renormalize .`), keeping the large weight files in LFS.
+4. Commit and push each repo.
+5. Verify with a **fresh** `git clone` **and** `hf download` — not the local
+   checkout used to develop the fix — that config files are real and the
+   checkpoint loads.
+6. Sweep the whole repository and update every pinned-revision reference —
+   at minimum `docs/model_setup.md` §1, `docs/evidence_map.md`,
+   `docs/release_checklist.md` §7, and `docs/eval_seed_cases.md`, plus any
+   other file the sweep turns up.
 
 ## Out of Scope
 
-- No WebUI/API source import.
-- No model weight validation.
-- No Docker image publishing.
-- No upstream PR to the main vLLM-Omni project unless separately approved.
+- Dev-scratch cleanup (drift D3: `_s2_*.md`, `producer_provenance.json`,
+  `load_quantized.py`, `assets/FP8-Examples/**`, benchmark PNGs) — owner
+  decided this is out of scope for this pass.
+- Rewriting the large weight files into non-LFS (would bloat repo history).
+- Dockerfile changes (`GPU-S1`).
+- Upstream PR work (`GPU-S4`, `GPU-S5`).
 
 ## Deliverables
 
-- Public vLLM-Omni branch and pinned commit or tag.
-- Rebase notes with conflict resolutions.
-- Test evidence and known limitations.
-- WebUI dependency pin recommendation for `MIG-S6`.
+- Fixed `wfen/Cosmos3-Nano-FP8-Blockwise` and
+  `wfen/Cosmos3-Nano-NVFP4-Blockwise` repos with new revision hashes.
+- Fresh-clone and `hf download` verification evidence for both.
+- Every in-repo pinned-reference location updated to the new revisions in
+  the same session — at minimum the four files named above, confirmed by a
+  whole-repository sweep.
 
 ## Deterministic Checks
 
 ```bash
-rtk git status --short --branch
-rtk git remote -v
-rtk git log --oneline -n 20
-rtk pytest -q tests/quantization tests/diffusion || true
-rtk python -m compileall vllm_omni
+git clone <fresh tmp dir> https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise
+git clone <fresh tmp dir> https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise
+hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision <new sha>
+hf download wfen/Cosmos3-Nano-NVFP4-Blockwise --revision <new sha>
+rtk rg -n "4e181f99|b5c9332e" .
 ```
 
-The exact test paths may change with the fork. Record skipped or unavailable
-checks explicitly.
+The last command sweeps the whole repository, not only the four named docs,
+using an 8-character prefix so it also catches abbreviated citations (for
+example `4e181f99…`), not only full 40-character SHAs. The only expected
+match after the sweep is `docs/eval_seed_cases.md`'s own "replacing the
+pre-fix …" historical reference under Public Checkpoint IDs; any other
+match means a stale pin survived.
 
 ## Exit Criteria
 
-- `GATE-MIG-S2-VLLM` passes.
-- The pinned public commit exists on the GitHub fork.
-- Tests pass or failures are classified and accepted by the owner.
-- `MIG-S6` has a precise public install target.
+- `GATE-GPU-S2-CHECKPOINT` passes.
+- Both repos load cleanly from a fresh clone/download with no manual index
+  removal.
+- No stale pin remains in any of the four referencing docs.
+- Owner go-ahead is recorded before the push to either `wfen/*` repo.
 
 ## Handoff
 
-Hand off the pinned vLLM-Omni commit/tag, install command, test result summary,
-and any runtime caveats to `MIG-S3`, `MIG-S4`, and `MIG-S6`.
-
+Hand off the new revision hashes, the exact LFS/`.gitattributes` recipe used,
+and the fresh-clone verification evidence to `GPU-S3`.

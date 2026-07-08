@@ -1,103 +1,106 @@
-# Project Contract - GitHub Migration Public Beta
+# Project Contract - GPU Release Readiness and Upstream Quant Contribution
 
-Date: 2026-07-06
-Status: Active blueprint
+Date: 2026-07-08
+Status: Active blueprint (first pass)
 
-Compilation: two-pass. The first pass drafted from the owner requirements,
-clarifying decisions, current public GitHub remote state, public Hugging Face
-model pages, and the README guidance in `references/readme.howto.md`. The second
-pass removed private-source evidence, demoted runtime claims that lack public
-verification to gates, removed legacy submodules from the first milestone, and
-rewrote ambiguous release language as testable acceptance criteria. This document
-is the revised output only.
+Compilation: two-pass. The first pass drafted from
+`docs/archive/phase-1/next_phase_handoff.md`, the archived Phase-1 evidence
+trail (`risk_register.md`, `evidence_map.md`, `model_setup.md`,
+`release_checklist.md`, `handoff.md`), and owner decisions made while
+brainstorming this blueprint. The second pass, an independent adversarial
+spec review, found and fixed a gate-satisfaction contradiction between
+`GATE-GPU-S4-UPSTREAM-SCOPE` and `GATE-GPU-S5-PR`, a self-defeating re-pin
+sweep check, cross-references broken by the Phase-1 archive move, and
+several smaller ambiguities across the pack. This document is the revised
+output only.
 
-Authority chain: read this file before implementing any migration session.
+Authority chain: read this file before implementing any Phase-2 session.
 Session-specific authority comes from `docs/session_{n}_contract.yaml`. If a
-session contract conflicts with this file, stop and record the conflict before
-editing.
+session contract conflicts with this file, stop and record the conflict
+before editing.
 
 ## 1. Objective
 
-Migrate Cosmos3-Nano-WebUI to GitHub as a public beta / research preview. The
-migration must produce a curated public repo, a pinned public vLLM-Omni fork
-dependency, external Hugging Face checkpoint setup, CPU-only GitHub Actions,
-local-build Docker/Compose, public project hygiene, and manual GPU release gates.
+Close the three gaps deferred at the end of Phase-1: make
+`deploy/vllm-omni.Dockerfile` build from public inputs, fix the published
+`wfen/*` Hugging Face checkpoints so they clone and load cleanly, and either
+land a decoupled FP8/NVFP4 blockwise quant contribution in
+`vllm-project/vllm-omni` or record why none is needed. Prove the combined
+result end to end on GPU hardware before considering any of it done.
 
 ## 2. Hard Commitments
 
-1. **Session identity:** session contracts are `MIG-S1` through `MIG-S8`.
-2. **Public evidence only:** public docs cite only public remotes, public model
-   pages, repo files, commands run during migration, and owner decisions. Private
-   source evidence is not cited.
-3. **Curated import:** migrate selected runtime source, schemas, tests, deploy
-   files, tools, and fresh public docs. Do not mirror private history or archives.
-4. **vLLM-Omni first-class dependency:** the Cosmos3 patch line must be rebased
-   or merged into the GitHub fork and pinned by public commit or tag before this
-   repo depends on it.
-5. **No public vLLM-Omni submodule in milestone 1:** WebUI Docker/build config
-   consumes the pinned GitHub fork commit. The WebUI repo does not vendor or
-   submodule `vllm-omni` in the first public beta.
-6. **External weights:** checkpoints are downloaded or mounted by operators from
-   public Hugging Face repos. No weights are committed or baked into images.
-7. **CPU CI first:** GitHub Actions run CPU-only checks. GPU inference is a
-   manual release gate for beta.
-8. **Local Docker first:** users build images locally. Publishing Docker images is
-   deferred.
-9. **MIT for repo code:** WebUI/API code uses MIT unless a later owner decision
-   changes it. Model and dependency licenses are separate and must be called out.
-10. **Full surface target, beta language:** the migration targets all current API
-    and WebUI modes, but public claims stay evidence-qualified until migrated
-    checks pass.
-11. **No legacy submodule import:** plain vLLM and TensorRT-LLM submodules are
-    not part of the first milestone unless a session proves a required runtime
-    dependency.
-12. **No private labels:** public docs use `Cosmos3-Nano-WebUI` only.
+1. **Session identity:** session contracts are `GPU-S1` through `GPU-S5`.
+2. **Fresh-verification discipline:** a checkpoint or Dockerfile fix is not
+   accepted as done on the strength of an already-patched local checkout. It
+   must be proven from a fresh `git clone` / `hf download` / image pull.
+3. **Atomic re-pin discipline:** when a Hugging Face checkpoint revision
+   changes, every reference to it anywhere in this repository is updated in
+   the same session — at minimum `docs/model_setup.md` §1,
+   `docs/evidence_map.md`, `docs/release_checklist.md` §7, and
+   `docs/eval_seed_cases.md` — verified by a whole-repository sweep, not only
+   those four files. No session ends with a partially-repinned state.
+4. **Upstream decoupling:** any code proposed to `vllm-project/vllm-omni`
+   contains no Cosmos3-specific model, adapter, or guard code, and must not
+   require the Cosmos3 model to build or pass CI.
+5. **Outward-action gate:** pushing to either `wfen/*` Hugging Face repo and
+   opening the upstream pull request each require an explicit owner
+   go-ahead recorded immediately before that action, not merely a passing
+   automated check.
+6. **No API/runtime regression:** existing public API shapes, WebUI
+   behavior, and non-quant vLLM-Omni runtime paths are unchanged unless a
+   session contract explicitly allows it and tests cover it.
+7. **External-repo blast radius:** work that happens in the
+   `fengwang/vllm-omni` fork or in `vllm-project/vllm-omni` upstream is
+   tracked here by reference (commit, branch, or PR URL) and is out of this
+   repository's blast radius; it does not authorize edits to this
+   repository's runtime source.
+8. **Archive boundary:** `docs/archive/phase-1/**` is historical record and
+   is not edited by Phase-2 sessions.
 
 ## 3. Invariants
 
-- **INV-1:** Public files contain no private hosts, private absolute paths,
-  private codenames, secrets, tokens, or local-only artifact references.
-- **INV-2:** Model weights and generated media artifacts are never committed to
-  Git and are never baked into Docker images.
-- **INV-3:** The WebUI repo consumes vLLM-Omni through a pinned public GitHub fork
-  commit or tag.
-- **INV-4:** Checkpoint locations are configurable operator inputs. Defaults use
-  placeholders or repo-relative examples, not private paths.
-- **INV-5:** CPU CI is deterministic and does not require CUDA, model weights, or
-  private network access.
-- **INV-6:** GPU and performance claims require manual validation evidence from
-  the migrated public repo state.
-- **INV-7:** README and docs distinguish repo code license from model and
-  dependency licenses.
-- **INV-8:** Public beta can ship with manual GPU gates, but unverified surfaces
-  must be marked clearly.
-- **INV-9:** Public API route names and request shapes are not changed during
-  import unless the session contract allows it and tests cover it.
-- **INV-10:** Any production dependency added during migration has an explicit
-  reason and appears in CI or local build verification.
+- **INV-1:** No secret, token, private host, private absolute path, or model
+  weight is committed to this repository or to the `vllm-omni` fork as part
+  of this work.
+- **INV-2:** `deploy/vllm-omni.Dockerfile` never bakes model weights;
+  checkpoints stay external and are mounted by revision.
+- **INV-3:** `deploy/vllm-omni.Dockerfile` installs the vLLM-Omni fork by
+  immutable commit SHA, never by a mutable branch name.
+- **INV-4:** A Hugging Face checkpoint fix is verified against a fresh clone
+  or `hf download`, independent of any local, already-patched checkout.
+- **INV-5:** `docs/model_setup.md` §1, `docs/evidence_map.md`,
+  `docs/release_checklist.md` §7, and `docs/eval_seed_cases.md` agree on
+  every pinned checkpoint revision at all times after a re-pin session
+  closes, and no other tracked file retains the superseded revision.
+- **INV-6:** Any upstream-facing quant code compiles and its tests pass
+  without importing or depending on Cosmos3-specific code.
+- **INV-7:** No push to an external `wfen/*` Hugging Face repo, and no
+  upstream pull request, happens without a recorded owner go-ahead
+  immediately preceding that action.
+- **INV-8:** Every manual GPU claim records hardware, driver/CUDA context,
+  checkpoint repo and revision, vLLM-Omni commit, request shape, artifact
+  metadata, and pass/fail result.
 
 ## 4. Gates
 
-- **GATE-MIG-S1-SCOPE:** Public repo state, public remote state, migration scope,
-  file inclusion/exclusion rules, and private-reference policy are recorded.
-- **GATE-MIG-S2-VLLM:** The Cosmos3 vLLM-Omni patch line is rebased or merged into
-  the GitHub fork, deterministic tests pass, and a public commit or tag is pinned
-  for this repo.
-- **GATE-MIG-S3-IMPORT:** API, WebUI, schemas, tests, tools, and non-Docker deploy
-  support are imported in curated form, with private-reference and weight scans
-  passing.
-- **GATE-MIG-S4-HF:** FP8 and NVFP4 Hugging Face checkpoints are verified for
-  public metadata, license, file layout, and compatibility expectations. Any
-  drift is dispositioned before Docker/README claim it.
-- **GATE-MIG-S5-CI:** CPU-only GitHub Actions pass and cover Python, WebUI,
-  schema, and render-only Docker/Compose checks.
-- **GATE-MIG-S6-DOCKER:** Local-build Docker/Compose uses the pinned vLLM-Omni
-  fork and external checkpoint mounts without private paths, and render/build
-  checks pass.
-- **GATE-MIG-S7-PUBLIC:** README and hygiene files are present, links resolve,
-  setup language is public-beta accurate, and claims match evidence.
-- **GATE-MIG-S8-BETA:** Evidence, risks, release checklist, and manual GPU gates
-  are reviewed. The owner records GO or NO-GO for public beta.
+- **GATE-GPU-S1-DOCKERFILE:** `deploy/vllm-omni.Dockerfile` builds from
+  public inputs, serves `/v1/models`, and generates a T2I artifact on the
+  target GPU; the local-image stopgap has a recorded disposition.
+- **GATE-GPU-S2-CHECKPOINT:** both `wfen/*` checkpoint repos load cleanly
+  from a fresh clone/download, and every in-repo pinned reference matches
+  the new revisions.
+- **GATE-GPU-S3-VALIDATION:** a fresh `hf download` at the `GPU-S2`
+  revisions, through the `GPU-S1` image, proves FP8 and NVFP4 T2I end to end
+  (direct and full-stack) with no manual workaround; a T2V attempt is
+  recorded either way.
+- **GATE-GPU-S4-UPSTREAM-SCOPE:** the upstream-state question is answered
+  with evidence before any contribution code exists; if proceeding, an
+  isolated, rebased, compiling feature branch exists with no Cosmos3-specific
+  code in it.
+- **GATE-GPU-S5-PR:** `precheck-pr` is clean, CI is green, DCO sign-off is
+  present, and either the PR is open with a recorded owner go-ahead, or the
+  session records why it did not proceed.
 
 ## 5. Session Routing
 
@@ -105,50 +108,53 @@ Risk classification follows the requested risk router.
 
 | Session | Risk | Routing | Human gate |
 |---|---|---|---|
-| MIG-S1 Public inventory and scope | low | single_agent | No |
-| MIG-S2 vLLM-Omni rebase and pin | high | branch_and_compare | On rebase conflict or test failure |
-| MIG-S3 Curated source import and scrub | high | worker_plus_reviewers | On scrub failure |
-| MIG-S4 Hugging Face verification | high | branch_and_compare | On artifact drift |
-| MIG-S5 CPU CI | medium | worker_plus_reviewers | No |
-| MIG-S6 Docker/Compose | high | worker_plus_reviewers | On GPU runtime blocker |
-| MIG-S7 README and hygiene | medium | worker_plus_reviewers | On licensing or claim dispute |
-| MIG-S8 Release gate | high | worker_plus_reviewers | Yes |
+| GPU-S1 Dockerfile build | high | branch_and_compare | On a build-failure class that needs a base-image change |
+| GPU-S2 Checkpoint fix and re-pin | high | branch_and_compare | Before pushing to either `wfen/*` repo |
+| GPU-S3 Joint validation | high | branch_and_compare | On T2I/T2V failure or a drift-D1 recurrence |
+| GPU-S4 Upstream state and isolation | medium | worker_plus_reviewers | On a semantic conflict needing Cosmos3-specific judgment |
+| GPU-S5 precheck-pr and PR submission | high | branch_and_compare | Mandatory, immediately before the PR is opened |
 
-High-risk sessions require deterministic checks, sharded review over the review
-axes, adversarial verification of claims, and any named owner gate before merge.
+High-risk sessions require deterministic checks, sharded review over the
+review axes, adversarial verification of claims, and the named human gate
+before the session's done condition is accepted.
 
 ## 6. Change Control
 
 - Do not edit outside a session contract's `blast_radius.allowed_files`.
-- Do not add model weights, generated media, caches, private evidence, or bulky
-  archives.
-- Do not add private path examples to public docs. Use placeholders such as
-  `/path/to/Cosmos3-Nano-FP8-Blockwise` only in examples.
-- Do not change the public product surface during import unless the session
-  contract allows it.
-- Do not add Docker image publishing, GPU CI, or a public submodule without a
-  contract amendment.
-- Treat `.github/**`, Dockerfiles, Compose files, dependency manifests, and
-  release docs as change-controlled surfaces.
+- Do not add model weights, generated media, caches, or bulky archives to
+  this repository.
+- Do not edit `docs/archive/phase-1/**`.
+- Do not push to a `wfen/*` Hugging Face repo, or open a pull request
+  against `vllm-project/vllm-omni`, without the recorded owner go-ahead
+  required by Hard Commitment 5.
+- Do not change public API route shapes, request/response schemas, or WebUI
+  behavior during this work.
+- Treat `deploy/**`, pinned Hugging Face revisions, and the vLLM-Omni fork
+  commit pin as change-controlled surfaces: any change to one requires an
+  equivalent same-session, whole-repository sweep of every file that cites
+  the changed pin, in the same spirit as Hard Commitment 3.
 
 ## 7. Verification Policy
 
-- Classify failures before fixing: environment, dependency, source, test, schema,
-  Docker, model artifact, or spec drift.
-- Prefer deterministic evidence: `git ls-remote`, file tree manifests, `rg`
-  scans, lockfile checks, schema diffs, unit tests, workflow dry runs, Compose
-  config rendering, and checkpoint metadata probes.
-- GPU checks are manual gates. Record hardware, driver/CUDA context when
-  available, checkpoint repo and revision, vLLM-Omni commit, request shape,
-  artifact metadata, and result.
-- Claims in README and docs must point to evidence rows or be phrased as
-  limitations.
+- Classify failures before fixing: BUG, SPEC_GAP, AMBIGUITY, ENVIRONMENT, or
+  TEST_BUG (`docs/agent_workflow/prompts/failure_arbiter.md`).
+- Prefer deterministic evidence: fresh `git clone`/`hf download` output,
+  `docker compose config`/`build`/`up` results, `python -m compileall`,
+  targeted test runs, and `rg` sweeps for stale pins.
+- GPU checks are manual, recorded gates. Record hardware, driver/CUDA
+  context, checkpoint repo and revision, vLLM-Omni commit, request shape,
+  artifact metadata, and result (INV-8).
+- Claims in `docs/model_setup.md` and `docs/release_checklist.md` must point
+  to an evidence row in `docs/evidence_map.md` or be phrased as a limitation.
 
 ## 8. Done Condition
 
-The migration blueprint is done when all requested docs exist, public evidence
-rules are enforced, every session has a contract, all release-blocking risks are
-routed, and the first public beta has a clear path from empty GitHub seed to
-curated source import, pinned vLLM-Omni dependency, verified HF checkpoints,
-CPU CI, local Docker, README/hygiene, manual GPU gates, and owner GO/NO-GO.
-
+This blueprint's session set is done when `GATE-GPU-S1-DOCKERFILE` through
+`GATE-GPU-S3-VALIDATION` all pass; `GATE-GPU-S4-UPSTREAM-SCOPE` is satisfied
+by a recorded, evidenced upstream-state finding (with an isolated, rebased,
+compiling feature branch if that finding is "proceed"); and
+`GATE-GPU-S5-PR` is satisfied either by an open, DCO-signed, CI-green pull
+request or by a documented, owner-accepted finding that no pull request was
+needed. `docs/risk_register.md`, `docs/evidence_map.md`, and
+`docs/eval_seed_cases.md` must reflect the final state of every session that
+has closed.

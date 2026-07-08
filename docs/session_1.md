@@ -1,69 +1,92 @@
-# Session 1 - Public Repo Inventory and Migration Scope
+# Session 1 - Public-Source vLLM-Omni Dockerfile Build
 
 Contract: `docs/session_1_contract.yaml`
-Risk: low
-Routing: single_agent
+Risk: high
+Routing: branch_and_compare
 
 ## Objective
 
-Lock the public migration baseline: current GitHub repo state, target remotes,
-file inclusion and exclusion rules, evidence policy, private-reference scrub
-patterns, and the exact public beta scope.
+Make `deploy/vllm-omni.Dockerfile` build a working vLLM-Omni image from public
+inputs only, replacing the broken recipe with one based on the fork's
+`docker/Dockerfile.cuda` pattern.
 
 ## Why This Session Exists
 
-The migration starts from a small public seed repo. Before importing source or
-rebasing dependencies, the project needs a public-safe boundary: what may be
-copied, what must stay out, and which claims need re-verification.
+The post-GO GPU gate proved T2I generation works, but only through a
+prebuilt local image. The public Dockerfile itself is broken:
+`pip install --break-system-packages` is unsupported by the base image's pip
+22.0 (Ubuntu 22.04), the `-runtime` CUDA base has no build toolchain, and the
+`CMD` invokes the wrong entrypoint. An operator cloning the public repo today
+cannot build a working image. This session closes that gap and retires the
+build half of archived Phase-1 risk R-13
+(`docs/archive/phase-1/risk_register.md`).
 
 ## In Scope
 
-1. Record current public repo branch, status, remotes, file tree, and docs state.
-2. Record target public remotes for WebUI/API, vLLM-Omni, and Hugging Face
-   checkpoints.
-3. Define the curated import manifest: source, deploy files, schemas, tests,
-   tools, docs, and project hygiene.
-4. Define the exclusion manifest: weights, archives, caches, generated media,
-   private evidence, temporary folders, local-only outputs, and legacy submodules.
-5. Define scrub patterns for private hosts, private absolute paths, codenames,
-   secrets, tokens, and weight paths.
-6. Update `docs/evidence_map.md` and `docs/risk_register.md` only if public
-   baseline evidence changes.
+1. Rework `deploy/vllm-omni.Dockerfile` to `FROM vllm/vllm-openai:<version>`
+   (a public base that already ships torch, CUDA, and vLLM), confirming the
+   chosen tag supports sm_120 / Blackwell.
+2. Install the pinned fork commit
+   `697035018b70cef76b974a909d23371a9984c3f2` by immutable commit (for
+   example `uv pip install "git+https://github.com/fengwang/vllm-omni.git@697035…"`,
+   or `COPY` the pinned checkout followed by `uv pip install .`).
+3. Fix the serve entrypoint to
+   `vllm serve <model-dir> --omni --host 0.0.0.0 --port 8000` (plus optional
+   `--init-timeout` / `--no-guardrails`), either as `CMD` or left to Compose
+   `command:` per the current pattern.
+4. Confirm `docker compose -f deploy/docker-compose.fp8.yml build vllm-omni`
+   builds and `up` serves `/v1/models`.
+5. Generate a T2I artifact on the RTX 5090 from the newly built image, using
+   at least one of the FP8 or NVFP4 checkpoints (either is acceptable; this
+   session does not require both). The checkpoint fix is `GPU-S2`'s job, so
+   using the current (pre-fix) HF revision with the already-known local
+   workaround (`docs/model_setup.md` §9) is acceptable for this smoke test;
+   record that as a known limitation pending `GPU-S2`/`GPU-S3`. That
+   workaround is local and non-pushed — it does not touch the `wfen/*`
+   Hugging Face repos and is not an "HF checkpoint repo change" for the
+   purpose of this session's Out of Scope list.
+6. Disposition `deploy/docker-compose.local-image.yml`: drop it, or keep it
+   only as an explicitly labeled "reuse a prebuilt image" convenience,
+   distinct from the shipped path.
+7. Update `docs/release_checklist.md` §6 to reflect the new build result.
 
 ## Out of Scope
 
-- No source import.
-- No vLLM-Omni rebase.
-- No Docker changes.
-- No README rewrite.
-- No GPU or checkpoint validation.
+- No changes to the HF checkpoint repos (`GPU-S2`).
+- No changes to WebUI/API source or public API shapes.
+- No Docker image publishing or registry work.
+- No upstream PR work (`GPU-S4`, `GPU-S5`).
 
 ## Deliverables
 
-- A migration inventory note under `docs/session_1/`.
-- A curated import/exclusion manifest.
-- A scrub checklist and command set for later sessions.
-- Updated evidence or risk rows if the public baseline has drifted.
+- A reworked `deploy/vllm-omni.Dockerfile` that builds from public inputs.
+- Build, serve, and T2I evidence recorded (exact commands, exit codes,
+  artifact metadata).
+- A recorded disposition for `deploy/docker-compose.local-image.yml`.
+- Updated `docs/release_checklist.md` §6.
 
 ## Deterministic Checks
 
 ```bash
 rtk git status --short --branch
-rtk git remote -v
-rtk rg --files
-rtk git ls-remote git@github.com:fengwang/Cosmos3-Nano-WebUI.git HEAD 'refs/heads/*'
-rtk git ls-remote git@github.com:fengwang/vllm-omni.git HEAD 'refs/heads/*'
-rtk rg -n "$PRIVATE_REF_PATTERN" .
+docker compose -f deploy/docker-compose.fp8.yml build vllm-omni
+docker compose -f deploy/docker-compose.fp8.yml up -d vllm-omni
+curl -sf http://localhost:8000/v1/models
 ```
+
+Record the actual base image tag, build duration, and any deviation from
+this list explicitly; a from-source vLLM build is heavy and iterative.
 
 ## Exit Criteria
 
-- `GATE-MIG-S1-SCOPE` passes.
-- Import and exclusion rules are explicit enough for `MIG-S3`.
-- Private-reference scans have a baseline result.
-- Later sessions know which claims need public re-verification.
+- `GATE-GPU-S1-DOCKERFILE` passes.
+- The image builds from public inputs with no prebuilt cosmos3 image.
+- `/v1/models` responds and a T2I artifact is generated on the RTX 5090 for
+  at least one of FP8 or NVFP4 (`EV-GPU-S1-BUILD-T2I-SMOKE`).
+- `docker-compose.local-image.yml` has a recorded disposition.
 
 ## Handoff
 
-Hand off the import manifest, exclusion manifest, scrub patterns, and any baseline
-drift to `MIG-S2` and `MIG-S3`.
+Hand off the build recipe, the base-image tag actually used, and any
+sm_120-specific findings to `GPU-S3` (joint validation) and to
+`docs/release_checklist.md`.

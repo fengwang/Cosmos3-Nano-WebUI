@@ -1,0 +1,85 @@
+session_contract:
+  id: MIG-S3
+  objective: Import the curated API/WebUI source tree and scrub private or unsupported material.
+  risk_level: high
+  routing: worker_plus_reviewers
+  in_scope:
+    - Import selected API, WebUI, schemas, tests, tools, and deploy support.
+    - Exclude archives, caches, model weights, generated media, and bulky evidence.
+    - Exclude legacy plain vLLM and TensorRT-LLM submodules unless a runtime dependency is proven.
+    - Replace private defaults with environment variables or public placeholders.
+    - Run source-level CPU smoke checks.
+    - Record import manifest and scrub report.
+  out_of_scope:
+    - vLLM-Omni fork edits.
+    - HF checkpoint deep validation.
+    - GitHub Actions finalization.
+    - README rewrite.
+    - Docker runtime validation.
+  blast_radius:
+    allowed_files:
+      - api/**
+      - webui/**
+      - schemas/**
+      - tests/**
+      - tools/**
+      - deploy/**
+      - pyproject.toml
+      - uv.lock
+      - package manager lockfiles under webui/**
+      - docs/session_3/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+    forbidden_files:
+      - submodules/vllm/**
+      - submodules/TensorRT-LLM/**
+      - submodules/vllm-omni/**
+      - model weight files
+      - generated media files
+      - private archive or evidence folders
+      - .github/**
+      - README.md
+  invariants:
+    - Imported source must not require private network access for CPU checks.
+    - No model weights or generated artifacts enter Git.
+    - Public API shapes stay stable unless tests and contract explicitly allow a change.
+    - Unsupported legacy dependency paths are removed or blocked.
+  acceptance_criteria:
+    - Curated source tree is present.
+    - Private-reference scan passes.
+    - Weight/media scan passes.
+    - CPU import or compile smoke checks pass or failures are classified.
+    - Import manifest records included and excluded paths.
+  deterministic_checks:
+    - "rtk rg --files"
+    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" ."
+    - "rtk rg -n \"submodules/(vllm|TensorRT-LLM)|TensorRT-LLM\" ."
+    - "rtk rg -n \"\\.(safetensors|pt|pth|ckpt|mp4|mov|avi)$\" ."
+    - "rtk python -m compileall api"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - Imported tests pass only because critical modules were not imported.
+    - A private default path remains in environment examples.
+    - A large binary artifact is hidden under a non-obvious extension.
+    - Legacy TensorRT or plain vLLM code is still reachable from production imports.
+  failure_modes_to_watch:
+    - Broad import creates noisy diffs that hide private leaks.
+    - Excluding legacy code breaks public imports.
+    - Generated API types are stale after import.
+  done_condition: GATE-MIG-S3-IMPORT passes with a curated, scrubbed public source tree.
+  handoff_requirements:
+    - Imported file manifest.
+    - Excluded file manifest.
+    - Scrub scan output.
+    - Source smoke results.
+    - Known import gaps.
+  eval_seed_candidates:
+    - EV-MIG-REPO-TREE
+    - EV-MIG-SCRUB
+

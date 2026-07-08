@@ -1,47 +1,51 @@
 session_contract:
-  id: MIG-S2
-  objective: Rebase or merge the Cosmos3 vLLM-Omni patch line into the GitHub fork and pin a public commit or tag.
+  id: GPU-S2
+  objective: Fix the wfen/Cosmos3-Nano-FP8-Blockwise and wfen/Cosmos3-Nano-NVFP4-Blockwise HF repos (remove the stale weight index, correct LFS tracking) and re-pin every in-repo reference to the new revisions.
   risk_level: high
   routing: branch_and_compare
   in_scope:
-    - Confirm the GitHub vLLM-Omni fork base.
-    - Apply the authorized Cosmos3 patch series to a fork branch.
-    - Resolve conflicts in Cosmos3, checkpoint adapter, and quantization code.
-    - Run deterministic vLLM-Omni tests and compile checks.
-    - Push or prepare a public branch, commit, or tag for WebUI consumption.
-    - Record dependency pin and install instructions.
+    - Fresh clone of both wfen/* repos.
+    - Remove the stale top-level model.safetensors.index.json in each.
+    - Rewrite .gitattributes per the LFS rule; migrate small text files out of LFS.
+    - Commit and push each repo.
+    - Verify via a fresh clone AND hf download.
+    - Sweep the whole repository and update every pinned-revision reference, at minimum docs/model_setup.md section 1, docs/evidence_map.md, docs/release_checklist.md section 7, docs/eval_seed_cases.md.
   out_of_scope:
-    - WebUI/API source import.
-    - Checkpoint artifact verification.
-    - Docker image publishing.
-    - Upstream PR creation unless separately approved.
+    - D3 dev-scratch cleanup on the HF repos.
+    - Rewriting large weight files out of LFS.
+    - Dockerfile changes.
+    - Upstream PR work.
   blast_radius:
     allowed_files:
-      - external vllm-omni fork repository branches
-      - external vllm-omni fork tests for touched surfaces
+      - external wfen/Cosmos3-Nano-FP8-Blockwise HF repo
+      - external wfen/Cosmos3-Nano-NVFP4-Blockwise HF repo
       - docs/session_2/**
+      - docs/model_setup.md
       - docs/evidence_map.md
       - docs/risk_register.md
+      - docs/release_checklist.md
+      - docs/eval_seed_cases.md
     forbidden_files:
-      - WebUI repo runtime source outside docs
-      - model weight files
-      - Docker publishing workflows
-      - GitHub secrets or registry credentials
+      - api/**
+      - webui/**
+      - deploy/**
+      - schemas/**
+      - .github/**
+      - this repository's model weight or generated media files
   invariants:
-    - WebUI repo consumes only a public vLLM-Omni commit or tag.
-    - The fork pin must be reproducible from public GitHub state.
-    - Test failures are classified before source changes are expanded.
+    - A checkpoint fix is verified against a fresh clone/download, not the already-patched local checkout.
+    - Large weight files stay in LFS; only small plain-text files move to regular git.
+    - Every reference to the old revision is updated in the same session, none left stale.
   acceptance_criteria:
-    - Public vLLM-Omni pin exists.
-    - Targeted deterministic tests pass or failures have owner disposition.
-    - Install command for the pinned fork is recorded.
-    - Evidence and risk docs reflect the rebase result.
+    - Both HF repos load cleanly from a fresh clone/download.
+    - No stale pin remains anywhere in the repository, confirmed by a whole-repository sweep (the four referencing docs are the minimum floor, not the full scope).
+    - Owner go-ahead is recorded before either repo is pushed.
   deterministic_checks:
-    - "rtk git status --short --branch"
-    - "rtk git remote -v"
-    - "rtk git log --oneline -n 20"
-    - "rtk python -m compileall vllm_omni"
-    - "rtk pytest -q tests/diffusion/model_loader/test_modelopt_native.py tests/diffusion/model_loader/test_modelopt_native_fp8_w8a16.py tests/diffusion/model_loader/test_modelopt_native_nvfp4.py tests/diffusion/models/cosmos3/test_cosmos3_nvfp4_load_guard.py tests/diffusion/quantization/test_fp8_blockwise_w8a16.py tests/diffusion/quantization/test_nvfp4_blockwise_config.py"
+    - "git clone <fresh dir> https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise"
+    - "git clone <fresh dir> https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise"
+    - "hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision <new sha>"
+    - "hf download wfen/Cosmos3-Nano-NVFP4-Blockwise --revision <new sha>"
+    - "rtk rg -n \"4e181f99|b5c9332e\" .   # whole-repo sweep, 8-char prefix catches abbreviated cites too; only expected hit is eval_seed_cases.md's own historical reference"
   review_axes:
     - correctness
     - security
@@ -49,20 +53,18 @@ session_contract:
     - architecture
     - performance
   adversarial_cases:
-    - Patch appears rebased but the public fork does not contain it.
-    - Merge accidentally drops a Cosmos3 adapter or guard.
-    - Tests pass because they do not cover touched files.
-    - WebUI pin points to a local branch name instead of a public commit or tag.
+    - The fix is verified only against the local already-patched checkout, not a fresh clone.
+    - The LFS migration accidentally de-LFSes a large weight file.
+    - The re-pin sweep updates 3 of 4 referencing files and misses one.
+    - The push happens before an owner go-ahead is recorded.
   failure_modes_to_watch:
-    - Upstream Cosmos3 changes conflict semantically with patch behavior.
-    - Fork test suite is too expensive or environment-sensitive.
-    - Public branch is pushed without a stable pin.
-  done_condition: GATE-MIG-S2-VLLM passes with a public vLLM-Omni pin ready for WebUI Docker/build config.
+    - HF's Xet backend caches the old pointer state and masks whether the fix actually works from a genuinely fresh environment.
+    - .gitattributes rewrite order causes already-committed files to not get renormalized.
+  done_condition: GATE-GPU-S2-CHECKPOINT passes with both repos fixed, fresh-clone-verified, and every in-repo pin swept.
   handoff_requirements:
-    - Public commit or tag.
-    - Install command.
-    - Test result summary.
-    - Conflict resolution notes.
-    - Known runtime caveats.
+    - New revision hashes for both repos.
+    - LFS/.gitattributes recipe used.
+    - Fresh-clone and hf download verification evidence.
   eval_seed_candidates:
-    - EV-MIG-VLLM-FORK
+    - EV-GPU-CHECKPOINT-FRESH-CLONE
+    - EV-GPU-REPIN-SWEEP-COMPLETE

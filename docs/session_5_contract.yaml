@@ -1,65 +1,45 @@
 session_contract:
-  id: MIG-S5
-  objective: Add CPU-only GitHub Actions and stabilize public test commands.
-  risk_level: medium
-  routing: worker_plus_reviewers
+  id: GPU-S5
+  objective: Run the fork's precheck-pr skill, satisfy upstream CI/pre-commit/DCO requirements, add quant unit tests, and open the PR against vllm-project/vllm-omni main only after an explicit owner go-ahead recorded immediately before submission.
+  risk_level: high
+  routing: branch_and_compare
   in_scope:
-    - Add Python and WebUI GitHub Actions workflows.
-    - Install dependencies from public package sources.
-    - Run Python lint and CPU tests.
-    - Run WebUI lint, typecheck, unit tests, and schema sync.
-    - Add render-only Docker/Compose checks if deploy files exist.
-    - Mark GPU tests so they do not run in CPU CI.
-    - Document local check commands.
+    - Run precheck-pr (quick then full) against the GPU-S4 feature branch.
+    - Add unit tests for the quant methods.
+    - Confirm CI (pre-commit, build_wheel) passes.
+    - DCO sign-off on every commit.
+    - Confirm no regression in existing non-quant paths.
+    - Determine the correct PR-title prefix.
+    - Record an explicit owner go-ahead immediately before opening the PR.
+    - Open the PR against vllm-project/vllm-omni main.
   out_of_scope:
-    - GPU CI.
-    - Docker image publishing.
-    - Secrets or registry credentials.
-    - Runtime model inference.
+    - Further isolation or rebase work; returns to GPU-S4 if precheck-pr surfaces a scope violation.
+    - Responding to maintainer review after the PR is open.
+    - Any change to this repository.
   blast_radius:
     allowed_files:
-      - .github/workflows/**
-      - pyproject.toml
-      - uv.lock
-      - webui/package.json
-      - webui/pnpm-lock.yaml
-      - webui/pnpm-workspace.yaml
-      - webui/vitest.config.ts
-      - webui/playwright.config.ts
-      - tests/**
-      - schemas/**
+      - external fengwang/vllm-omni fork feature branch (from GPU-S4)
+      - the opened pull request against vllm-project/vllm-omni
       - docs/session_5/**
       - docs/evidence_map.md
       - docs/risk_register.md
-      # S5 amendment (owner-approved 2026-07-07; Session End Protocol requires these
-      # outputs; precedent: S4 FA-4). Adds handoff, eval corpus, and eval seed cases.
-      - docs/handoff.md
-      - docs/eval_corpus/**
-      - docs/eval_seed_cases.md
     forbidden_files:
-      - model weight files
-      - Docker publishing workflows with secrets
-      - README.md
-      - vLLM-Omni fork source
+      - this repository's runtime source
+      - Cosmos3-specific code anywhere in the fork or the PR
+      - any commit without DCO sign-off
   invariants:
-    - CI does not require CUDA, model weights, private network access, or self-hosted runners.
-    - CI secrets are not needed for the first milestone.
-    - Generated schema artifacts are checked for drift.
+    - The PR is never opened without a recorded owner go-ahead immediately preceding submission.
+    - The PR contains no Cosmos3-specific code and does not require the Cosmos3 model to build or pass CI.
+    - Every commit in the PR is DCO-signed.
   acceptance_criteria:
-    - GitHub Actions workflows exist.
-    - Local CPU commands pass or failures are classified.
-    - GPU-only tests are skipped or separated.
-    - Schema sync check exists.
+    - precheck-pr is clean, quick and full.
+    - CI is green and DCO sign-off is present on every commit.
+    - No regression is found in non-quant upstream paths.
+    - Either the PR is open with a recorded owner go-ahead, or the session records why it did not proceed.
   deterministic_checks:
-    - "rtk pytest -q"
-    - "rtk ruff check api tests"
-    # S5 amendment (SPEC_GAP FA-2, owner-review): `pnpm build` must precede
-    # `pnpm typecheck` — Next generates the CSS-module (*.module.css) type
-    # declarations during build that `tsc --noEmit` needs. Verified empirically;
-    # see docs/session_5/failure_arbiter.md.
-    - "rtk proxy sh -lc 'cd webui && pnpm install --frozen-lockfile && pnpm build && pnpm lint && pnpm typecheck && pnpm test'"
-    - "rtk proxy sh -lc 'cd webui && pnpm gen:api && git diff --exit-code lib/api/schema.d.ts'"
-    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" .github docs tests api webui"
+    - "<fork checkout>/.claude/skills/precheck-pr"
+    - "git log --show-signature -n <N>"
+    - "gh pr checks <PR>"
   review_axes:
     - correctness
     - security
@@ -67,22 +47,18 @@ session_contract:
     - architecture
     - performance
   adversarial_cases:
-    - Workflow passes because it skips all meaningful tests.
-    - Workflow needs a secret despite the no-publishing milestone.
-    - GPU test imports fail during CPU collection.
-    - Generated API types drift without failing CI.
+    - The PR is opened before the owner go-ahead is actually recorded, only justified after the fact.
+    - The precheck-pr full run is skipped because the quick run passed.
+    - A commit without DCO sign-off is included because it predates the sign-off requirement being applied.
+    - The PR quietly depends on Cosmos3-specific behavior through an indirect import.
   failure_modes_to_watch:
-    - Lockfile is missing or incompatible with public runner.
-    - Optional dependencies fail collection.
-    - Docker render checks require Docker unavailable on runner.
-  done_condition: GATE-MIG-S5-CI passes with CPU-only public CI ready for the beta branch.
+    - Upstream CI flakes unrelated to the quant change are misread as a real regression.
+    - The precheck-pr skill's guidance and the actual current upstream CONTRIBUTING.md have drifted apart.
+  done_condition: GATE-GPU-S5-PR passes with either an open, DCO-signed, CI-green PR carrying a recorded owner go-ahead, or a documented reason the PR did not proceed.
   handoff_requirements:
-    - Workflow names.
-    - Local command list.
-    - CI result summary.
-    - Known skips and classified failures.
+    - precheck-pr output, quick and full.
+    - PR URL and review status, if opened.
+    - Recorded owner go-ahead timestamp.
   eval_seed_candidates:
-    - EV-MIG-SCHEMA-SYNC
-    - EV-MIG-PY-UNIT
-    - EV-MIG-WEBUI-UNIT
-
+    - EV-GPU-PR-PRECHECK
+    - EV-GPU-PR-CI-GREEN

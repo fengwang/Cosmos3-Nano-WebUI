@@ -1,51 +1,51 @@
 session_contract:
-  id: MIG-S1
-  objective: Lock the public migration baseline, import/exclusion rules, evidence policy, and scrub checklist.
-  risk_level: low
-  routing: single_agent
+  id: GPU-S1
+  objective: Build a working vLLM-Omni image from deploy/vllm-omni.Dockerfile using only public inputs, pinned to the fork commit by immutable SHA.
+  risk_level: high
+  routing: branch_and_compare
   in_scope:
-    - Record public repo branch, remotes, file tree, and docs baseline.
-    - Record public target remotes for WebUI/API, vLLM-Omni, and HF checkpoints.
-    - Define curated import and exclusion manifests.
-    - Define private-reference scrub patterns and release-blocking scans.
-    - Update evidence and risks if public baseline facts drift.
+    - Rework deploy/vllm-omni.Dockerfile to a public vllm/vllm-openai base with a build toolchain.
+    - Install the pinned fork commit 697035018b70cef76b974a909d23371a9984c3f2 by immutable commit.
+    - Fix the serve entrypoint to vllm serve <dir> --omni --host 0.0.0.0 --port 8000.
+    - Build and serve the image; generate a T2I artifact on the RTX 5090.
+    - Disposition deploy/docker-compose.local-image.yml.
+    - Update docs/release_checklist.md section 6.
   out_of_scope:
-    - Source import.
-    - vLLM-Omni rebase.
-    - Docker changes.
-    - README rewrite.
-    - GPU or checkpoint validation.
+    - Pushing changes to the wfen/* Hugging Face repos (the checkpoint fix itself is GPU-S2's job).
+    - WebUI/API source changes or public API shape changes.
+    - Docker image publishing or registry work.
+    - Upstream PR work.
   blast_radius:
     allowed_files:
+      - deploy/vllm-omni.Dockerfile
+      - deploy/docker-compose*.yml
+      - deploy/docker-compose.local-image.yml
       - docs/session_1/**
+      - docs/release_checklist.md
       - docs/evidence_map.md
       - docs/risk_register.md
-      - docs/eval_seed_cases.md
     forbidden_files:
       - api/**
       - webui/**
-      - deploy/**
-      - tools/**
       - schemas/**
       - .github/**
-      - README.md
       - model weight or generated media files
+      - wfen/* Hugging Face repos (external, not this session)
   invariants:
-    - Public docs cite only public remotes, repo files, commands run during migration, and owner decisions.
-    - No private source path or private evidence is committed.
-    - Import rules must exclude model weights, generated media, caches, archives, and legacy submodules by default.
+    - The image never bakes model weights.
+    - The fork is installed by immutable commit SHA, never a mutable branch.
+    - No public API shape changes.
+    - A local, non-pushed checkpoint workaround (moving aside the stale index on disk) is acceptable for this session's own T2I smoke test; it is not an HF checkpoint repo change and does not satisfy GPU-S2's done condition.
   acceptance_criteria:
-    - Public repo baseline is recorded.
-    - Import and exclusion manifests exist.
-    - Scrub command set exists and is usable by later sessions.
-    - Evidence and risk docs match the public baseline.
+    - deploy/vllm-omni.Dockerfile builds from public inputs only.
+    - The built image serves /v1/models and generates a T2I artifact on the RTX 5090 for at least one of FP8 or NVFP4.
+    - docker-compose.local-image.yml has a recorded disposition.
+    - docs/release_checklist.md section 6 reflects the new build result.
   deterministic_checks:
     - "rtk git status --short --branch"
-    - "rtk git remote -v"
-    - "rtk rg --files"
-    - "rtk git ls-remote git@github.com:fengwang/Cosmos3-Nano-WebUI.git HEAD 'refs/heads/*'"
-    - "rtk git ls-remote git@github.com:fengwang/vllm-omni.git HEAD 'refs/heads/*'"
-    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" ."
+    - "docker compose -f deploy/docker-compose.fp8.yml build vllm-omni"
+    - "docker compose -f deploy/docker-compose.fp8.yml up -d vllm-omni"
+    - "curl -sf http://localhost:8000/v1/models"
   review_axes:
     - correctness
     - security
@@ -53,21 +53,20 @@ session_contract:
     - architecture
     - performance
   adversarial_cases:
-    - Import manifest accidentally allows weights or generated videos.
-    - Scrub pattern misses private hostnames or local-only absolute paths.
-    - Evidence map cites non-public source evidence.
-    - Session scope is too vague for a later worker to execute.
+    - The build appears to succeed but actually reused a cached prebuilt cosmos3 layer.
+    - The chosen base image tag does not actually support sm_120 at runtime, only at compile time.
+    - The serve entrypoint works for FP8 but silently fails for NVFP4.
+    - The local-image stopgap is left in place as the de facto path without a recorded decision.
   failure_modes_to_watch:
-    - Baseline commands rely on unpushed local branch state.
-    - Exclusion rules block files required by runtime import.
-    - Evidence rows overstate what public checks proved.
-  done_condition: GATE-MIG-S1-SCOPE passes and MIG-S2/MIG-S3 have a clear public-safe starting point.
+    - Base image CUDA/torch version mismatches the fork's expected build environment.
+    - Build succeeds but the container lacks a runtime dependency only exercised at inference time.
+    - "--no-guardrails vs guardrails-on paths behave differently and only one is tested."
+  done_condition: GATE-GPU-S1-DOCKERFILE passes with a public, from-source image that serves T2I on the RTX 5090.
   handoff_requirements:
-    - Import manifest.
-    - Exclusion manifest.
-    - Scrub pattern and command list.
-    - Public baseline evidence updates.
+    - Base image tag actually used.
+    - Build command and duration.
+    - T2I evidence (command, exit code, artifact metadata).
+    - docker-compose.local-image.yml disposition.
   eval_seed_candidates:
-    - EV-MIG-REPO-TREE
-    - EV-MIG-SCRUB
-
+    - EV-GPU-DOCKERFILE-BUILD
+    - EV-GPU-S1-BUILD-T2I-SMOKE

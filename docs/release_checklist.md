@@ -13,13 +13,13 @@ public or after the GPU session).
 
 - **Verified now:** §1 scrub/safety, §2 licensing, §3 docs/claims (except self-referential
   links), §4 hygiene, §5 "no secrets/CUDA", §6 compose render + api/webui build, §8 auth path
-  + socket review disposition. Evidence: `docs/session_8/outputs/deterministic_checks.md`.
+  + socket review disposition. Evidence: `docs/archive/phase-1/session_8/outputs/deterministic_checks.md`.
 - **Deferred manual gate (owner decision — beta-limited):** §6 vLLM-Omni image build, §7 all
   GPU inference gates, drift D1.
 - **At-publish (post-push):** §3 self-referential links/badges, §5 GitHub-hosted CI run, §9
   release mechanics incl. the owner's binding GO/NO-GO.
 - **Recommendation:** GO for public beta / research preview, conditional on the standing GPU
-  gate + the at-publish items (see `docs/session_8/outputs/gate_record.md`). Advisory —
+  gate + the at-publish items (see `docs/archive/phase-1/session_8/outputs/gate_record.md`). Advisory —
   **owner ratifies.**
 
 ## GPU gate exercised (2026-07-08, post-GO)
@@ -152,4 +152,4 @@ vLLM-Omni `697035018b70…` + FP8 `4e181f99…` / NVFP4 `b5c9332e…` + BF16 bas
       `SECURITY.md`'s advisory flow and the issue-template security redirect resolve.
 - [ ] Tag + release notes summarizing beta scope and known limitations.
 - [x] Owner records **GO** (ratified 2026-07-07) with the evidence bundle
-      (`docs/session_8/outputs/**`) — public beta / research preview, GPU surface beta-limited.
+      (`docs/archive/phase-1/session_8/outputs/**`) — public beta / research preview, GPU surface beta-limited.

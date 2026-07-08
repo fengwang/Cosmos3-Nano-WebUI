@@ -1,63 +1,80 @@
-# Session 5 - CPU-Only CI and Test Stabilization
+# Session 5 - precheck-pr Gate and Upstream PR Submission
 
 Contract: `docs/session_5_contract.yaml`
-Risk: medium
-Routing: worker_plus_reviewers
+Risk: high
+Routing: branch_and_compare
 
 ## Objective
 
-Add and stabilize GitHub Actions for CPU-only public checks: Python lint/tests,
-WebUI lint/typecheck/unit tests, schema checks, and Docker/Compose rendering.
+Run the fork's `precheck-pr` skill, satisfy upstream CI/pre-commit/DCO
+requirements, add unit tests for the quant methods, and — only after an
+explicit owner go-ahead recorded immediately before submission — open the
+pull request against `vllm-project/vllm-omni` `main`.
 
 ## Why This Session Exists
 
-The public beta needs a reliable quality gate that runs without model weights,
-CUDA, private network access, or self-hosted runners. GPU checks remain manual,
-but CPU CI should catch schema drift, UI regressions, import errors, and public
-configuration mistakes.
+This is the irreversible, outward-facing half of the upstream contribution.
+Everything through `GPU-S4` is local and reversible; opening a public pull
+request attributed to the owner on a major upstream project is not something
+to walk back casually. This session exists specifically to hold that action
+behind its own gate, separate from the investigative work in `GPU-S4`.
 
 ## In Scope
 
-1. Add GitHub Actions workflows for Python and WebUI checks.
-2. Install dependencies from public package sources and lockfiles.
-3. Verify generated OpenAPI/client types stay in sync.
-4. Run unit tests that do not require model weights or CUDA.
-5. Add render-only Docker/Compose checks if Docker files exist by this session.
-6. Mark GPU tests with explicit skip markers or separate manual commands.
-7. Document required local check commands.
+1. Run the `fengwang/vllm-omni` fork's `precheck-pr` skill (quick, then
+   full) against the `GPU-S4` feature branch.
+2. Add unit tests for the quant methods.
+3. Confirm the branch passes
+   `.github/workflows/{pre-commit,build_wheel}.yml` and
+   `.pre-commit-config.yaml`.
+4. DCO sign-off (`git commit -s`) on every commit in the PR.
+5. Confirm no regression in existing (non-quant / other-model) upstream
+   paths.
+6. Determine the correct PR-title prefix (for example `[Kernel]` for quant
+   linear methods) per upstream contribution norms.
+7. Record an explicit owner go-ahead immediately before opening the PR.
+8. Open the PR against `vllm-project/vllm-omni` `main`.
 
 ## Out of Scope
 
-- No GPU CI.
-- No Docker image publishing.
-- No secrets or registry credentials.
-- No runtime checkpoint inference.
+- Further isolation or rebase work (`GPU-S4`) unless `precheck-pr` surfaces a
+  scope violation, in which case this session stops and returns to `GPU-S4`
+  rather than patching around it.
+- Responding to maintainer review after the PR is open — tracked as a
+  post-Phase-2 follow-up, not part of this session's done condition.
+- Any change to this repository.
 
 ## Deliverables
 
-- `.github/workflows/**` CPU workflows.
-- Updated test markers or skip policy.
-- CI check evidence and failure classifications.
-- Developer check command list.
+- `precheck-pr` output (quick and full) for the submitted branch.
+- Added unit tests for the quant methods.
+- A DCO-signed, CI-green branch.
+- A recorded owner go-ahead, timestamped immediately before submission.
+- The opened PR's URL.
 
 ## Deterministic Checks
 
 ```bash
-rtk pytest -q
-rtk ruff check api tests
-rtk proxy sh -lc 'cd webui && pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test'
-rtk proxy sh -lc 'cd webui && pnpm gen:api && git diff --exit-code lib/api/schema.d.ts'
+<fork checkout>/.claude/skills/precheck-pr   # quick, then full
+git log --show-signature -n <N>              # DCO sign-off presence
+gh pr checks <PR>                            # after opening
 ```
+
+`precheck-pr` runs against the `fengwang/vllm-omni` fork checkout, not this
+repository, and never posts on its own per its own contract.
 
 ## Exit Criteria
 
-- `GATE-MIG-S5-CI` passes.
-- GitHub Actions run without private resources.
-- CPU test failures are either fixed or classified with owner acceptance.
-- GPU-only tests cannot accidentally fail CPU CI.
+- `GATE-GPU-S5-PR` passes.
+- `precheck-pr` is clean, CI is green, DCO sign-off is present, and no
+  regression is found in non-quant paths.
+- The PR is not opened without a recorded owner go-ahead immediately
+  preceding submission.
+- Either the PR is open, or the session records why it did not proceed (for
+  example a scope conflict routed back to `GPU-S4`).
 
 ## Handoff
 
-Hand off workflow names, local commands, known skips, and CI gaps to `MIG-S6` and
-`MIG-S8`.
-
+Hand off the PR URL, its review status, and any maintainer-requested changes
+to a post-Phase-2 follow-up. There is no further Phase-2 session downstream
+of `GPU-S5`.

@@ -3,8 +3,8 @@
 Status: authoritative setup contract (MIG-S4). Source of truth for `MIG-S6` (Docker/Compose)
 and `MIG-S7` (README). This file records the checkpoint facts and configuration surface; it is
 **not** the public README — polished quickstart/marketing prose is `MIG-S7`, and Docker/Compose
-wiring is `MIG-S6`. Evidence: `docs/session_4/hf_verification.md` +
-`docs/session_4/probes/evidence.json`. Verified 2026-07-06.
+wiring is `MIG-S6`. Evidence: `docs/archive/phase-1/session_4/hf_verification.md` +
+`docs/archive/phase-1/session_4/probes/evidence.json`. Verified 2026-07-06.
 
 ## 1. Checkpoints (public Hugging Face repos, pinned)
 
@@ -82,7 +82,7 @@ loader), whose real compatibility is a `MIG-S6`/`MIG-S8` gate.
 No mode is beta-limited for missing weights (the base `nvidia/Cosmos3-Nano` is public — this
 corrects the pre-verification premise; see Failure Arbiter FA-1).
 
-## 7. Drift caveats (see `docs/session_4/drift_report.md`)
+## 7. Drift caveats (see `docs/archive/phase-1/session_4/drift_report.md`)
 
 - **D1 (high) — characterized 2026-07-08:** the in-process `diffusers_oracle` cannot load the
   current public FP8 (recipe `fp8_blockwise_mixed` ≠ exact `"fp8"`) or NVFP4 (no

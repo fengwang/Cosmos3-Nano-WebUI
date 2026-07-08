@@ -1,0 +1,88 @@
+session_contract:
+  id: MIG-S5
+  objective: Add CPU-only GitHub Actions and stabilize public test commands.
+  risk_level: medium
+  routing: worker_plus_reviewers
+  in_scope:
+    - Add Python and WebUI GitHub Actions workflows.
+    - Install dependencies from public package sources.
+    - Run Python lint and CPU tests.
+    - Run WebUI lint, typecheck, unit tests, and schema sync.
+    - Add render-only Docker/Compose checks if deploy files exist.
+    - Mark GPU tests so they do not run in CPU CI.
+    - Document local check commands.
+  out_of_scope:
+    - GPU CI.
+    - Docker image publishing.
+    - Secrets or registry credentials.
+    - Runtime model inference.
+  blast_radius:
+    allowed_files:
+      - .github/workflows/**
+      - pyproject.toml
+      - uv.lock
+      - webui/package.json
+      - webui/pnpm-lock.yaml
+      - webui/pnpm-workspace.yaml
+      - webui/vitest.config.ts
+      - webui/playwright.config.ts
+      - tests/**
+      - schemas/**
+      - docs/session_5/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      # S5 amendment (owner-approved 2026-07-07; Session End Protocol requires these
+      # outputs; precedent: S4 FA-4). Adds handoff, eval corpus, and eval seed cases.
+      - docs/handoff.md
+      - docs/eval_corpus/**
+      - docs/eval_seed_cases.md
+    forbidden_files:
+      - model weight files
+      - Docker publishing workflows with secrets
+      - README.md
+      - vLLM-Omni fork source
+  invariants:
+    - CI does not require CUDA, model weights, private network access, or self-hosted runners.
+    - CI secrets are not needed for the first milestone.
+    - Generated schema artifacts are checked for drift.
+  acceptance_criteria:
+    - GitHub Actions workflows exist.
+    - Local CPU commands pass or failures are classified.
+    - GPU-only tests are skipped or separated.
+    - Schema sync check exists.
+  deterministic_checks:
+    - "rtk pytest -q"
+    - "rtk ruff check api tests"
+    # S5 amendment (SPEC_GAP FA-2, owner-review): `pnpm build` must precede
+    # `pnpm typecheck` — Next generates the CSS-module (*.module.css) type
+    # declarations during build that `tsc --noEmit` needs. Verified empirically;
+    # see docs/session_5/failure_arbiter.md.
+    - "rtk proxy sh -lc 'cd webui && pnpm install --frozen-lockfile && pnpm build && pnpm lint && pnpm typecheck && pnpm test'"
+    - "rtk proxy sh -lc 'cd webui && pnpm gen:api && git diff --exit-code lib/api/schema.d.ts'"
+    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" .github docs tests api webui"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - Workflow passes because it skips all meaningful tests.
+    - Workflow needs a secret despite the no-publishing milestone.
+    - GPU test imports fail during CPU collection.
+    - Generated API types drift without failing CI.
+  failure_modes_to_watch:
+    - Lockfile is missing or incompatible with public runner.
+    - Optional dependencies fail collection.
+    - Docker render checks require Docker unavailable on runner.
+  done_condition: GATE-MIG-S5-CI passes with CPU-only public CI ready for the beta branch.
+  handoff_requirements:
+    - Workflow names.
+    - Local command list.
+    - CI result summary.
+    - Known skips and classified failures.
+  eval_seed_candidates:
+    - EV-MIG-SCHEMA-SYNC
+    - EV-MIG-PY-UNIT
+    - EV-MIG-WEBUI-UNIT
+
