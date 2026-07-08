@@ -22,6 +22,30 @@ public or after the GPU session).
   gate + the at-publish items (see `docs/session_8/outputs/gate_record.md`). Advisory —
   **owner ratifies.**
 
+## GPU gate exercised (2026-07-08, post-GO)
+
+Ran the deferred GPU gate on an RTX 5090 (sm_120, 32 GB). **T2I generation works end-to-end
+for both FP8 and NVFP4** — direct on vLLM-Omni and full-stack through the api (`X-API-Key`
+auth → job → orchestrator → artifact PNG). Per-item status in §6/§7. **Caveats (evidence is
+partial and on a proxy image):**
+
+- Image used was **`vllm-omni-local:c89089a4`** (a local build dated ≈ the pin commit
+  `697035…`), **not** an image built from the pinned commit via the public
+  `deploy/vllm-omni.Dockerfile` (which is **broken** — see §6). The exact-pinned-build path is
+  still unproven; what is proven is that the fork code (near-pin) + the public checkpoints
+  serve and generate.
+- Both published checkpoints needed a local fix to load: the top-level
+  `model.safetensors.index.json` is **stale** (references 7 non-existent
+  `diffusion_pytorch_model-*` shards; the real weight is a single consolidated file). Removing
+  it lets the container load — this is the precise nature of **drift D1 / R-03** (a
+  published-checkpoint packaging bug, not a quant incompatibility). Small config/tokenizer
+  files also arrived as unresolved git-LFS/Xet pointers on `git clone` and had to be fetched
+  from HF's resolve endpoint (`hf download` avoids this).
+- Only **T2I** (+ jobs + artifact + auth) is verified. `t2v`, `t2v_audio`, `i2v`,
+  `forward_dynamics`, `reasoning` (BF16 base), and 720p **video** (peak VRAM > 32 GB) remain
+  unrun.
+- README per-mode markings can be upgraded from "GPU-unverified" to "T2I-verified" for FP8/NVFP4.
+
 ## 1. Scrub and safety (INV-1, INV-2)
 
 - [x] Private-reference scan clean over the whole tree:
@@ -73,13 +97,18 @@ public or after the GPU session).
 - [x] `docker compose -f deploy/docker-compose.fp8.yml config` and `…nvfp4…`
       render clean (exit 0, no unset-var warning, correct label) (S8 #10/#11).
 - [x] `api` (lean) and `webui` images build from public inputs (S6).
-- [ ] `deploy/vllm-omni.Dockerfile` builds from the pinned fork commit
-      (`697035018b70…`) — **manual gate (heavy/CUDA), deferred to the GPU session**.
-      Command: `docker compose -f deploy/docker-compose.fp8.yml build vllm-omni`
-      (image `cosmos3-nano-vllm-omni:local`; or
-      `docker build -f deploy/vllm-omni.Dockerfile -t cosmos3-nano-vllm-omni:local .`).
-- [ ] Confirm the vLLM-Omni image's real serve entrypoint (the `CMD` is a best-effort
-      guess overridable via Compose `command:`) — **manual gate, deferred**.
+- [ ] `deploy/vllm-omni.Dockerfile` builds from the pinned fork commit (`697035018b70…`).
+      **FAILED as written (2026-07-08):** `pip install --break-system-packages` is unsupported
+      by the base image's pip 22.0 (Ubuntu 22.04) → build dies at step 3/3; and even fixed, the
+      `-runtime` base lacks the CUDA/C++ toolchain (`nvcc`, `build-essential`, `cmake`, `ninja`,
+      `torch`, arch list) a from-source vLLM build needs. **Needs rework** — base on the fork's
+      `docker/Dockerfile.cuda` (devel base + toolchain + `TORCH_CUDA_ARCH_LIST=12.0`) or document
+      consuming a prebuilt fork image. The local GPU test used a prebuilt image instead.
+- [x] vLLM-Omni serve entrypoint **confirmed (2026-07-08):**
+      `vllm serve <checkpoint-dir> --omni --host 0.0.0.0 --port 8000 [--init-timeout 1800]
+      [--no-guardrails]` (per the fork's `recipes/cosmos3/Cosmos3-Nano.md`). The Dockerfile's
+      guessed `python3 -m vllm_omni.entrypoints.openai.api_server` CMD is **wrong** — fix in the
+      rework. (`--no-guardrails` requires a fork build ≥ the flag's introduction.)
 
 ## 7. Manual GPU gates (INV-6, INV-8, R-05) — deferred (owner decision, beta-limited)
 
@@ -89,14 +118,23 @@ vLLM-Omni `697035018b70…` + FP8 `4e181f99…` / NVFP4 `b5c9332e…` + BF16 bas
 `nvidia/Cosmos3-Nano` @ `fea6e03a…`. GPU marker run:
 `COSMOS3_ENABLE_GPU_TESTS=1 uv run pytest -m gpu`; then the per-mode `EV-MIG-GPU-*` smokes.
 
-- [ ] `t2v`, `t2v_audio`, `i2v`, `t2i` generation on the served checkpoint.
-- [ ] `reasoning` on the BF16 base.
-- [ ] `forward_dynamics` / action graft.
-- [ ] jobs + SSE + artifact/trajectory retrieval end to end.
-- [ ] Resolve drift **D1** (does the default `vllm_omni` container load the public
-      FP8 **and** NVFP4 checkpoints).
+- [x] **`t2i`** generation — **PASS (2026-07-08)** on FP8 **and** NVFP4, direct on vLLM-Omni
+      (1024², ~3 s) and full-stack via the api (640², `precision:nvfp4`, artifact PNG). Proxy
+      image (see top caveat).
+- [ ] `t2v`, `t2v_audio`, `i2v` — **not run** (720p video peak VRAM > 32 GB; needs
+      `--enable-layerwise-offload` or smaller size — separate test).
+- [ ] `reasoning` on the BF16 base — **not run** (separate reasoner instance / BF16 base).
+- [ ] `forward_dynamics` / action graft — **not run**.
+- [x] jobs + artifact retrieval end to end — **PASS (2026-07-08)** via the api
+      (`POST /v1/generation/t2i` → job `succeeded` → `GET /v1/jobs/{id}/artifact` = `200 image/png`).
+      SSE `/events` + `/trajectory` not explicitly exercised.
+- [x] Resolve drift **D1** — **characterized + resolved-for-serving (2026-07-08):** the
+      `vllm_omni` container loads **both** public checkpoints (FP8 `W8A16`, NVFP4 `W4A16`) once
+      the stale top-level `model.safetensors.index.json` is removed. D1 root cause = a
+      published-checkpoint packaging bug (stale weight index), **not** a quant incompatibility.
+      Owner follow-up: fix the HF repos' index (R-03).
 - [ ] Any surface without passing GPU evidence is marked beta-limited in the README
-      (**done at S7** — every mode marked GPU-unverified; re-affirm after the GPU run).
+      (**S7** — every mode GPU-unverified; **upgrade `t2i` FP8/NVFP4 to T2I-verified** after this run).
 
 ## 8. Hardening review (R-16)
 

@@ -84,10 +84,14 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
 
 ## 7. Drift caveats (see `docs/session_4/drift_report.md`)
 
-- **D1 (high):** in-process `diffusers_oracle` cannot load+verify the current public FP8
-  (recipe `fp8_blockwise_mixed` ≠ exact `"fp8"`) or NVFP4 (no `modelopt_state.pt` /
-  `quantization_config.json`; vLLM-Omni-native export) checkpoints. Default `vllm_omni` path
-  must be validated in `S6`/`S8` before README claims in-process generation.
+- **D1 (high) — characterized 2026-07-08:** the in-process `diffusers_oracle` cannot load the
+  current public FP8 (recipe `fp8_blockwise_mixed` ≠ exact `"fp8"`) or NVFP4 (no
+  `modelopt_state.pt` / `quantization_config.json`; vLLM-Omni-native export) checkpoints. **The
+  default `vllm_omni` container path DOES load both** (FP8 `W8A16`, NVFP4 `W4A16`) and generates
+  **T2I** on an RTX 5090 — **after removing the stale top-level `model.safetensors.index.json`
+  (see §8)**. So D1 affects the in-process oracle only; the remaining issue is a
+  published-checkpoint packaging bug (stale index), routed to an owner HF-side fix (R-03). T2I
+  verified; `t2v`/`t2v_audio`/`i2v`/`forward_dynamics`/`reasoning` + 720p video not yet.
 - **D2 (low):** use base id `nvidia/Cosmos3-Nano` (public); `wfen/Cosmos3-Nano` 404s.
 - **D3 (low):** the public FP8 repo ships dev-scratch (`_s2_*.md`) + loader scripts and NVFP4
   ships `producer_provenance.json`; recommend HF-side cleanup (external follow-up).
@@ -103,4 +107,32 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
 3. For reasoning or action/`forward_dynamics`, also fetch the base
    `nvidia/Cosmos3-Nano` and set `COSMOS3_REASONER_MODEL_DIR` / `COSMOS3_BASE_ACTION_DIR`.
 4. Point `COSMOS3_MODEL_DIR` (and `COSMOS3_CHECKPOINT_LABEL`) at the served checkpoint.
-5. GPU inference is a manual release gate (`MIG-S8`); nothing here is GPU-verified yet.
+5. GPU inference is a manual release gate (`MIG-S8`). **T2I is now GPU-verified (2026-07-08,
+   FP8 + NVFP4, RTX 5090)**; other modes and 720p video remain manual gates.
+
+## 9. Known packaging workarounds (verified 2026-07-08)
+
+Loading the public `wfen/*` checkpoints in the `vllm_omni` container currently needs two
+operator workarounds (both are checkpoint-side; owner HF-side fixes are tracked as R-03 / D1):
+
+1. **Prefer `hf download` over `git clone`.** A `git clone` of these repos may smudge only the
+   large weights and leave the small config/tokenizer files as **unresolved git-LFS/Xet
+   pointers** (which then fail to parse). Use
+   `hf download <repo> --revision <pin> --local-dir <dir>`; if you already cloned, fetch the
+   config files from the resolve endpoint or re-`hf download`.
+2. **Remove the stale weight index.** Each checkpoint ships a top-level
+   `model.safetensors.index.json` that references non-existent sharded files
+   (`transformer/diffusion_pytorch_model-0000N-of-00007.safetensors`); the real transformer
+   weight is a single consolidated `transformer/{diffusion_pytorch_model,model}.safetensors`.
+   Move it aside so the loader uses the consolidated files:
+   `mv <dir>/model.safetensors.index.json <dir>/model.safetensors.index.json.bak`.
+
+Serve (fork's OpenAI-compatible entrypoint, per `vllm-omni` `recipes/cosmos3/Cosmos3-Nano.md`):
+
+```
+vllm serve <checkpoint-dir> --omni --host 0.0.0.0 --port 8000 --init-timeout 1800 [--no-guardrails]
+```
+
+`--no-guardrails` is for a quick local run; guardrails-on needs the gated
+`nvidia/Cosmos-1.0-Guardrail` model + `HF_TOKEN`. The api validates T2I dimensions against
+`{256, 480, 640, 720, 960, 1280}`.

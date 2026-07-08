@@ -17,9 +17,14 @@ Date: 2026-07-07 · Branch: `session-8` (not pushed; `origin/main` = seed `c3983
 
 ## Manual GPU gate status (deferred — owner decision 1)
 
-The entire GPU inference surface is **NOT-YET-RUN / beta-limited**. `INV-8` is satisfied
-because every mode is marked GPU-unverified in the README. Any later run **must match** these
-pins/revisions or the evidence is invalid:
+The GPU inference surface was **beta-limited / NOT-YET-RUN at GO**. A **post-GO GPU gate on
+2026-07-08 verified T2I** (FP8 **and** NVFP4, direct on vLLM-Omni and full-stack through the
+api → job → artifact) on an RTX 5090; `t2v`/`t2v_audio`/`i2v`/`forward_dynamics`/`reasoning`
+remain unrun (video peak VRAM > 32 GB). **Caveat:** run on a near-pin proxy image
+(`vllm-omni-local:c89089a4` ≈ pin `697035…`), **not** an image built from the pinned commit
+via the public Dockerfile (which is broken — `release_checklist.md` §6); the exact-pinned build
+is still unproven. `INV-8` holds (README marks modes GPU-unverified; T2I FP8/NVFP4 upgradable
+to verified). Any later run **must match** these pins/revisions or the evidence is invalid:
 
 - vLLM-Omni fork commit: `697035018b70cef76b974a909d23371a9984c3f2`
 - FP8 checkpoint `wfen/Cosmos3-Nano-FP8-Blockwise` @ `4e181f996abf03f3425298ef692e6e5e56fd46a4`
@@ -31,9 +36,13 @@ Cases deferred: `EV-MIG-GPU-FP8-T2V`, `-FP8-T2V-AUDIO`, `-FP8-I2V`, `-FP8-T2I`, 
 Required evidence fields per run: hardware, driver/CUDA, checkpoint repo+revision, vLLM-Omni
 commit, request shape, artifact metadata, pass/fail (`NFR-6`).
 
-**Drift D1** (open beta limitation, routed to the GPU session): the in-process
-`diffusers_oracle` cannot load+verify either current public checkpoint as-is; the default
-engine is the `vllm_omni` container path, whose real serve compatibility is unverified.
+**Drift D1** (characterized 2026-07-08): the in-process `diffusers_oracle` cannot load the
+current public checkpoints, **but the default `vllm_omni` container path CAN** — it loads both
+FP8 (`W8A16`) and NVFP4 (`W4A16`) and generates T2I — **once the checkpoints' stale top-level
+`model.safetensors.index.json` is removed** (it references 7 non-existent
+`diffusion_pytorch_model-*` shards; the real weight is a single consolidated file). D1's
+residual is therefore a **published-checkpoint packaging bug** (stale weight index), routed to
+an owner HF-side fix (R-03) — not a runtime/quant incompatibility.
 
 **Drift D3** (external, owner follow-up): the public HF checkpoint repos ship dev-scratch
 (`_s2_*`) / provenance / loader-script files (`docs/session_4/drift_report.md` D3; R-01).
