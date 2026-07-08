@@ -95,6 +95,34 @@ Classified live, during the task loop, before each fix was applied.
   `deploy/docker-compose*.yml` to "fix" this, or committing anything under a
   new top-level `models/` directory.
 
+## FA-6: session contract's blast radius omits mandated session-close paths
+
+- **Category:** AMBIGUITY — the session contract and the standing CLAUDE.md
+  workflow instructions make conflicting demands, and the contract permits
+  no interpretation that satisfies both without an explicit choice.
+- **Evidence:** `docs/session_1_contract.yaml`'s `blast_radius.allowed_files`
+  does not include `docs/handoff.md` or `docs/eval_corpus/**`/
+  `docs/eval_seed_cases.md`. The standing CLAUDE.md Session End Protocol
+  mandates writing both. Sibling contracts
+  (`docs/session_2_contract.yaml`, `docs/session_3_contract.yaml`, and
+  Phase-1's archived `session_1`/`session_8` contracts) all include
+  `docs/eval_seed_cases.md`/`docs/handoff.md` explicitly — `GPU-S1`'s
+  contract appears to omit them by drafting oversight, not by deliberate
+  scope restriction. Caught by the sharded review (F1 in
+  `docs/session_1/sharded_review.md`), not by the implementer beforehand.
+- **Why other categories don't fit:** Not a BUG — nothing was implemented
+  incorrectly. Not SPEC_GAP in the narrow sense (the *contract's* intent
+  for the session's core work is clear); the gap is specifically about the
+  two universally-needed session-close paths. Not ENVIRONMENT — fully
+  reproducible by reading two files side by side. Not TEST_BUG — no test
+  involved.
+- **Allowed next action:** stop and get the owner's explicit choice before
+  writing either path, per `AGENTS.md` Boundaries ("do not edit files
+  outside the session contract blast radius without stopping").
+- **Forbidden next action:** silently writing `docs/handoff.md` or
+  `docs/eval_corpus/**` without flagging the conflict first, and silently
+  skipping the CLAUDE.md-mandated session-close deliverables instead.
+
 ## FA-5: guardrails hard-fail (`ValueError: You have disabled the safety checker…`)
 
 - **Category:** Not a failure to fix — expected behavior matching the
