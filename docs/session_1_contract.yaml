@@ -24,6 +24,12 @@ session_contract:
       - docs/release_checklist.md
       - docs/evidence_map.md
       - docs/risk_register.md
+      # Amendment GPU-S1-A1 (owner-approved 2026-07-09, FA-6): the original list
+      # omitted the two session-close paths every sibling contract already has
+      # (session_2/session_3/Phase-1 session_8) and the standing CLAUDE.md
+      # Session End Protocol mandates. Caught by the sharded review (F1).
+      - docs/handoff.md
+      - docs/eval_seed_cases.md
     forbidden_files:
       - api/**
       - webui/**
