@@ -53,7 +53,9 @@ actually reused a cached prebuilt cosmos3 layer"):
 
 ```
 cosmos3 prebuilt (vllm/vllm-omni:cosmos3) layer count: 34
-new image (cosmos3-nano-vllm-omni:local) layer count: 35
+new image (cosmos3-nano-vllm-omni:local) layer count: 36 (34 base + 2 new RUN layers;
+  corrected 2026-07-09 per docs/session_1/adversarial_verification.md — originally
+  mis-recorded as 35)
 shared layer count: 5
   -> all 5 already present in the untouched vllm/vllm-openai:v0.24.0 base
      itself (verified: shared_base_cosmos == (cosmos3_layers & new_layers));
