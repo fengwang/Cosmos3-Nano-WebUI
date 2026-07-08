@@ -57,11 +57,14 @@ CUDA-capability probe, the build completes in well under a minute (only
 vllm-omni's incremental deps install — the base already ships torch/vLLM/CUDA),
 and the rebuilt image serves `/v1/models` and generates a valid T2I artifact for
 **both** FP8 and NVFP4 (exceeding this gate's "at least one" bar). Guardrails stay
-on by default in the shipped image; this session's own smoke test used an
-explicit `--no-guardrails` Compose override (undocumented in any tracked file)
-because the gated `nvidia/Cosmos-1.0-Guardrail` model/`HF_TOKEN` aren't
-provisioned here — full evidence, commands, and artifact metadata in
-`docs/evidence_map.md` and `docs/session_1/`. `deploy/docker-compose.local-image.yml`
+on by default in the shipped image; **a bare `docker compose up` with no other
+configuration will crash before serving** (`CosmosSafetyChecker` refuses to run
+without the gated `nvidia/Cosmos-1.0-Guardrail` model/`HF_TOKEN`, which this
+default does not provision — not a new constraint, the same flag was already
+required for Phase-1's own proven GPU gate). This session's own smoke test used
+an explicit `--no-guardrails` Compose override (undocumented in any tracked
+file) for exactly that reason — full evidence, commands, and artifact metadata
+in `docs/evidence_map.md` and `docs/session_1/`. `deploy/docker-compose.local-image.yml`
 is deleted (owner disposition: drop, not keep as a documented convenience).
 
 ## 1. Scrub and safety (INV-1, INV-2)

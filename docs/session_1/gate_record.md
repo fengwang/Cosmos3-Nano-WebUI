@@ -126,9 +126,40 @@ stray container, network, or `<repo>/models/**` directory was left behind.
 --short` shows no trace after removal. Recorded in
 `docs/release_checklist.md` and `docs/evidence_map.md`.
 
+## Re-run of the contract's literal deterministic checks (2026-07-09)
+
+Re-ran `session_1_contract.yaml`'s exact deterministic-check text against the
+final committed state before closing the session. `build` and `config`
+passed unchanged. `up -d vllm-omni` + `curl /v1/models`, run **literally as
+written (no `--no-guardrails`, no `--env-file`)**, does **not** pass:
+
+- Without `--env-file .env`, Compose resolves the checkpoint bind-mount to a
+  non-existent default path and Docker silently mounts an empty directory
+  (`FA-4`) — the container starts but never finds a valid checkpoint.
+- With `--env-file .env` fixing that, the container still crashes before
+  `/v1/models` ever answers: `CosmosSafetyChecker.__init__` raises
+  (`cosmos_guardrail` package not installed in this image — nor in the
+  fork's own reference `docker/Dockerfile.cuda`) unless `--no-guardrails` is
+  passed (`FA-5`). This is not new or specific to this session's rebuild —
+  the same flag was required for Phase-1's own proven GPU gate
+  (`docker-compose.local-image.yml`'s command, now removed, included it) and
+  is documented in `docs/model_setup.md` §9.
+
+Both are real, reproducible gaps in the contract's illustrative command
+**text**, not in `deploy/vllm-omni.Dockerfile`, `docker-compose*.yml`, or
+`.env`/`.env.example` themselves (all of which already document the
+correct invocation). All of this session's PASS evidence above (Steps 3-4)
+already used the correct invocation (`--env-file .env` + a documented,
+untracked `--no-guardrails` override) — this section exists so that claim
+doesn't rest on an unstated assumption. See `docs/session_1/failure_arbiter.md`
+FA-4/FA-5.
+
 ## Gate Verdict
 
-`GATE-GPU-S1-DOCKERFILE`: **PASS.**
+`GATE-GPU-S1-DOCKERFILE`: **PASS**, using the invocation documented above
+(`--env-file .env`; `--no-guardrails` as an explicit, undocumented-in-any-
+tracked-file override for this smoke test only — the shipped `CMD` keeps
+guardrails on).
 - `deploy/vllm-omni.Dockerfile` builds from public inputs only. ✅
 - Built image serves `/v1/models` and generates a T2I artifact on the RTX
   5090 for at least one of FP8/NVFP4 — **both**, in fact. ✅
