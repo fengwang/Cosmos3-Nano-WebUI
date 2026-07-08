@@ -23,6 +23,7 @@ session_contract:
       - docs/evidence_map.md
       - docs/risk_register.md
       - docs/eval_seed_cases.md
+      - docs/handoff.md
     forbidden_files:
       - api/**
       - webui/**

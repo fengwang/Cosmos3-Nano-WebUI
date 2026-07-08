@@ -20,6 +20,8 @@ session_contract:
       - docs/session_4/**
       - docs/evidence_map.md
       - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
     forbidden_files:
       - this repository's runtime source (api/**, webui/**, deploy/**, schemas/**)
       - Cosmos3-specific model, adapter, or guard code in the fork

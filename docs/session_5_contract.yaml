@@ -23,6 +23,8 @@ session_contract:
       - docs/session_5/**
       - docs/evidence_map.md
       - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
     forbidden_files:
       - this repository's runtime source
       - Cosmos3-specific code anywhere in the fork or the PR

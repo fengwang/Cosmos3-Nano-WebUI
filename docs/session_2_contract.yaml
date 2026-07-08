@@ -25,6 +25,8 @@ session_contract:
       - docs/risk_register.md
       - docs/release_checklist.md
       - docs/eval_seed_cases.md
+      - docs/handoff.md
+      - docs/eval_seed_cases.md
     forbidden_files:
       - api/**
       - webui/**
