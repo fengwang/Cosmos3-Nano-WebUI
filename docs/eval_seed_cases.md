@@ -53,6 +53,21 @@ there.
 | EV-GPU-T2V-SMOKE | Best-effort small text-to-video smoke. | FP8 or NVFP4 | Short prompt, low frame count, documented seed. | Valid video artifact, or a recorded reason it was scoped out (PRD FR-6, SHOULD). | GPU-S3 |
 | EV-GPU-JOBS-ARTIFACT | Full-stack job and artifact retrieval on the from-source build. | Either checkpoint | Async generation request observed through the api or WebUI. | Job reaches a terminal state; artifact is downloadable. | GPU-S3 |
 
+## GPU-S1 Retrospective Additions (2026-07-09)
+
+`EV-GPU-DOCKERFILE-BUILD` and `EV-GPU-S1-BUILD-T2I-SMOKE` above both passed —
+see `docs/evidence_map.md` and `docs/session_1/gate_record.md` for the
+executed evidence. These two new cases were harvested from gaps the
+sharded review and adversarial verification surfaced while executing them,
+and apply to any future session that touches `deploy/vllm-omni.Dockerfile`
+or a similarly-structured build (`GPU-S4` if it produces Docker-adjacent
+artifacts; any later rework of this file).
+
+| ID | Purpose | Inputs | Expected properties | Gate |
+|---|---|---|---|---|
+| EV-GPU-DOCKERFILE-NO-COSMOS3-TEXTUAL | Complement the layer-hash cosmos3-reuse check, which has a blind spot: `COPY --from=<image>` repackages content into a new layer diffID, so a layer-set comparison alone would false-PASS a `COPY --from=vllm/vllm-omni:cosmos3` instruction. | `rg -i cosmos3 deploy/vllm-omni.Dockerfile deploy/docker-compose*.yml` (excluding this repo's own `cosmos3-nano-*:local` tags). | Zero matches referencing the forbidden prebuilt as a `FROM`, `image:`, or `COPY --from=` source. | Any session changing this Dockerfile |
+| EV-GPU-DOCKERFILE-GUARDRAILS-DEFAULT | Confirm the shipped `CMD` fails **closed**, not open, without gated guardrail access, and that this is a deliberate, disclosed posture rather than a silent regression. | Start the container with the shipped default `CMD` (no override); separately with `--no-guardrails`. | Default crashes before serving (`CosmosSafetyChecker` refuses to run); `--no-guardrails` serves and generates. Both outcomes recorded, neither silently assumed. | Any session changing this Dockerfile's `CMD`/entrypoint |
+
 ## Evidence Fields
 
 For every manual GPU case, record:
