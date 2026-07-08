@@ -46,6 +46,24 @@ partial and on a proxy image):**
   unrun.
 - README per-mode markings can be upgraded from "GPU-unverified" to "T2I-verified" for FP8/NVFP4.
 
+## GPU-S1 Dockerfile rework (2026-07-09)
+
+Closed the build-half gap this section flagged above. `deploy/vllm-omni.Dockerfile`
+now builds from public inputs only (`FROM vllm/vllm-openai:v0.24.0`, matching the
+fork's own `docker/Dockerfile.cuda` pattern; fork installed by immutable commit
+`697035018b70…` via `uv pip install`) — no `vllm/vllm-omni:cosmos3` prebuilt
+involved. Verified live on the RTX 5090 (sm_120): the base tag passes a real bf16
+CUDA-capability probe, the build completes in well under a minute (only
+vllm-omni's incremental deps install — the base already ships torch/vLLM/CUDA),
+and the rebuilt image serves `/v1/models` and generates a valid T2I artifact for
+**both** FP8 and NVFP4 (exceeding this gate's "at least one" bar). Guardrails stay
+on by default in the shipped image; this session's own smoke test used an
+explicit `--no-guardrails` Compose override (undocumented in any tracked file)
+because the gated `nvidia/Cosmos-1.0-Guardrail` model/`HF_TOKEN` aren't
+provisioned here — full evidence, commands, and artifact metadata in
+`docs/evidence_map.md` and `docs/session_1/`. `deploy/docker-compose.local-image.yml`
+is deleted (owner disposition: drop, not keep as a documented convenience).
+
 ## 1. Scrub and safety (INV-1, INV-2)
 
 - [x] Private-reference scan clean over the whole tree:
@@ -97,18 +115,20 @@ partial and on a proxy image):**
 - [x] `docker compose -f deploy/docker-compose.fp8.yml config` and `…nvfp4…`
       render clean (exit 0, no unset-var warning, correct label) (S8 #10/#11).
 - [x] `api` (lean) and `webui` images build from public inputs (S6).
-- [ ] `deploy/vllm-omni.Dockerfile` builds from the pinned fork commit (`697035018b70…`).
-      **FAILED as written (2026-07-08):** `pip install --break-system-packages` is unsupported
-      by the base image's pip 22.0 (Ubuntu 22.04) → build dies at step 3/3; and even fixed, the
-      `-runtime` base lacks the CUDA/C++ toolchain (`nvcc`, `build-essential`, `cmake`, `ninja`,
-      `torch`, arch list) a from-source vLLM build needs. **Needs rework** — base on the fork's
-      `docker/Dockerfile.cuda` (devel base + toolchain + `TORCH_CUDA_ARCH_LIST=12.0`) or document
-      consuming a prebuilt fork image. The local GPU test used a prebuilt image instead.
-- [x] vLLM-Omni serve entrypoint **confirmed (2026-07-08):**
+- [x] `deploy/vllm-omni.Dockerfile` builds from the pinned fork commit (`697035018b70…`).
+      **FIXED and verified (2026-07-09, `GPU-S1`):** rebuilt from
+      `vllm/vllm-openai:v0.24.0` (public base with a build toolchain already present) +
+      `uv pip install` of the immutable-pinned fork commit. Builds clean from public
+      inputs only; no `vllm/vllm-omni:cosmos3` prebuilt involved. See the "GPU-S1
+      Dockerfile rework" addendum above and `docs/evidence_map.md`.
+- [x] vLLM-Omni serve entrypoint **confirmed (2026-07-08) and fixed in the image
+      (2026-07-09, `GPU-S1`):**
       `vllm serve <checkpoint-dir> --omni --host 0.0.0.0 --port 8000 [--init-timeout 1800]
-      [--no-guardrails]` (per the fork's `recipes/cosmos3/Cosmos3-Nano.md`). The Dockerfile's
-      guessed `python3 -m vllm_omni.entrypoints.openai.api_server` CMD is **wrong** — fix in the
-      rework. (`--no-guardrails` requires a fork build ≥ the flag's introduction.)
+      [--no-guardrails]` (per the fork's `recipes/cosmos3/Cosmos3-Nano.md`). The
+      Dockerfile's `CMD` now runs this directly (with `ENTRYPOINT []` cleared so it
+      isn't appended to `vllm-openai`'s own `vllm serve` entrypoint) instead of the
+      previously wrong `python3 -m vllm_omni.entrypoints.openai.api_server` guess.
+      Verified serving both FP8 and NVFP4 T2I on the RTX 5090.
 
 ## 7. Manual GPU gates (INV-6, INV-8, R-05) — deferred (owner decision, beta-limited)
 
