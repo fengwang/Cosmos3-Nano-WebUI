@@ -1,58 +1,65 @@
 # Session Handoff
 
 ## State Snapshot
-- Session: `GPU-S4` — Upstream state check and quant-patch isolation/rebase.
-- Main repo branch: `GPU-S4`.
+
+- Session: `GPU-S5` - precheck-pr gate and upstream PR submission.
+- Main repo branch: `GPU-S5`.
+- Main repo changed files: `docs/session_5/**`, `docs/evidence_map.md`, `docs/risk_register.md`, `docs/eval_seed_cases.md`, and this handoff.
 - External fork branch: `gpu-s4-quant-loader-isolation` on `fengwang/vllm-omni`.
-- External fork head: `f7e024ddc9965622ebcfdb919e8ccb46b4232074`, pushed to `origin/gpu-s4-quant-loader-isolation`.
-- External fork base: `vllm-project/vllm-omni` `upstream/main` at `a5db2d839a0a20ddb0090faa5bb233280601e5eb`; `git rebase upstream/main` reports the branch is up to date.
-- Changed main-repo files: `docs/session_4/**` plus `docs/evidence_map.md`, `docs/risk_register.md`, `docs/eval_seed_cases.md`, and `docs/handoff.md`.
-- Changed external fork files: 13 files limited to model-agnostic quant-loader/config wiring and narrow tests. No PR opened.
-- Current status: `GATE-GPU-S4-UPSTREAM-SCOPE` passes.
+- External fork base: `vllm-project/vllm-omni` `main` at `ca0ae7269ca3e9487645cf66088fdfc338951da9`.
+- External fork head: `a33df880b83da06087ca4ca13eb061a567cbfe36`, pushed to `origin/gpu-s4-quant-loader-isolation`.
+- Upstream PR: `https://github.com/vllm-project/vllm-omni/pull/5000`.
+- Current status: `GATE-GPU-S5-PR` passes; PR is open, DCO-signed, and GitHub checks are green.
 
 ## Narrative Context
-`GPU-S4` verified upstream before isolating code. Upstream already has generic ModelOpt FP8/NVFP4 detection and the NVFP4 W4A4 NaN-clamp hunk, but not the native blockwise sidecar adapters or FP8/NVFP4 blockwise config modules. The external branch imports the missing model-agnostic slice, adds narrow CPU tests, wires resident quant config selection to model construction, and keeps FP8 W8A16 resident execution explicit opt-in because it currently dequantizes full weights per forward. Sharded review found three High issues; all were fixed in `f7e024dd` and rechecked.
+
+`GPU-S5` took the `GPU-S4` isolated quant-loader branch through the outward-facing contribution gate. The branch was rebased cleanly onto current upstream `main`, checked for downstream residue, run through quick and full `precheck-pr` reconstruction, local targeted tests, local pre-commit, and local wheel build. A DCO-signed cleanup commit fixed repository hook findings before submission.
+
+The PR was opened only after an explicit owner approval recorded at `2026-07-09T19:40:49Z`. GitHub checks for PR #5000 are green: `DCO`, `pre-commit`, `build (3.11)`, `build (3.12)`, and `docs/readthedocs.org:vllm-omni` all succeeded.
 
 ## Decision Log
+
 | Decision | Chosen | Rejected | Reason | Contract Ref |
 |---|---|---|---|---|
-| Upstream overlap | Reuse upstream generic ModelOpt detection and NaN-clamp; import only missing native sidecar/config slice | Re-import all fork hunks | Avoid duplicate/conflicting upstream code | `docs/session_4/upstream_state.md` |
-| FP8 W8A16 default | Load-time dequant remains default; resident W8A16 requires `VLLM_OMNI_FP8_BLOCKWISE_W8A16=1` | Make resident W8A16 default | Sharded performance review found avoidable full-weight dequant on every forward | `docs/session_4/sharded_review.md` F3 |
-| Config wiring | Wire disk recipe resolution through `TransformerConfig.from_dict`, `OmniDiffusionConfig`, and the structured mirror | Leave helper builders unit-tested but unused | Adapter routing and model construction must agree before GPU-S5 | `docs/session_4/sharded_review.md` F1 |
-| Publication | Push branch to `fengwang/vllm-omni`; do not open PR | Open PR now | PR opening and `precheck-pr` are `GPU-S5` scope | `docs/session_4_contract.yaml` |
+| Upstream drift handling | Cleanly rebase `gpu-s4-quant-loader-isolation` onto current `upstream/main` | Route back to `GPU-S4` immediately | Upstream advanced but rebase had no conflicts or semantic drift | `docs/session_5/brainstorming.md` |
+| `precheck-pr` execution | Reconstruct quick and full modes from the fork skill docs | Treat missing executable as skipped | The fork provides a checklist skill, not a standalone command | `docs/session_5/precheck_quick.md`, `docs/session_5/precheck_full.md` |
+| PR title | `[Core][Quantization] Add ModelOpt-native FP8/NVFP4 blockwise loaders` | Initial `[Kernel]...` draft | Static guidance and live quant PR practice diverged; sharded review found `[Core][Quantization]` better supported | `docs/session_5/failure_arbiter.md` FA-4 |
+| Owner gate | Record approval immediately before `gh pr create` | Reuse earlier brainstorming approval | Contract requires immediate PR-opening go-ahead | `docs/session_5/pr_record.md` |
 
 ## Checks Run
-- External fork: upstream fetch/state grep/log/tree inspection before isolation.
-- External fork: red pytest for missing FP8 loader before production import.
-- External fork: targeted pytest after first import: 123 passed, 18 warnings.
-- External fork: sharded-review regression red run: 8 expected failures before fixes.
-- External fork: focused review-fix pytest: 93 passed, 17 warnings.
-- External fork: final targeted pytest: 128 passed, 18 warnings.
-- External fork: `.venv-mig-s2/bin/python -m compileall vllm_omni` passed after final commit.
-- External fork: unmasked branch-diff forbidden-residue sweep passed with zero matches.
-- External fork: `git rebase upstream/main` reported up to date.
-- External fork: branch pushed to `origin/gpu-s4-quant-loader-isolation` at `f7e024ddc9965622ebcfdb919e8ccb46b4232074`.
-- Main repo: `make scan` initially caught session-doc local paths; after placeholder fix, re-run passed with `PRIVATE-REF SCAN: clean (0 findings)`.
-- Review: sharded review saved; adversarial verifier passed and independently reran key branch checks.
+
+- External fork: `git fetch upstream`, clean `git rebase upstream/main`, diff file-list, forbidden-residue sweep, and `git diff --check`.
+- External fork: quick and full `precheck-pr` reconstruction; both passed with warnings only.
+- External fork: targeted pytest set passed after rebase and again after pre-commit fixes: `128 passed, 18 warnings`.
+- External fork: `.venv-mig-s2/bin/python -m compileall -q vllm_omni` passed after rebase and after pre-commit fixes.
+- External fork: AST parse of all 13 changed Python files passed.
+- External fork: local pre-commit passed after classified environment/tooling fixes.
+- External fork: local wheel build passed with `.venv-mig-s2/bin/python`.
+- External fork: DCO sweep confirmed all three PR commits include `Signed-off-by`.
+- GitHub: PR #5000 checks green (`DCO`, `pre-commit`, `build (3.11)`, `build (3.12)`, Read the Docs).
+- Review: sharded review saved; one High metadata finding fixed.
+- Verification: adversarial verification saved and updated after PR submission.
+- Main repo: final `make scan` and git status checks are expected at closeout after this handoff update.
 
 ## Checks Not Run
-- `precheck-pr` skill, upstream CI, and PR opening: explicitly `GPU-S5`.
-- GPU/manual runtime generation or benchmarking: out of `GPU-S4` scope.
-- Full fork test suite: out of scope; only touched quant-loader surfaces were tested.
+
+- Full upstream test suite: out of scope; targeted quant-loader/config tests plus build/pre-commit/CI were the required gates.
+- GPU runtime generation or benchmarking: out of `GPU-S5` scope and not claimed in the PR.
+- Maintainer review response: explicitly out of scope after the PR is open.
 
 ## Next Priority Queue
-1. `GPU-S5`: run fork contribution hygiene, `precheck-pr`, DCO/CLA checks, and decide whether to open the PR from `gpu-s4-quant-loader-isolation`.
-2. Review deferred Medium/Low findings in `docs/session_4/sharded_review.md`: adapter/quantization helper coupling, raw NVFP4 sidecar regex hardening, eager imports, and the FP8 W8A16 fixed-count docstring.
-3. Keep `R-08` open: upstream maintainer review, CLA/DCO, or CI may still block or reshape the contribution.
+
+1. Monitor PR #5000 for maintainer feedback and route any requested changes into a post-Phase-2 follow-up.
+2. Do not treat maintainer review latency as a release blocker for this repository; R-08 is mitigated for submission but review remains external.
+3. Preserve the Session 5 rule: do not open or mutate upstream-facing PRs without a freshly recorded owner gate.
 
 ## Warnings And Gotchas
-- Known failing checks: none at handoff.
-- Environment issue encountered: system Python lacked `aenum`; all external fork verification used the fork venv `.venv-mig-s2`.
-- The external branch intentionally changes `vllm_omni/diffusion/data.py` and `vllm_omni/config/omni_config.py` after review because config construction had to be wired for the quant-loader branch to be usable.
-- FP8 W8A16 resident mode is not the default. It requires `VLLM_OMNI_FP8_BLOCKWISE_W8A16=1` and remains a future optimization risk until a fused/cached path exists.
-- Do not edit this repository's runtime source, Dockerfile, checkpoints, or `docs/archive/phase-1/**` as part of `GPU-S5` unless its contract explicitly expands scope.
+
+- `precheck-pr` is a documentation-backed skill in the fork, not an executable script. Future sessions should preserve separate quick/full evidence instead of recording only "precheck passed."
+- Local system Python is externally managed in this environment; wheel-build equivalence used the fork venv.
+- Read the Docs remained pending after fast GitHub Actions passed; it later succeeded. Pending external statuses should be recorded as pending until terminal, not inferred.
+- The PR intentionally contains no downstream/Cosmos3-specific code, no model weights, and no GPU benchmark claim.
 
 ## Eval Seeds
-- New GPU-S4 seeds added: `EV-GPU-UPSTREAM-PARTIAL-OVERLAP`, `EV-GPU-CONTRIB-NO-DOMAIN-RESIDUE`, and `EV-GPU-SESSION-DOC-NO-LOCAL-PATHS`.
-- Missed check caught internally: main-repo `make scan` found local checkout paths in new session docs; fixed before handoff.
-- Instruction update candidate: when planning docs mention sibling checkouts, require placeholders from the start instead of absolute local paths.
+
+- New GPU-S5 seeds added in `docs/eval_seed_cases.md`: `EV-GPU-PR-TITLE-LIVE-NORM`, `EV-GPU-PRECOMMIT-ENV-BOOTSTRAP`, `EV-GPU-PRECOMMIT-HOOK-FIX-RECHECK`, and `EV-GPU-PR-CHECKS-PENDING-CLASSIFICATION`.

@@ -95,6 +95,20 @@ review layers.
 | EV-GPU-CONTRIB-NO-DOMAIN-RESIDUE | Confirm an upstream-facing contribution branch does not leak product/session-specific residue from the downstream fork. | Branch diff against upstream plus a sweep for product names, session docs, private paths, tokens, and private markers. | The sweep returns zero matches after cleanup; any imported diagnostics use upstream-project names, not downstream product names. | GPU-S4/GPU-S5 contribution prep | Task 2 pre-commit scope sweep |
 | EV-GPU-SESSION-DOC-NO-LOCAL-PATHS | Confirm session artifacts use public placeholders for local checkouts instead of private absolute workspace paths. | `make scan` plus a direct path sweep over new `docs/session_<n>/**` artifacts. | No private absolute checkout path appears in planning, evidence, review, verifier, or handoff docs; use placeholders such as `<external-vllm-omni-checkout>` instead. | Any session writing public docs that mention sibling repos or local checkouts | Main repo `make scan` during GPU-S4 closeout |
 
+## GPU-S5 Retrospective Additions (2026-07-09)
+
+Harvested per `docs/agent_workflow/prompts/eval_harvest.md`. `GPU-S5`
+caught one upstream-submission metadata issue in sharded review and three
+tooling/CI-routing issues through the Failure Arbiter before PR submission.
+No human-reported miss occurred after the agent's own review layers.
+
+| ID | Purpose | Inputs | Expected properties | Gate | Caught by |
+|---|---|---|---|---|---|
+| EV-GPU-PR-TITLE-LIVE-NORM | Confirm the PR title prefix matches both static contribution guidance and current upstream title practice. | Local contribution docs plus a live `gh search prs` sample for recent related upstream PRs. | If static docs and live practice diverge, the chosen title records the interpretation and remains within the documented first-prefix set. | GPU-S5 and future upstream-submission sessions | Sharded review (metadata/correctness), classified as AMBIGUITY in `docs/session_5/failure_arbiter.md` |
+| EV-GPU-PRECOMMIT-ENV-BOOTSTRAP | Confirm a missing local contributor tool is classified as environment before product code is touched. | A failed `python -m pre_commit` invocation, local executable/package probes, and the repository's pre-commit configuration. | Missing tool causes an ENVIRONMENT classification; after installing or selecting an isolated runner, hooks are rerun before any code fix. | Any session requiring local pre-commit equivalence | Failure Arbiter FA-1 |
+| EV-GPU-PRECOMMIT-HOOK-FIX-RECHECK | Confirm formatter/spelling hook changes are followed by behavior-level tests, not only by a green hook rerun. | Hook output that modifies product/test files plus the targeted pytest and compileall commands. | Hook-induced edits are committed only after targeted tests and compileall pass again. | Any session where pre-commit changes non-doc files | Failure Arbiter FA-2 |
+| EV-GPU-PR-CHECKS-PENDING-CLASSIFICATION | Confirm a pending external status is inspected before being called green or failed. | `gh pr checks --watch`, `gh pr checks --json`, and the external status target when a context remains pending. | Pending CI is recorded as pending until terminal; external build status is inspected if GitHub remains silent. | Any PR-submission session | Final PR checks loop; Read the Docs was inspected via its build API before later succeeding |
+
 ## GPU-S2 Retrospective Additions (2026-07-09)
 
 Harvested per `docs/agent_workflow/prompts/eval_harvest.md`. Two of the
