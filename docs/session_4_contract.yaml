@@ -1,0 +1,63 @@
+session_contract:
+  id: GPU-S4
+  objective: Determine whether vllm-project/vllm-omni main already implements FP8/NVFP4 blockwise quant or ModelOpt-native detection; if not, isolate the model-agnostic quant loader files from Cosmos3-specific code and rebase onto current upstream main.
+  risk_level: medium
+  routing: worker_plus_reviewers
+  in_scope:
+    - Inspect vllm-project/vllm-omni main for existing quant support.
+    - Identify and isolate the candidate quant-loader files from the fork.
+    - Rebase the isolated commits onto current upstream main on a fork feature branch.
+    - Record conflict resolutions and semantic-drift findings.
+  out_of_scope:
+    - Opening any pull request.
+    - Running the precheck-pr skill.
+    - Any change to this repository's runtime source, Dockerfile, or checkpoints.
+    - Adding unit tests for the quant methods.
+  blast_radius:
+    allowed_files:
+      - external fengwang/vllm-omni fork feature branch
+      - external fengwang/vllm-omni fork tests for touched quant-loader surfaces
+      - docs/session_4/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - this repository's runtime source (api/**, webui/**, deploy/**, schemas/**)
+      - Cosmos3-specific model, adapter, or guard code in the fork
+      - upstream vllm-project/vllm-omni (read-only inspection only this session)
+  invariants:
+    - The isolated branch contains no Cosmos3-specific code.
+    - The upstream-state finding is recorded with evidence before any isolation commit is made.
+    - Conflicts outside the quant-loader surface are escalated, not resolved unilaterally.
+  acceptance_criteria:
+    - A recorded, evidenced answer to whether upstream already has this exists.
+    - If proceeding, an isolated, rebased, compiling feature branch exists with no Cosmos3-specific code.
+  deterministic_checks:
+    - "git remote add upstream https://github.com/vllm-project/vllm-omni.git   # one-time, if not already present"
+    - "git fetch upstream"
+    - "git log upstream/main -- vllm_omni/quantization"
+    - "rtk rg -n \"fp8_blockwise|nvfp4_blockwise|modelopt_native\" vllm_omni"
+    - "git rebase upstream/main <isolated feature branch>"
+    - "python -m compileall vllm_omni"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The upstream-state check is skipped or done superficially, and isolation work proceeds regardless.
+    - The rebase silently drops a Cosmos3 guard that the isolated code still implicitly depends on.
+    - A conflict is resolved by copying in Cosmos3-specific logic instead of escalating it.
+  failure_modes_to_watch:
+    - Upstream main has restructured the quantization module layout since the fork's pin, making a clean isolation harder than expected.
+    - The fork's tests for the touched surfaces are too fragile or environment-sensitive to run in isolation.
+  done_condition: GATE-GPU-S4-UPSTREAM-SCOPE passes, either as a documented no-PR-needed finding or as an isolated, rebased, compiling branch ready for GPU-S5.
+  handoff_requirements:
+    - Upstream-state finding with evidence.
+    - Isolated feature branch name/commit, if applicable.
+    - Conflict-resolution and semantic-drift notes.
+  eval_seed_candidates:
+    - EV-GPU-UPSTREAM-STATE-CHECK
+    - EV-GPU-QUANT-ISOLATION-COMPILE

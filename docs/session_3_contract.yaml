@@ -1,0 +1,69 @@
+session_contract:
+  id: GPU-S3
+  objective: Prove FP8 and NVFP4 T2I end to end on the RTX 5090 using the GPU-S1 from-source image and GPU-S2's freshly downloaded, fixed checkpoints, with no manual workaround, and attempt a small T2V smoke.
+  risk_level: high
+  routing: branch_and_compare
+  in_scope:
+    - Fresh hf download of both checkpoints at the GPU-S2 revisions.
+    - Run the GPU-S1 image against the freshly downloaded checkpoints.
+    - Direct vLLM-Omni T2I generation for FP8 and NVFP4.
+    - Full-stack T2I generation through the api.
+    - Best-effort small T2V smoke on at least one checkpoint.
+    - Update docs/model_setup.md, docs/release_checklist.md, and README.md per-mode markings.
+  out_of_scope:
+    - t2v_audio, i2v, forward_dynamics, and reasoning validation.
+    - 720p video.
+    - Any Dockerfile or HF-repo change.
+  blast_radius:
+    allowed_files:
+      - docs/session_3/**
+      - docs/model_setup.md
+      - docs/release_checklist.md
+      - README.md
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - api/**
+      - webui/**
+      - deploy/vllm-omni.Dockerfile
+      - schemas/**
+      - .github/**
+      - external HF repos (consumed read-only this session)
+  invariants:
+    - Validation runs against a fresh hf download, not a locally cached or pre-fixed checkpoint directory.
+    - No manual index-removal or LFS-pointer workaround is used in the recorded evidence.
+    - GPU claims record hardware, driver/CUDA, checkpoint revision, vLLM-Omni commit, request shape, and pass/fail.
+  acceptance_criteria:
+    - FP8 and NVFP4 T2I proven end to end, direct and full-stack.
+    - T2V attempted and its outcome recorded either way.
+    - Per-mode markings in docs/model_setup.md and docs/release_checklist.md reflect the result.
+  deterministic_checks:
+    - "nvidia-smi"
+    - "hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision <GPU-S2 sha>"
+    - "hf download wfen/Cosmos3-Nano-NVFP4-Blockwise --revision <GPU-S2 sha>"
+    - "docker compose -f deploy/docker-compose.fp8.yml up -d"
+    - "curl -sf http://localhost:8000/v1/models"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The session reuses a cached, already-fixed local checkpoint directory instead of a genuinely fresh download.
+    - T2I passes but the evidence is missing a required field (revision, commit, or artifact metadata).
+    - A T2V failure is silently dropped instead of recorded as a known limitation.
+  failure_modes_to_watch:
+    - Drift D1 recurs in a new form even after GPU-S2's fix.
+    - VRAM pressure from a T2V attempt destabilizes the T2I evidence collected in the same session.
+  done_condition: GATE-GPU-S3-VALIDATION passes with FP8/NVFP4 T2I proven end to end and a recorded T2V outcome.
+  handoff_requirements:
+    - Full evidence bundle (hardware, commit, revisions, request shape, artifact metadata, pass/fail) for FP8 and NVFP4 T2I and the T2V attempt.
+    - Any newly discovered drift, recorded as a new docs/risk_register.md row.
+  eval_seed_candidates:
+    - EV-GPU-FP8-T2I
+    - EV-GPU-NVFP4-T2I
+    - EV-GPU-T2V-SMOKE
+    - EV-GPU-JOBS-ARTIFACT

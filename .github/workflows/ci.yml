@@ -1,0 +1,93 @@
+# CPU-only public CI (MIG-S5, GATE-MIG-S5-CI).
+#
+# Invariants (INV-5, R-14): no CUDA, no model weights, no private network, no
+# self-hosted runners, and no repository secrets. GPU checks are a manual release
+# gate (S8), not part of this workflow. Actions are pinned to major tags; bump as
+# upstream releases new majors.
+name: ci
+
+on: [push, pull_request]
+
+# Least privilege: read-only checkout, no write scopes, no secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python (lint + cpu tests + schema/scrub gates)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv (provisions the pinned interpreter, caches wheels)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Project requires Python >=3.12,<3.13; never the runner's system Python.
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      # Torch-free: core + dev + test-cpu only. Never `--extra oracle`.
+      - name: Sync dependencies (frozen, torch-free)
+        run: uv sync --frozen --group test-cpu
+
+      - name: Ruff (lint api + tests)
+        run: uv run ruff check api tests
+
+      # Runs the CPU suite, including the app->schemas/openapi.json drift check
+      # (tests/test_openapi.py) and the private-reference scan
+      # (tests/test_private_ref_scan.py). GPU-marked tests are excluded.
+      - name: Pytest (CPU, excludes gpu marker)
+        run: uv run pytest -m "not gpu"
+
+  webui:
+    name: webui (lint + typecheck + unit + schema sync)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webui
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      # Schema sync: regenerate the client types from schemas/openapi.json and fail
+      # on any drift (EV-MIG-SCHEMA-SYNC).
+      - name: Verify generated API types are in sync
+        run: |
+          pnpm gen:api
+          git diff --exit-code lib/api/schema.d.ts
+
+      # Build first: Next generates .next/types (incl. CSS-module *.d.ts) that
+      # `tsc --noEmit` needs, and this validates the production bundle.
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests (vitest)
+        run: pnpm test

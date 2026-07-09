@@ -1,0 +1,53 @@
+.pill {
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line); /* ≥3:1 affordance — not shadow-only */
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-raised-sm);
+  cursor: pointer;
+  transition:
+    box-shadow var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+.pill:hover {
+  transform: translateY(-1px);
+}
+
+.pill:active {
+  box-shadow: var(--shadow-inset);
+  transform: translateY(0);
+}
+
+.pill:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pill:disabled {
+  cursor: not-allowed;
+  opacity: 0.55; /* disabled controls are exempt from WCAG contrast */
+  box-shadow: none;
+}
+
+.accent {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.danger {
+  color: var(--danger-text);
+  border-color: var(--danger);
+}
+
+/* Selected: a border-weight + inset delta, redundant with aria-pressed (non-color). */
+.selected {
+  border-width: 2px;
+  box-shadow: var(--shadow-inset);
+}

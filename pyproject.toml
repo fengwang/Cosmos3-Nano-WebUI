@@ -1,0 +1,73 @@
+[project]
+name = "cosmos3-nano-webui-api"
+version = "0.1.0"
+description = "Cosmos3-Nano serving — API runtime foundation (Session 1)"
+requires-python = ">=3.12,<3.13"
+
+# Server core (always installed). The heavy generation/oracle stack is the opt-in
+# `oracle` extra below so the host/CI loop stays torch-free and fast (design.md D2).
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "prometheus-client>=0.21",   # S11: /v1/metrics exposition (pure-Python, no transitive deps; INV-7-pinned)
+]
+
+[project.optional-dependencies]
+# Proven generation/oracle stack — frozen pins reused verbatim from the proven
+# Cosmos3-Nano quantization base image (INV-7 / RK-06). Installed only in the api
+# image (`uv sync --frozen --extra oracle`). diffusers is git-main-only for Cosmos3Omni.
+oracle = [
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "diffusers",
+    "transformers>=4.57",
+    "accelerate>=1.0",
+    "nvidia-modelopt[hf]==0.44.0",
+    "safetensors>=0.4",
+    "huggingface-hub>=0.34",
+    "einops>=0.8",
+    "sentencepiece>=0.2",
+    "protobuf>=4.25",
+    "ftfy>=6.2",
+    "lpips>=0.1.4",
+    "scikit-image>=0.24",
+    "numpy>=1.26",
+    "pillow>=10.0",
+    "imageio>=2.34",
+    "imageio-ffmpeg>=0.5",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "httpx>=0.27", "openapi-spec-validator>=0.7", "ruff>=0.6"]
+# Torch-free CPU test deps (S5): let the image/video artifact-encoder tests run in
+# CI instead of skipping for a missing numpy. Pins mirror the `oracle` extra; no
+# torch/CUDA is pulled in. Install in CI with `uv sync --frozen --group test-cpu`.
+test-cpu = ["numpy>=1.26", "pillow>=10.0", "imageio>=2.34", "imageio-ffmpeg>=0.5", "safetensors>=0.4"]
+
+[tool.uv]
+# The app source is run from a COPY (image) / PYTHONPATH (host), not pip-installed.
+package = false
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+# Cosmos3Omni exists only on diffusers git-main; pinned to the proven Session-1 commit.
+diffusers = { git = "https://github.com/huggingface/diffusers", rev = "7bf00006aa005eae37bcc639fd0f010c183365b4" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["api"]
+addopts = "-q"
+markers = [
+    "gpu: requires the RTX 5090 (gated-live; skipped on the torch-free host loop)",
+]
+
+[tool.ruff]
+src = ["api", "tests"]
+line-length = 110

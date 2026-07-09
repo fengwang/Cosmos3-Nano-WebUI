@@ -1,0 +1,50 @@
+# Build-context exclusions (MIG-S6). Defense-in-depth on top of narrow per-image
+# COPYs: nothing here is copied into any image, and no broad `COPY .` is used.
+
+# VCS / CI / tooling
+.git
+.gitignore
+.github
+
+# Python envs and caches
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.benchmarks
+
+# Node build output / deps (rebuilt inside the webui image)
+node_modules
+webui/node_modules
+webui/.next
+webui/tsconfig.tsbuildinfo
+
+# Docs, references, and dev-only files (not needed in runtime images)
+docs
+references
+misc
+tests
+REVIEW.md
+AGENTS.md
+CLAUDE.md
+ENVIRONMENTS.md
+
+# Model weights and the checkpoint mount dir — NEVER baked into images (INV-2, R-06)
+models/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.gguf
+
+# Generated media — never baked (INV-2)
+*.mp4
+*.webm
+*.mov
+*.avi
+*.png
+*.jpg
+*.jpeg
+*.gif

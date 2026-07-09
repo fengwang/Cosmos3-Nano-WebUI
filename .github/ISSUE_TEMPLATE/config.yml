@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/fengwang/Cosmos3-Nano-WebUI/security/policy
+    about: Do NOT open a public issue for security problems. Use private reporting — see the security policy.
+  - name: Questions & discussion
+    url: https://github.com/fengwang/Cosmos3-Nano-WebUI/discussions
+    about: Ask setup or usage questions here rather than filing a bug.

@@ -1,0 +1,24 @@
+# Optional reasoning overlay (MIG-S6). Adds the in-container vLLM reasoner to a stack.
+# Requires the api image built with `--build-arg WITH_REASONING=1` and the BF16 base
+# checkpoint. GPU runtime is the MIG-S8 gate; this file only renders/wires it.
+#   docker compose -f deploy/docker-compose.fp8.yml -f deploy/docker-compose.reasoning.yml config
+#   make up-fp8-reasoning
+services:
+  api:
+    environment:
+      COSMOS3_VLLM_BIN: ${COSMOS3_VLLM_BIN:-vllm}                       # reasoner subprocess binary
+      COSMOS3_REASONER_MODEL_DIR: ${COSMOS3_REASONER_MODEL_DIR:-/models/base}
+      # Consumed only by the in-process diffusers action engine (COSMOS3_GEN_ENGINE=diffusers),
+      # not the reasoner; shares this same BF16 base mount for action / forward_dynamics.
+      COSMOS3_BASE_ACTION_DIR: ${COSMOS3_BASE_ACTION_DIR:-/models/base/transformer}
+    volumes:
+      # BF16 base (nvidia/Cosmos3-Nano) for the reasoner/action tower, read-only.
+      # Default is <repo>/models/... (../ is relative to the deploy/ project dir).
+      - ${COSMOS3_BASE_DIR:-../models/Cosmos3-Nano}:/models/base:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

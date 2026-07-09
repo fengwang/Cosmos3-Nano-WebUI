@@ -1,0 +1,78 @@
+session_contract:
+  id: GPU-S1
+  objective: Build a working vLLM-Omni image from deploy/vllm-omni.Dockerfile using only public inputs, pinned to the fork commit by immutable SHA.
+  risk_level: high
+  routing: branch_and_compare
+  in_scope:
+    - Rework deploy/vllm-omni.Dockerfile to a public vllm/vllm-openai base with a build toolchain.
+    - Install the pinned fork commit 697035018b70cef76b974a909d23371a9984c3f2 by immutable commit.
+    - Fix the serve entrypoint to vllm serve <dir> --omni --host 0.0.0.0 --port 8000.
+    - Build and serve the image; generate a T2I artifact on the RTX 5090.
+    - Disposition deploy/docker-compose.local-image.yml.
+    - Update docs/release_checklist.md section 6.
+  out_of_scope:
+    - Pushing changes to the wfen/* Hugging Face repos (the checkpoint fix itself is GPU-S2's job).
+    - WebUI/API source changes or public API shape changes.
+    - Docker image publishing or registry work.
+    - Upstream PR work.
+  blast_radius:
+    allowed_files:
+      - deploy/vllm-omni.Dockerfile
+      - deploy/docker-compose*.yml
+      - deploy/docker-compose.local-image.yml
+      - docs/session_1/**
+      - docs/release_checklist.md
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      # Amendment GPU-S1-A1 (owner-approved 2026-07-09, FA-6): the original list
+      # omitted the two session-close paths every sibling contract already has
+      # (session_2/session_3/Phase-1 session_8) and the standing CLAUDE.md
+      # Session End Protocol mandates. Caught by the sharded review (F1).
+      - docs/handoff.md
+      - docs/eval_seed_cases.md
+    forbidden_files:
+      - api/**
+      - webui/**
+      - schemas/**
+      - .github/**
+      - model weight or generated media files
+      - wfen/* Hugging Face repos (external, not this session)
+  invariants:
+    - The image never bakes model weights.
+    - The fork is installed by immutable commit SHA, never a mutable branch.
+    - No public API shape changes.
+    - A local, non-pushed checkpoint workaround (moving aside the stale index on disk) is acceptable for this session's own T2I smoke test; it is not an HF checkpoint repo change and does not satisfy GPU-S2's done condition.
+  acceptance_criteria:
+    - deploy/vllm-omni.Dockerfile builds from public inputs only.
+    - The built image serves /v1/models and generates a T2I artifact on the RTX 5090 for at least one of FP8 or NVFP4.
+    - docker-compose.local-image.yml has a recorded disposition.
+    - docs/release_checklist.md section 6 reflects the new build result.
+  deterministic_checks:
+    - "rtk git status --short --branch"
+    - "docker compose -f deploy/docker-compose.fp8.yml build vllm-omni"
+    - "docker compose -f deploy/docker-compose.fp8.yml up -d vllm-omni"
+    - "curl -sf http://localhost:8000/v1/models"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The build appears to succeed but actually reused a cached prebuilt cosmos3 layer.
+    - The chosen base image tag does not actually support sm_120 at runtime, only at compile time.
+    - The serve entrypoint works for FP8 but silently fails for NVFP4.
+    - The local-image stopgap is left in place as the de facto path without a recorded decision.
+  failure_modes_to_watch:
+    - Base image CUDA/torch version mismatches the fork's expected build environment.
+    - Build succeeds but the container lacks a runtime dependency only exercised at inference time.
+    - "--no-guardrails vs guardrails-on paths behave differently and only one is tested."
+  done_condition: GATE-GPU-S1-DOCKERFILE passes with a public, from-source image that serves T2I on the RTX 5090.
+  handoff_requirements:
+    - Base image tag actually used.
+    - Build command and duration.
+    - T2I evidence (command, exit code, artifact metadata).
+    - docker-compose.local-image.yml disposition.
+  eval_seed_candidates:
+    - EV-GPU-DOCKERFILE-BUILD
+    - EV-GPU-S1-BUILD-T2I-SMOKE

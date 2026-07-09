@@ -1,0 +1,10 @@
+# pnpm 11 build-script policy (the package.json "pnpm" field is ignored in pnpm 11).
+# Both entries are native-binding deps with pure-JS fallbacks, disabled so that
+# non-interactive installs (host + the webui Dockerfile's
+# `pnpm install --frozen-lockfile`) exit 0 without running build scripts.
+#   - sharp: transitive optional dep of Next (next/image optimization — unused here).
+#   - unrs-resolver: native oxc resolver pulled in by eslint-config-next; the JS
+#     fallback is sufficient for `next lint`.
+allowBuilds:
+  sharp: false
+  unrs-resolver: false

@@ -1,0 +1,34 @@
+{
+  "repos": [
+    {
+      "findings": {
+        "large_file_stability": {},
+        "lfs_placement": {
+          "_s2_postfix.md": "known_dev_scratch_orphan_left_as_is",
+          "_s2_rerun.md": "known_dev_scratch_orphan_left_as_is",
+          "_s2_verify.md": "known_dev_scratch_orphan_left_as_is"
+        },
+        "stale_index_present": false
+      },
+      "n_files": 110,
+      "passed": true,
+      "pre_fix_revision": "4e181f996abf03f3425298ef692e6e5e56fd46a4",
+      "repo_id": "wfen/Cosmos3-Nano-FP8-Blockwise",
+      "revision": "9bf5d6ae164688487bdb71947ccc6ebe70d12900"
+    },
+    {
+      "findings": {
+        "large_file_stability": {},
+        "lfs_placement": {
+          "transformer/producer_provenance.json": "known_dev_scratch_orphan_left_as_is"
+        },
+        "stale_index_present": false
+      },
+      "n_files": 56,
+      "passed": true,
+      "pre_fix_revision": "b5c9332efbaefa72c99890b1b1150da12ca9256c",
+      "repo_id": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+      "revision": "5514c42b9759739f545e0d0dee453db8d8525fbc"
+    }
+  ]
+}

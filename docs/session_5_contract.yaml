@@ -1,0 +1,66 @@
+session_contract:
+  id: GPU-S5
+  objective: Run the fork's precheck-pr skill, satisfy upstream CI/pre-commit/DCO requirements, add quant unit tests, and open the PR against vllm-project/vllm-omni main only after an explicit owner go-ahead recorded immediately before submission.
+  risk_level: high
+  routing: branch_and_compare
+  in_scope:
+    - Run precheck-pr (quick then full) against the GPU-S4 feature branch.
+    - Add unit tests for the quant methods.
+    - Confirm CI (pre-commit, build_wheel) passes.
+    - DCO sign-off on every commit.
+    - Confirm no regression in existing non-quant paths.
+    - Determine the correct PR-title prefix.
+    - Record an explicit owner go-ahead immediately before opening the PR.
+    - Open the PR against vllm-project/vllm-omni main.
+  out_of_scope:
+    - Further isolation or rebase work; returns to GPU-S4 if precheck-pr surfaces a scope violation.
+    - Responding to maintainer review after the PR is open.
+    - Any change to this repository.
+  blast_radius:
+    allowed_files:
+      - external fengwang/vllm-omni fork feature branch (from GPU-S4)
+      - the opened pull request against vllm-project/vllm-omni
+      - docs/session_5/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - this repository's runtime source
+      - Cosmos3-specific code anywhere in the fork or the PR
+      - any commit without DCO sign-off
+  invariants:
+    - The PR is never opened without a recorded owner go-ahead immediately preceding submission.
+    - The PR contains no Cosmos3-specific code and does not require the Cosmos3 model to build or pass CI.
+    - Every commit in the PR is DCO-signed.
+  acceptance_criteria:
+    - precheck-pr is clean, quick and full.
+    - CI is green and DCO sign-off is present on every commit.
+    - No regression is found in non-quant upstream paths.
+    - Either the PR is open with a recorded owner go-ahead, or the session records why it did not proceed.
+  deterministic_checks:
+    - "<fork checkout>/.claude/skills/precheck-pr"
+    - "git log --show-signature -n <N>"
+    - "gh pr checks <PR>"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The PR is opened before the owner go-ahead is actually recorded, only justified after the fact.
+    - The precheck-pr full run is skipped because the quick run passed.
+    - A commit without DCO sign-off is included because it predates the sign-off requirement being applied.
+    - The PR quietly depends on Cosmos3-specific behavior through an indirect import.
+  failure_modes_to_watch:
+    - Upstream CI flakes unrelated to the quant change are misread as a real regression.
+    - The precheck-pr skill's guidance and the actual current upstream CONTRIBUTING.md have drifted apart.
+  done_condition: GATE-GPU-S5-PR passes with either an open, DCO-signed, CI-green PR carrying a recorded owner go-ahead, or a documented reason the PR did not proceed.
+  handoff_requirements:
+    - precheck-pr output, quick and full.
+    - PR URL and review status, if opened.
+    - Recorded owner go-ahead timestamp.
+  eval_seed_candidates:
+    - EV-GPU-PR-PRECHECK
+    - EV-GPU-PR-CI-GREEN

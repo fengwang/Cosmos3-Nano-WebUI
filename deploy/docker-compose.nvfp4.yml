@@ -1,0 +1,15 @@
+# NVFP4 local-build stack (MIG-S6). Renders standalone under a single -f (includes the base).
+#   docker compose -f deploy/docker-compose.nvfp4.yml config
+#   make up-nvfp4
+include:
+  - docker-compose.base.yml
+
+services:
+  api:
+    environment:
+      COSMOS3_CHECKPOINT_LABEL: nvfp4
+  vllm-omni:
+    volumes:
+      # Operator-supplied NVFP4 checkpoint (download first — see .env.example), read-only.
+      # Default is <repo>/models/... (../ is relative to the deploy/ project dir).
+      - ${COSMOS3_NVFP4_DIR:-../models/Cosmos3-Nano-NVFP4-Blockwise}:/models/checkpoint:ro

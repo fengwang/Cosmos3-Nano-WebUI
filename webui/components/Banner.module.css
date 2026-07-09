@@ -1,0 +1,43 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.banner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.glyph {
+  flex: none;
+  line-height: 1.5;
+}
+
+.body {
+  color: var(--text);
+}
+
+/* Error: danger border (≥3:1) + danger-text body (audited ≥4.5:1 on surface). */
+.banner[data-severity="error"] {
+  border-color: var(--danger);
+  border-width: 2px;
+}
+
+.banner[data-severity="error"] .body {
+  color: var(--danger-text);
+}
+
+/* Warn: heavier neutral border (non-color emphasis). */
+.banner[data-severity="warn"] {
+  border-width: 2px;
+}

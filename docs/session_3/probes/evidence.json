@@ -1,0 +1,222 @@
+{
+  "fragments": {
+    "checkpoint_fetch_fp8": {
+      "artifact_metadata": {
+        "file_count": 222,
+        "total_bytes": 24047158804
+      },
+      "artifact_path": "models/Cosmos3-Nano-FP8-Blockwise",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-FP8-Blockwise",
+      "checkpoint_revision": "9bf5d6ae164688487bdb71947ccc6ebe70d12900",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "action": "hf_download",
+        "local_dir": "models/Cosmos3-Nano-FP8-Blockwise"
+      },
+      "run_at": "2026-07-09T12:14:33.797584+00:00",
+      "task_id": "checkpoint_fetch_fp8",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    },
+    "checkpoint_fetch_nvfp4": {
+      "artifact_metadata": {
+        "file_count": 116,
+        "total_bytes": 26570924863
+      },
+      "artifact_path": "models/Cosmos3-Nano-NVFP4-Blockwise",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+      "checkpoint_revision": "5514c42b9759739f545e0d0dee453db8d8525fbc",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "action": "hf_download",
+        "local_dir": "models/Cosmos3-Nano-NVFP4-Blockwise"
+      },
+      "run_at": "2026-07-09T12:14:56.032265+00:00",
+      "task_id": "checkpoint_fetch_nvfp4",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    },
+    "direct_t2i_fp8": {
+      "artifact_metadata": {
+        "dims": [
+          480,
+          480
+        ],
+        "format": "png",
+        "sha256": "368ae934d5902ebda04cd07dcfbdb71f2b84007d91735ea8f0dc754b31147490",
+        "size_bytes": 691968
+      },
+      "artifact_path": "direct_t2i_fp8.png",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-FP8-Blockwise",
+      "checkpoint_revision": "9bf5d6ae164688487bdb71947ccc6ebe70d12900",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "guidance_scale": 6.0,
+        "mode": "t2i",
+        "n": 1,
+        "num_inference_steps": 35,
+        "prompt": "a red apple on a wooden table, studio lighting",
+        "response_format": "b64_json",
+        "seed": 42,
+        "size": "480x480"
+      },
+      "run_at": "2026-07-09T12:16:10.006567+00:00",
+      "task_id": "direct_t2i_fp8",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    },
+    "direct_t2i_nvfp4": {
+      "artifact_metadata": {
+        "dims": [
+          480,
+          480
+        ],
+        "format": "png",
+        "sha256": "dca897ee8378c1681554a2fd7c17c41720f9b5feef059160094b31bc63a2df0a",
+        "size_bytes": 691968
+      },
+      "artifact_path": "direct_t2i_nvfp4.png",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+      "checkpoint_revision": "5514c42b9759739f545e0d0dee453db8d8525fbc",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "guidance_scale": 6.0,
+        "mode": "t2i",
+        "n": 1,
+        "num_inference_steps": 35,
+        "prompt": "a red apple on a wooden table, studio lighting",
+        "response_format": "b64_json",
+        "seed": 42,
+        "size": "480x480"
+      },
+      "run_at": "2026-07-09T12:18:09.731702+00:00",
+      "task_id": "direct_t2i_nvfp4",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    },
+    "fullstack_t2i_fp8": {
+      "artifact_metadata": {
+        "dims": [
+          480,
+          480
+        ],
+        "format": "png",
+        "job_id": "d1f2b832830340a2ad7507d5449c7ad1",
+        "sha256": "5ece5ec577f17bafc3d4aa2c1fbde7e49cf34bbb8fe3f326027485ace881ba69",
+        "size_bytes": 691968
+      },
+      "artifact_path": "fullstack_t2i_fp8.png",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-FP8-Blockwise",
+      "checkpoint_revision": "9bf5d6ae164688487bdb71947ccc6ebe70d12900",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "job_status_history": [
+          "queued",
+          "queued",
+          "queued",
+          "running",
+          "succeeded"
+        ],
+        "mode": "t2i",
+        "prompt": "a red apple on a wooden table, studio lighting",
+        "resolution": 480,
+        "seed": 42
+      },
+      "run_at": "2026-07-09T12:19:12.724281+00:00",
+      "task_id": "fullstack_t2i_fp8",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    },
+    "fullstack_t2i_nvfp4": {
+      "artifact_metadata": {
+        "dims": [
+          480,
+          480
+        ],
+        "format": "png",
+        "job_id": "ce9bb9ed6b344a26a4837326b286c3fa",
+        "sha256": "b999233fcefef51fc1e98f0a52a9e61c7c3b4e4bfc665ed56c7e513d16ab7814",
+        "size_bytes": 691968
+      },
+      "artifact_path": "fullstack_t2i_nvfp4.png",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+      "checkpoint_revision": "5514c42b9759739f545e0d0dee453db8d8525fbc",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "job_status_history": [
+          "queued",
+          "queued",
+          "queued",
+          "succeeded"
+        ],
+        "mode": "t2i",
+        "prompt": "a red apple on a wooden table, studio lighting",
+        "resolution": 480,
+        "seed": 42
+      },
+      "run_at": "2026-07-09T12:20:13.789313+00:00",
+      "task_id": "fullstack_t2i_nvfp4",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    },
+    "t2v_smoke": {
+      "artifact_metadata": {
+        "dims": [
+          256,
+          256
+        ],
+        "format": "mp4/webm",
+        "fps": 8,
+        "num_frames": 9,
+        "sha256": "71a79b6941c11023d271d067cc1041bb95d2b45e4c996d503d2255110a37301a",
+        "size_bytes": 92668
+      },
+      "artifact_path": "t2v_smoke_nvfp4.mp4",
+      "checkpoint_repo": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+      "checkpoint_revision": "5514c42b9759739f545e0d0dee453db8d8525fbc",
+      "driver_cuda": "610.43.02 / CUDA 13.3",
+      "hardware": "NVIDIA GeForce RTX 5090",
+      "notes": "",
+      "request_shape": {
+        "extra_params": "{\"use_resolution_template\": false, \"use_duration_template\": false, \"guardrails\": false}",
+        "flow_shift": "10.0",
+        "fps": "8",
+        "guidance_scale": "6.0",
+        "max_sequence_length": "4096",
+        "mode": "t2v",
+        "num_frames": "9",
+        "num_inference_steps": "20",
+        "prompt": "a red apple slowly rotating on a wooden table",
+        "seed": "42",
+        "size": "256x256"
+      },
+      "run_at": "2026-07-09T12:21:14.884119+00:00",
+      "task_id": "t2v_smoke",
+      "verdict": "PASS",
+      "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+    }
+  },
+  "missing_task_ids": [],
+  "present_task_ids": [
+    "checkpoint_fetch_fp8",
+    "checkpoint_fetch_nvfp4",
+    "direct_t2i_fp8",
+    "direct_t2i_nvfp4",
+    "fullstack_t2i_fp8",
+    "fullstack_t2i_nvfp4",
+    "t2v_smoke"
+  ],
+  "unexpected_task_ids": []
+}

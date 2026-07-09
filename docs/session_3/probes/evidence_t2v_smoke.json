@@ -1,0 +1,36 @@
+{
+  "artifact_metadata": {
+    "dims": [
+      256,
+      256
+    ],
+    "format": "mp4/webm",
+    "fps": 8,
+    "num_frames": 9,
+    "sha256": "71a79b6941c11023d271d067cc1041bb95d2b45e4c996d503d2255110a37301a",
+    "size_bytes": 92668
+  },
+  "artifact_path": "t2v_smoke_nvfp4.mp4",
+  "checkpoint_repo": "wfen/Cosmos3-Nano-NVFP4-Blockwise",
+  "checkpoint_revision": "5514c42b9759739f545e0d0dee453db8d8525fbc",
+  "driver_cuda": "610.43.02 / CUDA 13.3",
+  "hardware": "NVIDIA GeForce RTX 5090",
+  "notes": "",
+  "request_shape": {
+    "extra_params": "{\"use_resolution_template\": false, \"use_duration_template\": false, \"guardrails\": false}",
+    "flow_shift": "10.0",
+    "fps": "8",
+    "guidance_scale": "6.0",
+    "max_sequence_length": "4096",
+    "mode": "t2v",
+    "num_frames": "9",
+    "num_inference_steps": "20",
+    "prompt": "a red apple slowly rotating on a wooden table",
+    "seed": "42",
+    "size": "256x256"
+  },
+  "run_at": "2026-07-09T12:21:14.884119+00:00",
+  "task_id": "t2v_smoke",
+  "verdict": "PASS",
+  "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+}

@@ -1,0 +1,12 @@
+.media {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+}
+
+.audio {
+  width: 100%;
+}

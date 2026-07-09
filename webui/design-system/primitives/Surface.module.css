@@ -1,0 +1,17 @@
+.surface {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+}
+
+/* Dual-shadow recipe — decorative only (state never relies on it; see components). */
+.raised {
+  box-shadow: var(--shadow-raised);
+}
+
+.inset {
+  box-shadow: var(--shadow-inset);
+}
+
+.flat {
+  box-shadow: none;
+}

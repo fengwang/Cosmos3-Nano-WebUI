@@ -1,0 +1,122 @@
+session_contract:
+  id: MIG-S7
+  objective: Write public README and add core project hygiene for beta users.
+  risk_level: medium
+  routing: worker_plus_reviewers
+  in_scope:
+    - Write public README using logo, pitch, badges, features, quickstart, setup, limitations, and troubleshooting.
+    - Add MIT LICENSE for repo code.
+    - Add SECURITY.md, CONTRIBUTING.md, issue templates, and release checklist.
+    - Ensure model license and dependency license boundaries are clear.
+    - Link README claims to evidence or phrase them as beta limitations.
+    - Run link, claim, and private-reference reviews.
+  out_of_scope:
+    - Runtime feature work.
+    - Docker publishing.
+    - Model-card edits outside this repo.
+    - Production-readiness claim.
+  blast_radius:
+    allowed_files:
+      - README.md
+      - LICENSE
+      - SECURITY.md
+      - CONTRIBUTING.md
+      - .github/ISSUE_TEMPLATE/**
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - docs/release_checklist.md
+      - docs/session_7/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      # ── Amendment (owner-approved 2026-07-07); see `amendments:` below ──
+      - CODE_OF_CONDUCT.md
+      - .gitignore
+      - webui/lib/proxy.ts          # X-1 fix (narrow exception to "runtime source files")
+      - webui/lib/proxy.test.ts     # X-1 regression tests
+      - webui/lib/proxyFetch.test.ts # X-1 regression tests
+      - docs/handoff.md             # Session End Protocol
+      - docs/eval_corpus/**         # Eval Harvest
+      - docs/eval_seed_cases.md     # Eval Harvest (index rows for the S7 seeds)
+      - docs/session_7_contract.yaml # this amendment
+      - .env.example                # S7-A2: stale X-1 comment (see amendments)
+    forbidden_files:
+      - runtime source files (except the three X-1 files named in allowed_files)
+      - model weight files
+      - Docker publishing workflows
+      - vLLM-Omni fork source
+      - api/** (the X-API-Key contract is honored, not changed — INV-9)
+      - schemas/openapi.json
+      - pyproject.toml / uv.lock / package.json (no new dependency — INV-10)
+  invariants:
+    - README claims match public evidence or are marked as manual/beta validation.
+    - Repo code license is not conflated with model license.
+    - Setup commands work from public inputs only.
+    - README stays concise and points to docs for detail.
+  acceptance_criteria:
+    - README exists and is non-empty.
+    - LICENSE, SECURITY.md, CONTRIBUTING.md, issue templates, and release checklist exist.
+    - Private-reference scan passes.
+    - Claim review finds no unsupported production or performance claims.
+  deterministic_checks:
+    - "rtk test -s README.md"
+    - "rtk test -f LICENSE"
+    - "rtk test -f SECURITY.md"
+    - "rtk test -f CONTRIBUTING.md"
+    - "rtk rg -n \"$PRIVATE_REF_PATTERN\" README.md docs .github"
+    - "rtk rg -n \"production-ready|guaranteed|always|official\" README.md docs"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - README says GPU support is shipped without manual evidence.
+    - MIT license text appears to cover HF model weights.
+    - Quickstart depends on unpublished images or private paths.
+    - Security reporting asks users to disclose vulnerabilities in public issues.
+  failure_modes_to_watch:
+    - README grows too long and hides setup steps.
+    - Links to HF or GitHub pins rot before beta.
+    - Issue templates request sensitive data.
+  done_condition: GATE-MIG-S7-PUBLIC passes with public-facing docs and hygiene ready for release review.
+  handoff_requirements:
+    - README claim matrix.
+    - Hygiene file list.
+    - Link check notes.
+    - Remaining docs limitations.
+  eval_seed_candidates:
+    - EV-MIG-README-LINKS
+    - EV-MIG-LICENSE-HYGIENE
+    - EV-MIG-SCRUB
+  amendments:
+    - id: S7-A1
+      date: 2026-07-07
+      approved_by: owner (Feng)
+      change: >
+        Extend blast_radius.allowed_files to permit the X-1 fix and the two extra
+        hygiene items decided during brainstorming, plus the Session End / Eval
+        Harvest artifacts the literal list omitted.
+      added:
+        - webui/lib/proxy.ts, webui/lib/proxy.test.ts, webui/lib/proxyFetch.test.ts
+        - .gitignore
+        - CODE_OF_CONDUCT.md
+        - docs/handoff.md, docs/eval_corpus/**, docs/eval_seed_cases.md, docs/session_7_contract.yaml
+      rationale: >
+        X-1: the WebUI BFF sent `Authorization: Bearer <key>` while the API enforces
+        `X-API-Key`, so enabling COSMOS3_API_KEY broke the WebUI->API proxy (prior
+        handoff, pre-existing). The fix is confined to the WebUI client and preserves
+        INV-9 (the public API request shape is unchanged). The .gitignore hardening and
+        CODE_OF_CONDUCT.md are standard beta hygiene for a repo now inviting external
+        contributions. Mirrors the S4 FA-4 / S5 D10 / S6 allowed_files amendment
+        precedent. Full basis: docs/session_7/{brainstorming,design}.md.
+    - id: S7-A2
+      date: 2026-07-07
+      approved_by: owner (Feng) - pending review; direct consequence of S7-A1/X-1
+      change: >
+        Add .env.example to allowed_files to fix a now-stale comment: it stated
+        "enabling COSMOS3_API_KEY currently breaks the WebUI->API proxy", which the
+        X-1 fix (S7-A1) falsifies. Leaving it would make a public tracked file
+        contradict the README and evidence map (invariant: README/public claims match
+        evidence). Caught by the S7 sharded review (correctness F2). Comment-only edit;
+        no variable/default changed.
+

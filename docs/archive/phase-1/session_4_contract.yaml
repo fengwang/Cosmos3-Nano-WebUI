@@ -1,0 +1,73 @@
+session_contract:
+  id: MIG-S4
+  objective: Verify public HF FP8/NVFP4 checkpoints and define the public model setup contract.
+  risk_level: high
+  routing: branch_and_compare
+  in_scope:
+    - Verify FP8 and NVFP4 HF repos are reachable and record revisions.
+    - Record license metadata and model-card state.
+    - Inspect file layout and runtime assumptions without adding weights to Git.
+    - Run metadata or header-level probes when checkpoints are available.
+    - Define public environment variables and mount layout for Docker and README.
+    - Record drift and route unsupported modes.
+  out_of_scope:
+    - Committing model weights.
+    - Runtime auto-download on API boot.
+    - Docker changes.
+    - README rewrite.
+  blast_radius:
+    allowed_files:
+      - docs/session_4/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/eval_corpus/**   # amended MIG-S4 (FA-4): reconcile with Session End Protocol step 4
+      - docs/handoff.md       # amended MIG-S4 (FA-4): Session End Protocol step 3 (as in S1-S3)
+      - docs/model_setup.md
+    forbidden_files:
+      - model weight files
+      - generated media files
+      - Dockerfiles and Compose files
+      - README.md
+      - .github/**
+  invariants:
+    - HF verification cites public repo IDs and revisions.
+    - Local checkpoint paths are examples only and configurable.
+    - Model license notes stay separate from repo MIT license.
+    - No checkpoint blob is committed.
+  acceptance_criteria:
+    - FP8 and NVFP4 HF revisions are recorded.
+    - License metadata is recorded.
+    - File layout and runtime assumptions are documented.
+    - Any drift has an owner disposition before Docker or README depends on it.
+  deterministic_checks:
+    - "rtk git ls-remote https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise HEAD 'refs/heads/*'"
+    - "rtk git ls-remote https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise HEAD 'refs/heads/*'"
+    - "rtk python -c \"import huggingface_hub; print(huggingface_hub.__version__)\""
+    - "rtk rg -n \"wfen/Cosmos3-Nano-(FP8|NVFP4)-Blockwise\" docs"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - HF repo exists but file layout does not match loader expectations.
+    - License wording in README treats model weights as MIT.
+    - NVFP4 model-card gap causes setup ambiguity.
+    - Checkpoint verification accidentally commits downloaded files.
+  failure_modes_to_watch:
+    - HF large-file access requires credentials or Xet setup.
+    - Metadata probe depends on unavailable optional packages.
+    - Public artifact drift blocks a target mode.
+  done_condition: GATE-MIG-S4-HF passes with public checkpoint setup ready for Docker and README.
+  handoff_requirements:
+    - HF repo revisions.
+    - License notes.
+    - Expected local env vars.
+    - Mount layout.
+    - Drift report.
+  eval_seed_candidates:
+    - EV-MIG-HF-FP8-METADATA
+    - EV-MIG-HF-NVFP4-METADATA
+

@@ -1,0 +1,98 @@
+session_contract:
+  id: GPU-S2
+  objective: Fix the wfen/Cosmos3-Nano-FP8-Blockwise and wfen/Cosmos3-Nano-NVFP4-Blockwise HF repos (remove the stale weight index, correct LFS tracking) and re-pin every in-repo reference to the new revisions.
+  risk_level: high
+  routing: branch_and_compare
+  in_scope:
+    - Fresh clone of both wfen/* repos.
+    - Remove the stale top-level model.safetensors.index.json in each.
+    - Rewrite .gitattributes per the LFS rule; migrate small text files out of LFS.
+    - Commit and push each repo.
+    - Verify via a fresh clone AND hf download.
+    - Sweep the whole repository and update every pinned-revision reference, at minimum docs/model_setup.md section 1, docs/evidence_map.md, docs/release_checklist.md section 7, docs/eval_seed_cases.md.
+    # Amendment GPU-S2-A1 (owner-approved 2026-07-09, baseline check): the
+    # original scope did not anticipate that BIAS.md/EXPLAINABILITY.md/
+    # PRIVACY.md/SAFETY.md in both repos currently contain raw LFS-pointer
+    # text as their checked-out content (a third, distinct packaging bug —
+    # these paths match no current .gitattributes rule, so neither a normal
+    # clone nor `git add --renormalize .` recovers their real content).
+    # Verified recoverable via direct LFS object fetch + manual smudge.
+    - Restore the real content of BIAS.md, EXPLAINABILITY.md, PRIVACY.md, and SAFETY.md in both wfen/* repos (orphaned LFS-pointer text, not a dev-scratch file).
+  out_of_scope:
+    - D3 dev-scratch cleanup on the HF repos.
+    # GPU-S2-A1: the identical orphaned-pointer corruption exists in FP8's
+    # _s2_postfix.md/_s2_rerun.md/_s2_verify.md too, but those are D3
+    # dev-scratch (named below) — left untouched, corruption and all.
+    - Rewriting large weight files out of LFS.
+    - Dockerfile changes.
+    - Upstream PR work.
+  blast_radius:
+    allowed_files:
+      - external wfen/Cosmos3-Nano-FP8-Blockwise HF repo
+      - external wfen/Cosmos3-Nano-NVFP4-Blockwise HF repo
+      - docs/session_2/**
+      - docs/model_setup.md
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/release_checklist.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+      - docs/eval_seed_cases.md
+      # Amendment GPU-S2-A2 (owner-approved 2026-07-09, whole-repo sweep):
+      # the top-level README.md quickstart and checkpoint table cite the
+      # pre-fix revisions and were absent from the original blast radius —
+      # exactly the "not only those four files" gap Hard Commitment 3 itself
+      # anticipates. Caught by the sweep this session's own contract
+      # requires before closing.
+      - README.md
+      # Amendment GPU-S2-A3 (owner-approved 2026-07-09, fresh-context
+      # adversarial verifier, FAIL -> fix): the whole-repo sweep command
+      # named in this contract's own deterministic_checks (`rg -n "..." .`)
+      # silently skips dotfiles by default, so it never actually scanned
+      # `.env.example`, which cited the pre-fix revisions as live operator
+      # guidance. Caught by independent re-verification, not by this
+      # session's own (incomplete) sweep. See sweep command fix below.
+      - .env.example
+    forbidden_files:
+      - api/**
+      - webui/**
+      - deploy/**
+      - schemas/**
+      - .github/**
+      - this repository's model weight or generated media files
+  invariants:
+    - A checkpoint fix is verified against a fresh clone/download, not the already-patched local checkout.
+    - Large weight files stay in LFS; only small plain-text files move to regular git.
+    - Every reference to the old revision is updated in the same session, none left stale.
+  acceptance_criteria:
+    - Both HF repos load cleanly from a fresh clone/download.
+    - No stale pin remains anywhere in the repository, confirmed by a whole-repository sweep (the four referencing docs are the minimum floor, not the full scope).
+    - Owner go-ahead is recorded before either repo is pushed.
+  deterministic_checks:
+    - "git clone <fresh dir> https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise"
+    - "git clone <fresh dir> https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise"
+    - "hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision <new sha>"
+    - "hf download wfen/Cosmos3-Nano-NVFP4-Blockwise --revision <new sha>"
+    - "rtk rg -n --hidden --glob '!.git' \"4e181f99|b5c9332e\" .   # whole-repo sweep, 8-char prefix catches abbreviated cites too; --hidden is required (GPU-S2-A3) because rg skips dotfiles by default and the un-hidden form misses .env.example; only expected hits are eval_seed_cases.md's own historical reference and this session's own planning/evidence prose"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The fix is verified only against the local already-patched checkout, not a fresh clone.
+    - The LFS migration accidentally de-LFSes a large weight file.
+    - The re-pin sweep updates 3 of 4 referencing files and misses one.
+    - The push happens before an owner go-ahead is recorded.
+  failure_modes_to_watch:
+    - HF's Xet backend caches the old pointer state and masks whether the fix actually works from a genuinely fresh environment.
+    - .gitattributes rewrite order causes already-committed files to not get renormalized.
+  done_condition: GATE-GPU-S2-CHECKPOINT passes with both repos fixed, fresh-clone-verified, and every in-repo pin swept.
+  handoff_requirements:
+    - New revision hashes for both repos.
+    - LFS/.gitattributes recipe used.
+    - Fresh-clone and hf download verification evidence.
+  eval_seed_candidates:
+    - EV-GPU-CHECKPOINT-FRESH-CLONE
+    - EV-GPU-REPIN-SWEEP-COMPLETE

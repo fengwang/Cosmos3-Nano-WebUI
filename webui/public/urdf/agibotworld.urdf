@@ -1,0 +1,242 @@
+<?xml version="1.0"?>
+<!--
+  agibotworld.urdf — a primitive-geometry, license-clean URDF AUTHORED IN-REPO for the Session 10
+  kinematic action viewer. It is NOT a vendored third-party model and uses NO external mesh files
+  (boxes/cylinders/spheres only), so it loads same-origin and offline (INV-1; security adversarial case).
+
+  It encodes a dual-arm humanoid-style chain with EXACTLY 29 actuated dimensions under the CANDIDATE
+  convention in `webui/components/action-viewer/jointmap.ts` (the dim->joint layout is a candidate
+  convention gated by the human visual gate — NOT the engine's ground-truth semantic layout; see
+  PROVENANCE.md). Joint dim indices (for reference; the authority is jointmap.ts):
+    0-6  left arm  (l_shoulder_pitch/roll/yaw, l_elbow, l_wrist_pitch/roll/yaw)   revolute
+    7    left gripper                                                              prismatic
+    8-14 right arm (r_shoulder_pitch/roll/yaw, r_elbow, r_wrist_pitch/roll/yaw)   revolute
+    15   right gripper                                                             prismatic
+    16-18 waist (waist_yaw/pitch/roll)                                            revolute
+    19-20 head (head_yaw/pitch)                                                   revolute
+    21   body_lift                                                                prismatic
+    22-23 base_x / base_y                                                         prismatic
+    24   base_yaw                                                                 continuous
+    25-28 chest orientation quaternion (x,y,z,w) applied to the `chest` link      orientation group (SLERP)
+-->
+<robot name="agibotworld">
+
+  <material name="frame"><color rgba="0.30 0.34 0.42 1"/></material>
+  <material name="limb"><color rgba="0.55 0.60 0.68 1"/></material>
+  <material name="accent"><color rgba="0.42 0.70 0.85 1"/></material>
+  <material name="grip"><color rgba="0.80 0.55 0.30 1"/></material>
+
+  <!-- ===== Mobile base: x, y (prismatic) + yaw (continuous) — dims 22,23,24 ===== -->
+  <link name="base_footprint"/>
+
+  <joint name="base_x" type="prismatic">
+    <parent link="base_footprint"/><child link="bx_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.0" upper="1.0" effort="50" velocity="1"/>
+  </joint>
+  <link name="bx_link"/>
+
+  <joint name="base_y" type="prismatic">
+    <parent link="bx_link"/><child link="by_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="50" velocity="1"/>
+  </joint>
+  <link name="by_link"/>
+
+  <joint name="base_yaw" type="continuous">
+    <parent link="by_link"/><child link="mobile_base"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/><axis xyz="0 0 1"/>
+  </joint>
+  <link name="mobile_base">
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.40 0.40 0.10"/></geometry><material name="frame"/></visual>
+  </link>
+
+  <!-- ===== Lift column (prismatic Z) — dim 21 ===== -->
+  <joint name="body_lift" type="prismatic">
+    <parent link="mobile_base"/><child link="lift_link"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="0.30" effort="80" velocity="0.5"/>
+  </joint>
+  <link name="lift_link">
+    <visual><origin xyz="0 0 0.25" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.05" length="0.50"/></geometry><material name="frame"/></visual>
+  </link>
+
+  <!-- ===== Waist: yaw, pitch, roll (revolute) — dims 16,17,18 ===== -->
+  <joint name="waist_yaw" type="revolute">
+    <parent link="lift_link"/><child link="wy_link"/>
+    <origin xyz="0 0 0.52" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="40" velocity="1"/>
+  </joint>
+  <link name="wy_link"/>
+  <joint name="waist_pitch" type="revolute">
+    <parent link="wy_link"/><child link="wp_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-0.79" upper="0.79" effort="40" velocity="1"/>
+  </joint>
+  <link name="wp_link"/>
+  <joint name="waist_roll" type="revolute">
+    <parent link="wp_link"/><child link="torso"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-0.52" upper="0.52" effort="40" velocity="1"/>
+  </joint>
+  <link name="torso">
+    <visual><origin xyz="0 0 0.12" rpy="0 0 0"/>
+      <geometry><box size="0.22 0.30 0.24"/></geometry><material name="frame"/></visual>
+  </link>
+
+  <!-- ===== Chest (orientation group target — dims 25-28, applied as a quaternion at runtime) =====
+       chest_mount is FIXED; the viewer overwrites chest.quaternion each frame after the scalar joints,
+       so the chest-orientation SLERP composes on top of the waist rotation. -->
+  <joint name="chest_mount" type="fixed">
+    <parent link="torso"/><child link="chest"/>
+    <origin xyz="0 0 0.26" rpy="0 0 0"/>
+  </joint>
+  <link name="chest">
+    <visual><origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry><box size="0.20 0.34 0.10"/></geometry><material name="accent"/></visual>
+  </link>
+
+  <!-- ===== Head: yaw, pitch (revolute) — dims 19,20 ===== -->
+  <joint name="head_yaw" type="revolute">
+    <parent link="chest"/><child link="hy_link"/>
+    <origin xyz="0 0 0.10" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+  <link name="hy_link"/>
+  <joint name="head_pitch" type="revolute">
+    <parent link="hy_link"/><child link="head"/>
+    <origin xyz="0 0 0.10" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-0.79" upper="0.79" effort="10" velocity="2"/>
+  </joint>
+  <link name="head">
+    <visual><origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry><sphere radius="0.09"/></geometry><material name="limb"/></visual>
+  </link>
+
+  <!-- ===== Left arm — dims 0-6 (shoulder p/r/y, elbow, wrist p/r/y) + gripper dim 7 ===== -->
+  <joint name="l_shoulder_pitch" type="revolute">
+    <parent link="chest"/><child link="l_sp"/>
+    <origin xyz="0 0.20 0.04" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-3.14" upper="3.14" effort="30" velocity="2"/>
+  </joint>
+  <link name="l_sp"/>
+  <joint name="l_shoulder_roll" type="revolute">
+    <parent link="l_sp"/><child link="l_sr"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-0.20" upper="2.00" effort="30" velocity="2"/>
+  </joint>
+  <link name="l_sr"/>
+  <joint name="l_shoulder_yaw" type="revolute">
+    <parent link="l_sr"/><child link="l_sy"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="30" velocity="2"/>
+  </joint>
+  <link name="l_sy">
+    <visual><origin xyz="0 0 -0.12" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.035" length="0.24"/></geometry><material name="limb"/></visual>
+  </link>
+  <joint name="l_elbow" type="revolute">
+    <parent link="l_sy"/><child link="l_el"/>
+    <origin xyz="0 0 -0.24" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="0.0" upper="2.50" effort="30" velocity="2"/>
+  </joint>
+  <link name="l_el">
+    <visual><origin xyz="0 0 -0.11" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.030" length="0.22"/></geometry><material name="limb"/></visual>
+  </link>
+  <joint name="l_wrist_pitch" type="revolute">
+    <parent link="l_el"/><child link="l_wp"/>
+    <origin xyz="0 0 -0.22" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="3"/>
+  </joint>
+  <link name="l_wp"/>
+  <joint name="l_wrist_roll" type="revolute">
+    <parent link="l_wp"/><child link="l_wr"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="3"/>
+  </joint>
+  <link name="l_wr"/>
+  <joint name="l_wrist_yaw" type="revolute">
+    <parent link="l_wr"/><child link="l_hand"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="3"/>
+  </joint>
+  <link name="l_hand">
+    <visual><origin xyz="0 0 -0.04" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.10 0.08"/></geometry><material name="grip"/></visual>
+  </link>
+  <joint name="l_gripper" type="prismatic">
+    <parent link="l_hand"/><child link="l_gripper_link"/>
+    <origin xyz="0 0 -0.08" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="0.0" upper="0.04" effort="10" velocity="1"/>
+  </joint>
+  <link name="l_gripper_link">
+    <visual><origin xyz="0 0.03 0" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.02 0.06"/></geometry><material name="grip"/></visual>
+  </link>
+
+  <!-- ===== Right arm — dims 8-14 + gripper dim 15 (mirror of left) ===== -->
+  <joint name="r_shoulder_pitch" type="revolute">
+    <parent link="chest"/><child link="r_sp"/>
+    <origin xyz="0 -0.20 0.04" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-3.14" upper="3.14" effort="30" velocity="2"/>
+  </joint>
+  <link name="r_sp"/>
+  <joint name="r_shoulder_roll" type="revolute">
+    <parent link="r_sp"/><child link="r_sr"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-2.00" upper="0.20" effort="30" velocity="2"/>
+  </joint>
+  <link name="r_sr"/>
+  <joint name="r_shoulder_yaw" type="revolute">
+    <parent link="r_sr"/><child link="r_sy"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="30" velocity="2"/>
+  </joint>
+  <link name="r_sy">
+    <visual><origin xyz="0 0 -0.12" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.035" length="0.24"/></geometry><material name="limb"/></visual>
+  </link>
+  <joint name="r_elbow" type="revolute">
+    <parent link="r_sy"/><child link="r_el"/>
+    <origin xyz="0 0 -0.24" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="0.0" upper="2.50" effort="30" velocity="2"/>
+  </joint>
+  <link name="r_el">
+    <visual><origin xyz="0 0 -0.11" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.030" length="0.22"/></geometry><material name="limb"/></visual>
+  </link>
+  <joint name="r_wrist_pitch" type="revolute">
+    <parent link="r_el"/><child link="r_wp"/>
+    <origin xyz="0 0 -0.22" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="3"/>
+  </joint>
+  <link name="r_wp"/>
+  <joint name="r_wrist_roll" type="revolute">
+    <parent link="r_wp"/><child link="r_wr"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="3"/>
+  </joint>
+  <link name="r_wr"/>
+  <joint name="r_wrist_yaw" type="revolute">
+    <parent link="r_wr"/><child link="r_hand"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="3"/>
+  </joint>
+  <link name="r_hand">
+    <visual><origin xyz="0 0 -0.04" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.10 0.08"/></geometry><material name="grip"/></visual>
+  </link>
+  <joint name="r_gripper" type="prismatic">
+    <parent link="r_hand"/><child link="r_gripper_link"/>
+    <origin xyz="0 0 -0.08" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="0.0" upper="0.04" effort="10" velocity="1"/>
+  </joint>
+  <link name="r_gripper_link">
+    <visual><origin xyz="0 -0.03 0" rpy="0 0 0"/>
+      <geometry><box size="0.05 0.02 0.06"/></geometry><material name="grip"/></visual>
+  </link>
+
+</robot>
