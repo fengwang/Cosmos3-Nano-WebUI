@@ -281,12 +281,16 @@ Edit, in this order, using the two new revision SHAs recorded in Steps 3/4:
    diffs).
 
 ```bash
-rg -n "4e181f99|b5c9332e" .
+rg -n --hidden --glob '!.git' "4e181f99|b5c9332e" .
 ```
 
-**Check:** the only match is `docs/eval_seed_cases.md`'s own historical
-note. Any other match is a hard stop — fix that file and re-run before
-proceeding.
+(`--hidden` required — `rg` skips dotfiles by default; the un-hidden form
+missed `.env.example`, caught only by adversarial verification and fixed as
+amendment `GPU-S2-A3`.)
+
+**Check:** the only matches are `docs/eval_seed_cases.md`'s own historical
+note and this session's own planning/evidence prose. Any other match is a
+hard stop — fix that file and re-run before proceeding.
 
 **Commit point:** `docs(gpu-s2): re-pin sweep — model_setup/evidence_map/release_checklist/eval_seed_cases/risk_register`.
 

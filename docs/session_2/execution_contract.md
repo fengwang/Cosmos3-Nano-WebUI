@@ -63,8 +63,10 @@ probe is ever pointed at the network.
 - After the probe is written: `--check` exits 0 with no network; the full
   probe run against both new revisions produces `evidence.json`/`summary.md`
   with zero flagged files.
-- After the doc sweep: `rg -n "4e181f99|b5c9332e" .` from the repository
-  root — the only match is `docs/eval_seed_cases.md`'s own historical note.
+- After the doc sweep: `rg -n --hidden --glob '!.git' "4e181f99|b5c9332e" .`
+  from the repository root (`--hidden` required — see amendment
+  `GPU-S2-A3`) — the only matches are `docs/eval_seed_cases.md`'s own
+  historical note and this session's own planning/evidence prose.
 - Full deterministic check list from `session_2_contract.yaml`, re-run once
   at the end against the final state of both external repos and this repo.
 

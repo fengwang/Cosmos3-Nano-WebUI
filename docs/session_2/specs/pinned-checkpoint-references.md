@@ -40,10 +40,14 @@ minimum floor. Any match outside the one documented historical exception is
 a hard failure, not a note.
 
 #### Scenario: Sweep finds only the one documented historical exception
-WHEN `rg -n "4e181f99|b5c9332e" .` is run from the repository root after all
-re-pin edits are made
-THEN the only match is `docs/eval_seed_cases.md`'s own "replacing the pre-fix
-…" historical reference under "Public Checkpoint IDs"
+WHEN `rg -n --hidden --glob '!.git' "4e181f99|b5c9332e" .` (`--hidden` is
+required — the un-hidden form silently skips dotfiles, including
+`.env.example`; amendment `GPU-S2-A3`) is run from the repository root after
+all re-pin edits are made
+THEN the only match outside `docs/archive/phase-1/**` (never edited) and
+this session's own planning/evidence prose is `docs/eval_seed_cases.md`'s
+own "replacing the pre-fix …" historical reference under "Public Checkpoint
+IDs"
 AND every other match, if any, is treated as a stale pin requiring another
 edit pass before the session closes.
 

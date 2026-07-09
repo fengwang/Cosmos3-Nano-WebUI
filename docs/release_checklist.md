@@ -77,7 +77,7 @@ Fixed at the source: the stale index is removed from both repos, and
 `.gitattributes`/renormalize corrects LFS tracking to the owner's
 size/type rule (large weights stay LFS; small plain-text files are regular
 Git). A third, previously undocumented bug was also found and fixed:
-`BIAS.md`/`EXPLAINABILITY.md`/`PRIVACY.md`/`SAFETY.md` (both repos) and 28
+`BIAS.md`/`EXPLAINABILITY.md`/`PRIVACY.md`/`SAFETY.md` (both repos) and 32
 further NVFP4-side files were checking out as raw LFS-pointer text
 regardless of `.gitattributes` state (no rule has ever matched `.md`;
 NVFP4's text-extension rules were already removed pre-session without a

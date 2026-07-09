@@ -45,6 +45,14 @@ session_contract:
       # anticipates. Caught by the sweep this session's own contract
       # requires before closing.
       - README.md
+      # Amendment GPU-S2-A3 (owner-approved 2026-07-09, fresh-context
+      # adversarial verifier, FAIL -> fix): the whole-repo sweep command
+      # named in this contract's own deterministic_checks (`rg -n "..." .`)
+      # silently skips dotfiles by default, so it never actually scanned
+      # `.env.example`, which cited the pre-fix revisions as live operator
+      # guidance. Caught by independent re-verification, not by this
+      # session's own (incomplete) sweep. See sweep command fix below.
+      - .env.example
     forbidden_files:
       - api/**
       - webui/**
@@ -65,7 +73,7 @@ session_contract:
     - "git clone <fresh dir> https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise"
     - "hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision <new sha>"
     - "hf download wfen/Cosmos3-Nano-NVFP4-Blockwise --revision <new sha>"
-    - "rtk rg -n \"4e181f99|b5c9332e\" .   # whole-repo sweep, 8-char prefix catches abbreviated cites too; only expected hit is eval_seed_cases.md's own historical reference"
+    - "rtk rg -n --hidden --glob '!.git' \"4e181f99|b5c9332e\" .   # whole-repo sweep, 8-char prefix catches abbreviated cites too; --hidden is required (GPU-S2-A3) because rg skips dotfiles by default and the un-hidden form misses .env.example; only expected hits are eval_seed_cases.md's own historical reference and this session's own planning/evidence prose"
   review_axes:
     - correctness
     - security
