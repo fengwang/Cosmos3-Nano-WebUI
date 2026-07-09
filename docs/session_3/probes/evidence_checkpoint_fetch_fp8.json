@@ -1,0 +1,20 @@
+{
+  "artifact_metadata": {
+    "file_count": 222,
+    "total_bytes": 24047158804
+  },
+  "artifact_path": "models/Cosmos3-Nano-FP8-Blockwise",
+  "checkpoint_repo": "wfen/Cosmos3-Nano-FP8-Blockwise",
+  "checkpoint_revision": "9bf5d6ae164688487bdb71947ccc6ebe70d12900",
+  "driver_cuda": "610.43.02 / CUDA 13.3",
+  "hardware": "NVIDIA GeForce RTX 5090",
+  "notes": "",
+  "request_shape": {
+    "action": "hf_download",
+    "local_dir": "models/Cosmos3-Nano-FP8-Blockwise"
+  },
+  "run_at": "2026-07-09T12:14:33.797584+00:00",
+  "task_id": "checkpoint_fetch_fp8",
+  "verdict": "PASS",
+  "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+}

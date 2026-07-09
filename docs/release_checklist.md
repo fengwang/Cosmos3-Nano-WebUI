@@ -93,6 +93,26 @@ this file, `docs/eval_seed_cases.md`, `docs/risk_register.md`,
 `docs/model_setup.md`, `docs/handoff.md`). No large weight file was
 affected (R-04 — verified empty diff for every large file across the fix).
 
+## GPU-S3 joint validation (2026-07-09)
+
+Closed `GATE-GPU-S3-VALIDATION` and retired archived `R-13`'s remaining "proxy
+image, not pinned-commit build" caveat for good. A genuinely fresh `hf
+download` of both `wfen/*` repos at the `GPU-S2` revisions, through the
+unmodified `GPU-S1` image (`cosmos3-nano-vllm-omni:local`, confirmed
+current via `git diff --quiet` against `deploy/vllm-omni.Dockerfile` rather
+than a timestamp comparison — `git checkout` bumps mtimes without changing
+content, so mtime was tried and rejected first), generates a valid T2I
+artifact for **both** FP8 and NVFP4, **both** direct (bypassing the api)
+and full-stack (`X-API-Key` → job → artifact), with no manual
+index-removal or LFS-pointer workaround. Guardrails off via the same kind
+of runtime Compose `command:` override `GPU-S1` used (never baked into the
+Dockerfile; R-10 stays open, out of scope for this session per owner
+decision). A best-effort, direct-only T2V smoke (NVFP4, 256×256, 9 frames)
+also passed on the first attempt — a PRD FR-6 SHOULD, not a gate
+requirement. Full evidence (hardware, driver/CUDA, checkpoint revisions,
+vLLM-Omni commit, request shapes, artifact hashes, pass/fail) in
+`docs/evidence_map.md`; per-item status in §7 below.
+
 ## 1. Scrub and safety (INV-1, INV-2)
 
 - [x] Private-reference scan clean over the whole tree:
@@ -170,21 +190,30 @@ superseding the pre-fix `4e181f99…`/`b5c9332e…`) + BF16 base
 
 - [x] **`t2i`** generation — **PASS (2026-07-08)** on FP8 **and** NVFP4, direct on vLLM-Omni
       (1024², ~3 s) and full-stack via the api (640², `precision:nvfp4`, artifact PNG). Proxy
-      image (see top caveat).
+      image (see top caveat). **Superseded by `GPU-S3` (2026-07-09): PASS on the from-source
+      image + fresh download, no proxy, no manual workaround** — see the "GPU-S3 joint
+      validation" addendum above and `docs/evidence_map.md`.
 - [ ] `t2v`, `t2v_audio`, `i2v` — **not run** (720p video peak VRAM > 32 GB; needs
-      `--enable-layerwise-offload` or smaller size — separate test).
+      `--enable-layerwise-offload` or smaller size — separate test). **`GPU-S3` (2026-07-09):**
+      a best-effort 256² NVFP4 `t2v` smoke passed (see addendum above), but this does not
+      constitute the full `t2v` validation this row tracks, and `t2v_audio`/`i2v` remain unrun
+      — row stays unchecked.
 - [ ] `reasoning` on the BF16 base — **not run** (separate reasoner instance / BF16 base).
 - [ ] `forward_dynamics` / action graft — **not run**.
 - [x] jobs + artifact retrieval end to end — **PASS (2026-07-08)** via the api
       (`POST /v1/generation/t2i` → job `succeeded` → `GET /v1/jobs/{id}/artifact` = `200 image/png`).
-      SSE `/events` + `/trajectory` not explicitly exercised.
+      SSE `/events` + `/trajectory` not explicitly exercised. **Re-confirmed on `GPU-S3`
+      (2026-07-09)** against the fresh checkpoints and from-source image, both FP8 and NVFP4.
 - [x] Resolve drift **D1** — **characterized + resolved-for-serving (2026-07-08):** the
       `vllm_omni` container loads **both** public checkpoints (FP8 `W8A16`, NVFP4 `W4A16`) once
       the stale top-level `model.safetensors.index.json` is removed. D1 root cause = a
       published-checkpoint packaging bug (stale weight index), **not** a quant incompatibility.
       Owner follow-up: fix the HF repos' index (R-03).
-- [ ] Any surface without passing GPU evidence is marked beta-limited in the README
-      (**S7** — every mode GPU-unverified; **upgrade `t2i` FP8/NVFP4 to T2I-verified** after this run).
+- [x] Any surface without passing GPU evidence is marked beta-limited in the README
+      (**S7** — every mode GPU-unverified). **Done (`GPU-S3`, 2026-07-09):** README's
+      capability table, warning banner, quickstart note, and Limitations section all
+      upgraded to reflect `t2i` (FP8/NVFP4) as T2I-verified; every other mode's
+      "GPU-unverified" marking is unchanged.
 
 ## 8. Hardening review (R-16)
 

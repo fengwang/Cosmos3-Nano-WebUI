@@ -20,10 +20,11 @@
 
 > [!WARNING]
 > **Beta / research preview.** This project is not intended for production or
-> untrusted, internet-facing use. GPU inference has **not** yet been verified in
-> this public repository — it is a manual release gate (see
-> [Limitations](#limitations--beta-status)). Runtime, hardware, and performance
-> statements below are described as capabilities-present, not proven results.
+> untrusted, internet-facing use. Text&rarr;image (FP8/NVFP4) is GPU-verified; every
+> other GPU inference path has **not** yet been verified in this public repository
+> — it is a manual release gate (see [Limitations](#limitations--beta-status)).
+> Runtime, hardware, and performance statements below are described as
+> capabilities-present, not proven results except where marked verified.
 
 ## What is this?
 
@@ -41,12 +42,15 @@ documented manual gate for the first beta.
 ## Features
 
 Every generation/reasoning/action mode is **implemented in code and covered by CPU
-tests**, but the GPU inference path is unverified in this repo (manual gate — see
+tests**. Text&rarr;image (FP8 and NVFP4) is now GPU-verified end to end, from a fresh
+checkpoint download through the from-source image, with no manual workaround; every other
+GPU inference path remains unverified in this repo (manual gate — see
 [Limitations](#limitations--beta-status)).
 
 | Capability | Endpoint(s) | Status |
 |---|---|---|
-| Text&rarr;video · image&rarr;video · text&rarr;image · video+audio | `POST /v1/generation/{t2v,i2v,t2i,t2v_audio}` | Implemented · GPU-unverified¹ |
+| Text&rarr;image (FP8, NVFP4) | `POST /v1/generation/t2i` | Implemented · **T2I-verified¹** |
+| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · GPU-unverified¹ |
 | Reasoning | `POST /v1/reason` | Implemented · GPU-unverified¹ |
 | Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · GPU-unverified¹ |
 | Async jobs + live progress over SSE | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `.../events`, `.../artifact`, `.../trajectory`, `.../cancel` | Implemented · CPU-tested |
@@ -54,6 +58,8 @@ tests**, but the GPU inference path is unverified in this repo (manual gate — 
 | Web UI (generation, history, 3D / robot views) | Next.js 15 + React 19 app | Implemented · CPU-tested |
 
 ¹ GPU inference is a manual release gate (`MIG-S8`); see [`docs/evidence_map.md`](docs/evidence_map.md).
+A best-effort NVFP4 text&rarr;video smoke also passed, but does not itself upgrade the
+`t2v` row above — see [Limitations](#limitations--beta-status).
 
 ## Quickstart
 
@@ -86,9 +92,10 @@ make health               # GET /v1/health/ready
 > [!NOTE]
 > The generation service runs the Cosmos3-Nano checkpoint inside the **vLLM-Omni
 > container**, which uses a CUDA image and a GPU. Building that image and running GPU
-> inference is the current **manual gate** (`MIG-S8`) — the API and Web UI build and
-> start from public inputs, but end-to-end generation is not yet verified here. See
-> [`docs/model_setup.md`](docs/model_setup.md) and [Limitations](#limitations--beta-status).
+> inference is the current **manual gate** (`MIG-S8`) — text&rarr;image (FP8/NVFP4) is
+> verified end to end from public inputs; other generation modes are not yet verified
+> here. See [`docs/model_setup.md`](docs/model_setup.md) and
+> [Limitations](#limitations--beta-status).
 
 ## Requirements
 
@@ -148,9 +155,14 @@ This is an honest early beta. Known limits, each tracked in
 [`docs/risk_register.md`](docs/risk_register.md) and
 [`docs/evidence_map.md`](docs/evidence_map.md):
 
-- **GPU inference is unverified here.** t2v/t2v_audio/i2v/t2i, reasoning, and action are
-  implemented and CPU-tested, but no GPU run, throughput, or quality result is claimed —
-  that is the `MIG-S8` manual release gate. No performance numbers are promised.
+- **GPU inference is unverified here, except text&rarr;image.** t2i (FP8 and NVFP4) is
+  GPU-verified end to end — fresh checkpoint download, from-source image, no manual
+  workaround, direct and full-stack (`GPU-S3`, 2026-07-09; see
+  [`docs/evidence_map.md`](docs/evidence_map.md)). t2v/t2v_audio/i2v, reasoning, and action
+  are implemented and CPU-tested, but no full GPU run, throughput, or quality result is
+  claimed for them — that is the `MIG-S8` manual release gate. A best-effort NVFP4 t2v
+  smoke passed but does not constitute full t2v validation. No performance numbers are
+  promised.
 - **Default engine is the vLLM-Omni container.** The imported in-process `diffusers`
   engine cannot load+verify the *current* public checkpoints as-is (drift **D1**);
   generation runs through the vLLM-Omni container, whose end-to-end compatibility is part

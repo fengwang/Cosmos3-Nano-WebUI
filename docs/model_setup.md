@@ -75,7 +75,8 @@ loader), whose real compatibility is a `MIG-S6`/`MIG-S8` gate.
 
 | Mode | Public weights | Default serving path | In-process oracle path | Residual limit |
 |---|---|---|---|---|
-| `t2v`, `t2v_audio`, `i2v`, `t2i` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) — verify `S6`/`S8` | not loadable as-is (D1) | GPU-unverified (`S8`); D1 for in-process path |
+| `t2i` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) | not loadable as-is (D1) | **T2I-verified (`GPU-S3`, 2026-07-09):** fresh `hf download` at the `GPU-S2` revisions, through the unmodified `GPU-S1` image, direct **and** full-stack, no manual workaround; D1 remains for the in-process path only |
+| `t2v`, `t2v_audio`, `i2v` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) — verify `S6`/`S8` | not loadable as-is (D1) | GPU-unverified (`S8`); D1 for in-process path. (A best-effort NVFP4 `t2v` smoke passed under `GPU-S3` — see `docs/evidence_map.md` — but `t2v_audio`/`i2v` and any full validation of `t2v` remain unrun; this residual limit is otherwise unchanged.) |
 | reasoning | base `nvidia/Cosmos3-Nano` (BF16) | separate vLLM reasoner instance | n/a | GPU-unverified (`S8`) |
 | action / `forward_dynamics` | FP8 checkpoint **+** base `nvidia/Cosmos3-Nano` (BF16 action tensors) | in-process `diffusers_action` graft | FP8 verify blocked (D1) | GPU-unverified (`S8`); D1 |
 
@@ -92,6 +93,10 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
   the source (`GPU-S2`, see §9), so no manual removal step is needed at the revisions in §1. So
   D1 affects the in-process oracle only; the packaging bug (stale index, R-03) is closed. T2I
   verified; `t2v`/`t2v_audio`/`i2v`/`forward_dynamics`/`reasoning` + 720p video not yet.
+  **`GPU-S3` (2026-07-09) additionally closes the joint gap** these two facts left open on
+  their own: a fresh `hf download` at the revisions in §1, through the *unmodified*, from-source
+  `GPU-S1` image (not a prebuilt proxy), generates T2I for both FP8 and NVFP4 with no manual
+  workaround — direct and full-stack. See `docs/evidence_map.md`.
 - **D2 (low):** use base id `nvidia/Cosmos3-Nano` (public); `wfen/Cosmos3-Nano` 404s.
 - **D3 (low):** the public FP8 repo ships dev-scratch (`_s2_*.md`) + loader scripts and NVFP4
   ships `producer_provenance.json`; recommend HF-side cleanup (external follow-up).
@@ -109,7 +114,9 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
    `nvidia/Cosmos3-Nano` and set `COSMOS3_REASONER_MODEL_DIR` / `COSMOS3_BASE_ACTION_DIR`.
 4. Point `COSMOS3_MODEL_DIR` (and `COSMOS3_CHECKPOINT_LABEL`) at the served checkpoint.
 5. GPU inference is a manual release gate (`MIG-S8`). **T2I is now GPU-verified (2026-07-08,
-   FP8 + NVFP4, RTX 5090)**; other modes and 720p video remain manual gates.
+   FP8 + NVFP4, RTX 5090)**, and as of **`GPU-S3` (2026-07-09)** this holds for a fresh
+   checkpoint download through the unmodified, from-source `GPU-S1` image with no manual
+   workaround, direct and full-stack; other modes and 720p video remain manual gates.
 
 ## 9. Known packaging workarounds — fixed at the source (`GPU-S2`, 2026-07-09)
 

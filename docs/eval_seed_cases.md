@@ -49,10 +49,37 @@ there.
 | ID | Purpose | Checkpoint | Request shape | Expected properties | Gate |
 |---|---|---|---|---|---|
 | EV-GPU-S1-BUILD-T2I-SMOKE | Confirm the from-source image itself can generate a T2I artifact, independent of the checkpoint fix. | FP8 or NVFP4 (either) | Short prompt, documented seed. | Valid image artifact on the RTX 5090 from the `GPU-S1` image; the pre-fix revision with the known index-removal workaround is acceptable here. | GPU-S1 |
-| EV-GPU-FP8-T2I | FP8 text-to-image, from-source build + fresh checkpoint. | FP8 | Short prompt, documented seed. | Valid image artifact, direct and full-stack through the api, with no manual workaround. | GPU-S3 |
-| EV-GPU-NVFP4-T2I | NVFP4 text-to-image, from-source build + fresh checkpoint. | NVFP4 | Short prompt, documented seed. | Valid image artifact, direct and full-stack through the api, with no manual workaround. | GPU-S3 |
-| EV-GPU-T2V-SMOKE | Best-effort small text-to-video smoke. | FP8 or NVFP4 | Short prompt, low frame count, documented seed. | Valid video artifact, or a recorded reason it was scoped out (PRD FR-6, SHOULD). | GPU-S3 |
-| EV-GPU-JOBS-ARTIFACT | Full-stack job and artifact retrieval on the from-source build. | Either checkpoint | Async generation request observed through the api or WebUI. | Job reaches a terminal state; artifact is downloadable. | GPU-S3 |
+| EV-GPU-FP8-T2I | FP8 text-to-image, from-source build + fresh checkpoint. | FP8 | Short prompt, documented seed. | Valid image artifact, direct and full-stack through the api, with no manual workaround. **PASSED (`GPU-S3`, 2026-07-09T12:16-12:19Z):** fresh `hf download` at `9bf5d6ae1646…`, direct sha256 `368ae934d5…`, full-stack (job `d1f2b832…`) sha256 `5ece5ec577…` — each independently valid (hashes need not match each other; generation is not bit-deterministic run to run). See `docs/evidence_map.md`. | GPU-S3 |
+| EV-GPU-NVFP4-T2I | NVFP4 text-to-image, from-source build + fresh checkpoint. | NVFP4 | Short prompt, documented seed. | Valid image artifact, direct and full-stack through the api, with no manual workaround. **PASSED (`GPU-S3`, 2026-07-09T12:18-12:20Z):** fresh `hf download` at `5514c42b9759…`, direct sha256 `dca897ee83…`, full-stack (job `ce9bb9ed…`) sha256 `b999233fce…` — each independently valid. See `docs/evidence_map.md`. | GPU-S3 |
+| EV-GPU-T2V-SMOKE | Best-effort small text-to-video smoke. | FP8 or NVFP4 | Short prompt, low frame count, documented seed. | Valid video artifact, or a recorded reason it was scoped out (PRD FR-6, SHOULD). **PASSED (`GPU-S3`, 2026-07-09T12:21Z):** NVFP4, first attempt, no FP8 fallback needed — 256×256, 9 frames, 8 fps, sha256 `71a79b6941…`, independently verified via `file`/`ffprobe` as real h264/MP4. See `docs/evidence_map.md`. | GPU-S3 |
+| EV-GPU-JOBS-ARTIFACT | Full-stack job and artifact retrieval on the from-source build. | Either checkpoint | Async generation request observed through the api or WebUI. | Job reaches a terminal state; artifact is downloadable. **PASSED (`GPU-S3`, 2026-07-09T12:19-12:20Z):** both FP8 (job `d1f2b832…`) and NVFP4 (job `ce9bb9ed…`) jobs reached `succeeded` and their artifacts downloaded via `GET /v1/jobs/{id}/artifact` with `X-API-Key`. See `docs/evidence_map.md`. | GPU-S3 |
+
+## GPU-S3 Retrospective Additions (2026-07-09)
+
+Harvested per `docs/agent_workflow/prompts/eval_harvest.md`. This session's own
+Task-Loop self-critique missed the most severe finding below (C1) entirely — it was
+caught only by sharded review, and a further three gaps survived sharded review and
+were caught only by adversarial verification (which itself needed three rounds before
+converging, with the same "recheck after every commit" lesson recurring twice within
+its own fix cycles). No finding in this session was caught by the human after the
+agent's own layers missed it.
+
+| ID | Purpose | Inputs | Expected properties | Gate | Caught by |
+|---|---|---|---|---|---|
+| EV-GPU-COMPOSE-ENV-PIN-OVERRIDE | Confirm a compose-driven probe actually resolves its `${VAR:-default}` bind mount to the intended path, not whatever a local `.env` happens to pin for developer convenience. | The literal `docker compose --env-file .env -f <file> config` output; the intended absolute path. | The resolved `source:` for the target mount equals the intended path exactly; a probe that only checks "did `up -d` exit 0" cannot detect a wrong-but-valid mount. | Any session bringing up a compose stack whose checkpoint/data path is `.env`-overridable | Sharded review (correctness axis) — missed by this session's own Task-Loop self-critique across 3 generate-critique-fix cycles on the affected scripts |
+| EV-GPU-EVIDENCE-PROVENANCE-TIMESTAMP | Confirm a re-run claim ("re-verified after fix X") is provable from the evidence artifacts alone, not just asserted in prose. | Two evidence-producing runs of the same task, one before and one after a fix, where the fix happens not to change the output content. | If the second run's output is byte-identical to the first, there must still be a field (e.g. a provenance timestamp) that distinguishes "genuinely re-run, same result" from "never re-run" — content equality alone is not enough. | Any session whose evidence schema doesn't already carry a run timestamp | Adversarial verification round 1 |
+| EV-GPU-SCAN-AFTER-EVERY-COMMIT | Confirm a private-reference/secret scan is re-run after *every* commit in a session, not only the commits judged relevant to that class of finding at the time. | A commit that adds prose or test fixtures naming/matching a previously-fixed leak pattern. | The scan is re-run and would catch the regression before the next commit, not several commits later. | Any session that fixes a scan finding and then continues committing | Adversarial verification, 3 separate times in this session alone (rounds 1, 2, and a third instance caught only by round 2's own fix commit's follow-through) — the single most-repeated mistake in this session |
+| EV-GPU-NO-UNIFORM-GENERALIZATION | Confirm a claim about "each of N items" gives each item's own value rather than one figure computed from a single item and asserted for all. | A doc claim like "checkpoint X's evidence reflects a re-verification ~9 hours after the real transfer" applied to multiple checkpoints/artifacts with actually-different individual values. | Each item's own figure is checked and cited individually; a claim is never generalized across items without verifying each one. | Any session citing a per-item metric (timestamp, hash, size) across more than one item | Adversarial verification round 3 (a milder recurrence of the same mistake round 2's own fix was written to correct) |
+
+**New repo rule candidates** (not applied this session — `session_3_contract.yaml`,
+`session_3.md`, and `.env`/`.env.example` are outside `GPU-S3`'s blast radius to edit;
+recorded here and in `docs/handoff.md` for the owner or a future session with authority):
+- The project's session contracts' `deterministic_checks` blocks should name any required
+  env-var override explicitly when a repo-local `.env` convenience default could otherwise
+  silently substitute a different (possibly stale) path — see `R-11` in
+  `docs/risk_register.md`.
+- Consider a project-level rule: "after fixing a private-reference/secret scan finding, run
+  the scan again after every subsequent commit in the same session, not only once."
 
 ## GPU-S2 Retrospective Additions (2026-07-09)
 

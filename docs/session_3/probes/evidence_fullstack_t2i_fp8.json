@@ -1,0 +1,35 @@
+{
+  "artifact_metadata": {
+    "dims": [
+      480,
+      480
+    ],
+    "format": "png",
+    "job_id": "d1f2b832830340a2ad7507d5449c7ad1",
+    "sha256": "5ece5ec577f17bafc3d4aa2c1fbde7e49cf34bbb8fe3f326027485ace881ba69",
+    "size_bytes": 691968
+  },
+  "artifact_path": "fullstack_t2i_fp8.png",
+  "checkpoint_repo": "wfen/Cosmos3-Nano-FP8-Blockwise",
+  "checkpoint_revision": "9bf5d6ae164688487bdb71947ccc6ebe70d12900",
+  "driver_cuda": "610.43.02 / CUDA 13.3",
+  "hardware": "NVIDIA GeForce RTX 5090",
+  "notes": "",
+  "request_shape": {
+    "job_status_history": [
+      "queued",
+      "queued",
+      "queued",
+      "running",
+      "succeeded"
+    ],
+    "mode": "t2i",
+    "prompt": "a red apple on a wooden table, studio lighting",
+    "resolution": 480,
+    "seed": 42
+  },
+  "run_at": "2026-07-09T12:19:12.724281+00:00",
+  "task_id": "fullstack_t2i_fp8",
+  "verdict": "PASS",
+  "vllm_omni_commit": "697035018b70cef76b974a909d23371a9984c3f2"
+}
