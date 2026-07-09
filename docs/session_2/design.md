@@ -76,14 +76,26 @@ outward-visible action class this project hasn't executed yet.
    commit makes the "did any large file's LFS OID change" check (directly
    guarding R-04) a trivial single-commit `git lfs ls-files` diff, and keeps
    each commit independently revertable.
-4. **Verification runs the real client tools, scoped to avoid tensor
-   bytes.** `GIT_LFS_SKIP_SMUDGE=1 git clone` and `hf download --exclude
-   "*.safetensors" --exclude "*.pt"` (or equivalent) are still real
-   invocations of the two named tools — they just don't pull the ~24–27 GB
-   of weight bytes per repo, which this session's checks don't need
-   (`GPU-S3` owns the functional GPU load). The probe inspects the resulting
-   local directory directly (no top-level index; small files are real text,
-   not `version https://git-lfs...` pointer stubs) and cross-checks against
+4. **Verification runs the real client tools, scoped to avoid tensor bytes
+   — via a targeted exclude, not a blanket skip-smudge (amended, GPU-S2-A1).**
+   Baseline testing (Task 1.2) showed `GIT_LFS_SKIP_SMUDGE=1` leaves *every*
+   LFS-tracked file unsmudged, not just the large ones — unsafe for the
+   *working* clone specifically, because `git add --renormalize .` would
+   then bake raw pointer text into every small file's new "regular git"
+   content instead of their real content. The tested, safe form for any
+   clone whose content will be inspected or renormalized is a targeted
+   `.gitattributes`-aware exclude:
+   `git clone -c "lfs.fetchexclude=*.safetensors,*.pt,*.mp4,*.png,*.jpg,*.jpeg" <url>`,
+   plus `hf download --exclude "*.safetensors" --exclude "*.pt"` (or
+   equivalent) for the `hf` tool. Both are still real invocations of the two
+   named client tools — they just don't pull the ~24–27 GB of weight bytes
+   per repo, which this session's checks don't need (`GPU-S3` owns the
+   functional GPU load). Neither mechanism smudges a path with no *current*
+   `.gitattributes` match regardless (Decision 9) — that's a separate,
+   orthogonal problem handled by Decision 9's manual restoration, not by
+   clone flags. The probe inspects the resulting local directory directly
+   (no top-level index; small files are real text, not
+   `version https://git-lfs...` pointer stubs) and cross-checks against
    `HfApi.get_paths_info` manifest metadata (does a path report an `.lfs`
    attribute or not) as an independent second signal — reusing the
    functional-core/imperative-shell shape of
@@ -110,6 +122,18 @@ outward-visible action class this project hasn't executed yet.
    row; do not edit either HF repo's own README/model card (keeps the
    external blast radius to exactly index+LFS, per the "ignore
    `-dist`/don't fold in extra content" decision).
+9. **Restore the four orphaned compliance docs' real content, in the same
+   two commits as the LFS fix (amended, GPU-S2-A1).** `BIAS.md`,
+   `EXPLAINABILITY.md`, `PRIVACY.md`, `SAFETY.md` check out as raw LFS
+   pointer text in both repos, unrelated to the `.gitattributes` fix (no
+   rule has ever matched `.md`, so neither the old nor the new
+   `.gitattributes` state smudges them). Before renormalizing, fetch each
+   file's real content directly from the LFS object store and smudge it
+   manually (`git lfs fetch --include=<path>` then
+   `git show HEAD:<path> | git-lfs smudge -- <path> > <path>`), then stage
+   it as a normal file. FP8's `_s2_*.md` files have the identical
+   corruption but are dev-scratch (Owner Decision 3) — left untouched,
+   corruption and all, per the owner's explicit choice.
 
 ## Risks / Trade-offs
 
@@ -141,6 +165,16 @@ outward-visible action class this project hasn't executed yet.
   `.gitattributes`/`lfs ls-files` state rather than blindly copying FP8's
   patch; both were already read in full during brainstorming, so the actual
   per-repo differences are already known, not a surprise to react to later.
+- **[Risk]** (amended, GPU-S2-A1) A file with no *current* `.gitattributes`
+  match but LFS-pointer-shaped committed content (an "orphan") gets silently
+  renormalized with its pointer text intact, because renormalize only
+  transforms paths whose attribute-driven treatment actually changes →
+  **Mitigation:** Decision 9's explicit manual restoration for the four
+  known orphans, plus a general pre-renormalize scan (Plan Step 2/4) that
+  greps every to-become-regular file's working-tree content for the
+  `version https://git-lfs` signature and fails loud if any unexpected
+  orphan turns up, rather than trusting the enumeration in this design doc
+  to be exhaustive.
 
 ## Migration Plan
 

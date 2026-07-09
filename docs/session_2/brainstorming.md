@@ -35,11 +35,10 @@ Status: Approved by owner (Feng), proceeding to proposal/design/specs/tasks/plan
     NVFP4's `producer_provenance.json`, etc.) are incorrectly LFS-tracked.
     Only `text_tokenizer/tokenizer.json` (11.4 MB, over the 10 MB line) has a
     deliberate standalone override — that one is already correct and stays.
-    `model.safetensors.index.json` itself and `video_preprocessor_config.json`
-    are, by accident, already plain git blobs (committed before the blanket
-    `*.json` rule existed) — direct proof the "rewrite order" failure mode
-    named in the contract's `failure_modes_to_watch` has already happened
-    once in this repo's history.
+    `model.safetensors.index.json` itself is an LFS pointer (not a plain
+    git blob as this section originally, incorrectly, concluded — see the
+    Amendment below: the `-`/`*` marker in `git lfs ls-files` means "not
+    locally smudged," not "not LFS").
   - Confirmed the actual weight layout: FP8's `transformer/` has a single
     consolidated `diffusion_pytorch_model.safetensors` (~19.5 GB) +
     `modelopt_state.pt`; NVFP4's has `model.safetensors` (~14.7 GB) +
@@ -173,3 +172,73 @@ answer not to fold in extra HF-side content this pass.
 
 Owner approved this direction ("it is good. proceed"). Proceeding to
 `docs/session_2/proposal.md`.
+
+## Amendment GPU-S2-A1 (post-approval, surfaced by Task 1.2's baseline check)
+
+**Marker correction:** `git lfs ls-files`'s `-`/`*` suffix indicates local
+smudge status ("content not downloaded/checked out here" vs. "downloaded"),
+**not** LFS-tracking status. Every path listed by that command — `-` or `*`
+— has LFS-pointer-shaped committed content. This session's "Context
+Explored" section above originally read `-` as "not LFS," which is wrong;
+corrected inline where it mattered.
+
+**New finding:** `BIAS.md`, `EXPLAINABILITY.md`, `PRIVACY.md`, and
+`SAFETY.md` — identical content/OIDs in both `wfen/Cosmos3-Nano-FP8-Blockwise`
+and `wfen/Cosmos3-Nano-NVFP4-Blockwise` — currently check out as raw LFS
+pointer text, not their real content, on a **normal** `git clone` (no
+skip-smudge involved). Root cause: git only invokes the LFS smudge filter
+for a path if a *current* `.gitattributes` rule matches it; no rule has
+ever matched `.md`, so these paths' historically-committed pointer-shaped
+blobs are written to the working tree as-is. `git lfs pull`/`checkout` are
+no-ops for the same reason (git-lfs's own tooling also keys off current
+attributes) — confirmed by direct testing. `git add --renormalize .` does
+**not** fix this either: renormalize re-applies the clean filter to the
+*working-tree file's current bytes*, and since no attribute matches `.md`
+before or after the LFS-tracking fix, there is no clean/smudge
+transformation to apply — it would silently re-stage the same corrupted
+pointer text. FP8's dev-scratch `_s2_postfix.md`/`_s2_rerun.md`/`_s2_verify.md`
+have the identical corruption (verified) but stay untouched (D3, Owner
+Decision 3). The real content **is** recoverable — fetching the LFS object
+directly (`git lfs fetch --include=<path>` populates `.git/lfs/objects/`)
+and smudging it manually (`git show HEAD:<path> | git-lfs smudge -- <path>`,
+bypassing git's attribute-gated checkout path) reproduces the real content,
+verified independently in both repos:
+
+| File | Real size | Confirmed in |
+|---|---:|---|
+| `BIAS.md` | 4720 B | FP8, NVFP4 |
+| `EXPLAINABILITY.md` | 3189 B | FP8, NVFP4 |
+| `PRIVACY.md` | 1215 B | FP8, NVFP4 |
+| `SAFETY.md` | 3677 B | FP8, NVFP4 |
+
+**Mechanism correction (working-clone safety):** the original Design
+Decision 4 planned `GIT_LFS_SKIP_SMUDGE=1` for the *working* clone (the one
+used to make and commit the fix), reasoning that the fix "never touches
+large-file bytes." That reasoning is correct for large files but unsafe for
+the renormalize step: skip-smudge leaves **every** LFS-tracked file
+unsmudged, including the ~30 small files still matched by the
+soon-to-be-removed blanket `*.json`/`*.py`/`*.txt`/`*.jinja` rules (e.g.
+`config.json`, `chat_template.json`). If those files' working-tree bytes
+are still raw pointer text at renormalize time, renormalize would bake that
+pointer text in as their new "regular git" content — turning a handful of
+already-broken files into dozens. Corrected mechanism (tested, confirmed
+safe):
+```bash
+git clone -c "lfs.fetchexclude=*.safetensors,*.pt,*.mp4,*.png,*.jpg,*.jpeg" \
+  https://huggingface.co/wfen/<repo> <dir>
+```
+This excludes only the genuinely large/binary patterns from the automatic
+clone-time smudge (confirmed unsmudged, pointer text, as intended) while
+correctly smudging every small file — including ones an active rule still
+covers today — to real content (confirmed: `config.json`,
+`model.safetensors.index.json` both resolved to real content in this test
+clone). `BIAS.md`-class orphans still need the manual fetch+smudge
+treatment regardless, since no exclude/include list changes whether a
+*current* attribute matches `.md` (it never does).
+
+**Owner decision:** restore the real content of the four compliance docs in
+both repos as part of this session (see `docs/session_2_contract.yaml`
+Amendment GPU-S2-A1); leave the three FP8-only dev-scratch files corrupted,
+untouched. `docs/session_2/design.md`, `docs/session_2/specs/hf-checkpoint-lfs-layout.md`,
+`docs/session_2/tasks.md`, and `docs/session_2/plan.md` are updated to match
+before any live fix proceeds on either repo.

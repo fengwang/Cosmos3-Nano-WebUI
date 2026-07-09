@@ -17,18 +17,34 @@ Input: `docs/session_2/design.md`, `docs/session_2/specs/*.md`
 ## 2. FP8 Fix (depends on 1)
 
 - [ ] 2.1 Fresh working clone of `wfen/Cosmos3-Nano-FP8-Blockwise` into the
-      scratchpad (`GIT_LFS_SKIP_SMUDGE=1`).
+      scratchpad, using the targeted exclude (**not** blanket
+      `GIT_LFS_SKIP_SMUDGE=1` — amended, GPU-S2-A1, see brainstorming.md):
+      `git clone -c "lfs.fetchexclude=*.safetensors,*.pt,*.mp4,*.png,*.jpg,*.jpeg" <url>`.
 - [ ] 2.2 Commit 1: `git rm model.safetensors.index.json`.
+- [ ] 2.2a (amended, GPU-S2-A1) Restore `BIAS.md`, `EXPLAINABILITY.md`,
+      `PRIVACY.md`, `SAFETY.md`: `git lfs fetch --include=<path>` then
+      `git show HEAD:<path> | git-lfs smudge -- <path> > <path>` for each,
+      then `git add` the four files as part of Commit 1 (same commit as the
+      index removal — both are "restore correct content").
 - [ ] 2.3 Edit `.gitattributes`: remove the blanket `*.json`, `*.py`,
       `*.txt`, `*.csv`, `*.jinja` LFS lines; keep every binary pattern and
       the `text_tokenizer/tokenizer.json` size-justified override unchanged.
+- [ ] 2.3a (amended, GPU-S2-A1) Before renormalizing: scan every
+      to-become-regular file's working-tree content for the
+      `version https://git-lfs` signature. Any hit besides the three known,
+      intentionally-untouched `_s2_*.md` dev-scratch files is a
+      newly-discovered orphan — stop and handle it like 2.2a before
+      proceeding, don't renormalize it silently.
 - [ ] 2.4 Commit 2: the `.gitattributes` edit plus `git add --renormalize .`.
       Diff `git lfs ls-files`' large-weight-file rows between the commit
       before and after this one — the OID column must be unchanged (R-04
       guard) before proceeding.
 - [ ] 2.5 Local verification: small files in the working clone are real
-      content (not `version https://git-lfs...` pointer stubs); no
-      top-level index remains.
+      content (not `version https://git-lfs...` pointer stubs) — including
+      the four restored compliance docs, matched against their known real
+      sizes (4720/3189/1215/3677 bytes); no top-level index remains; the
+      three dev-scratch `_s2_*.md` files are unchanged (still corrupted,
+      untouched).
 - [ ] 2.6 **Stop.** Explicit "push FP8 now?" go/no-go with the owner —
       never batched with any other action.
 - [ ] 2.7 Push both commits — only after the go-ahead in 2.6.
@@ -45,16 +61,23 @@ and never renormalized. Re-verify this live rather than assuming it still
 holds.
 
 - [ ] 3.1 Fresh working clone of `wfen/Cosmos3-Nano-NVFP4-Blockwise` into the
-      scratchpad (`GIT_LFS_SKIP_SMUDGE=1`).
+      scratchpad, using the same targeted-exclude clone as 2.1 (not blanket
+      skip-smudge).
 - [ ] 3.2 Commit 1: `git rm model.safetensors.index.json`.
+- [ ] 3.2a (amended, GPU-S2-A1) Restore `BIAS.md`, `EXPLAINABILITY.md`,
+      `PRIVACY.md`, `SAFETY.md` (same recipe as 2.2a; NVFP4 has no
+      dev-scratch `_s2_*.md` equivalent, so there is nothing to
+      deliberately leave untouched here).
 - [ ] 3.3 Re-inspect NVFP4's live `.gitattributes`. If it is already
-      correctly scoped (expected), skip straight to 3.4. If it is not (state
+      correctly scoped (expected), skip straight to 3.3a. If it is not (state
       has drifted since brainstorming), re-derive its own diff from its
       current content — do not copy FP8's `.gitattributes` patch verbatim.
+- [ ] 3.3a (amended, GPU-S2-A1) Same pre-renormalize orphan scan as 2.3a.
 - [ ] 3.4 Commit 2: `git add --renormalize .` (plus any `.gitattributes` edit
       3.3 found necessary). Diff `git lfs ls-files`' large-weight-file rows
       before/after — OID column unchanged (R-04 guard).
-- [ ] 3.5 Local verification (same checks as 2.5).
+- [ ] 3.5 Local verification (same checks as 2.5, minus the `_s2_*.md`
+      check, which doesn't apply to NVFP4).
 - [ ] 3.6 **Stop.** Explicit "push NVFP4 now?" go/no-go, independent of
       FP8's — never batched with any other action.
 - [ ] 3.7 Push — only after the go-ahead in 3.6.

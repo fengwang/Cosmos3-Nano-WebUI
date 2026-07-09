@@ -69,6 +69,36 @@ renormalize commit, for either repo
 THEN every large weight file's OID (first column) is identical in both
 listings.
 
+### Requirement: Orphaned LFS-Pointer Content Is Restored For Compliance Docs
+`BIAS.md`, `EXPLAINABILITY.md`, `PRIVACY.md`, and `SAFETY.md` in both repos
+MUST contain their real content, not LFS-pointer-spec text, after this
+session. Neither the `.gitattributes` fix nor `git add --renormalize .`
+resolves this on its own, since no attribute rule has ever matched `.md`;
+restoring these four requires a direct LFS object fetch and manual smudge.
+FP8's `_s2_postfix.md`, `_s2_rerun.md`, and `_s2_verify.md` have the
+identical corruption and are explicitly exempted (dev-scratch, Owner
+Decision 3) — this requirement does not apply to them.
+
+#### Scenario: Compliance docs contain real content after the fix
+WHEN `BIAS.md`, `EXPLAINABILITY.md`, `PRIVACY.md`, and `SAFETY.md` are read
+from a fresh clone of either repo at the new HEAD
+THEN none of their first lines is `version https://git-lfs.github.com/spec/v1`
+AND each file's byte size matches its known real size (4720, 3189, 1215,
+and 3677 bytes respectively).
+
+#### Scenario: Dev-scratch orphans are explicitly left corrupted
+WHEN `_s2_postfix.md`, `_s2_rerun.md`, and `_s2_verify.md` are read from a
+fresh clone of `wfen/Cosmos3-Nano-FP8-Blockwise` at the new HEAD
+THEN they remain LFS-pointer-shaped text, byte-identical to the pre-fix
+revision — unchanged, not newly broken and not newly fixed.
+
+#### Scenario: No other orphan survives unnoticed
+WHEN every file that is not one of the known large/binary patterns is
+inspected in the working clone immediately before the renormalize commit
+THEN none of their contents begins with `version https://git-lfs.github.com/spec/v1`
+AND any file that does is treated as a newly-discovered orphan requiring
+the same fetch-and-smudge treatment, not a silently-accepted gap.
+
 ### Requirement: Push Requires A Recorded Owner Go-Ahead
 Neither repo MUST be pushed to without an explicit, separately recorded owner
 go-ahead immediately preceding that specific push (`project_contract.md`

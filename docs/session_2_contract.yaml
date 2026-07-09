@@ -10,8 +10,19 @@ session_contract:
     - Commit and push each repo.
     - Verify via a fresh clone AND hf download.
     - Sweep the whole repository and update every pinned-revision reference, at minimum docs/model_setup.md section 1, docs/evidence_map.md, docs/release_checklist.md section 7, docs/eval_seed_cases.md.
+    # Amendment GPU-S2-A1 (owner-approved 2026-07-09, baseline check): the
+    # original scope did not anticipate that BIAS.md/EXPLAINABILITY.md/
+    # PRIVACY.md/SAFETY.md in both repos currently contain raw LFS-pointer
+    # text as their checked-out content (a third, distinct packaging bug —
+    # these paths match no current .gitattributes rule, so neither a normal
+    # clone nor `git add --renormalize .` recovers their real content).
+    # Verified recoverable via direct LFS object fetch + manual smudge.
+    - Restore the real content of BIAS.md, EXPLAINABILITY.md, PRIVACY.md, and SAFETY.md in both wfen/* repos (orphaned LFS-pointer text, not a dev-scratch file).
   out_of_scope:
     - D3 dev-scratch cleanup on the HF repos.
+    # GPU-S2-A1: the identical orphaned-pointer corruption exists in FP8's
+    # _s2_postfix.md/_s2_rerun.md/_s2_verify.md too, but those are D3
+    # dev-scratch (named below) — left untouched, corruption and all.
     - Rewriting large weight files out of LFS.
     - Dockerfile changes.
     - Upstream PR work.

@@ -28,21 +28,45 @@ repos, nothing written to this repository).
 ## Step 2 (Task 2.1-2.5) — FP8 fix, local (target: `wfen/Cosmos3-Nano-FP8-Blockwise`)
 
 ```bash
-mkdir -p "$SCRATCH/fp8-fix" && cd "$SCRATCH"
-export GIT_LFS_SKIP_SMUDGE=1
-git clone https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise fp8-fix
+mkdir -p "$SCRATCH" && cd "$SCRATCH"
+git clone -c "lfs.fetchexclude=*.safetensors,*.pt,*.mp4,*.png,*.jpg,*.jpeg" \
+  https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise fp8-fix
 cd fp8-fix
 git log --oneline -1   # confirm HEAD == 4e181f996abf03f3425298ef692e6e5e56fd46a4
 ```
 
-**Commit 1 — remove the stale index:**
+(Amended, GPU-S2-A1: **not** `GIT_LFS_SKIP_SMUDGE=1` — that leaves every
+small file unsmudged too, which would corrupt them at the renormalize step
+below. The targeted `lfs.fetchexclude` only skips the genuinely large/binary
+patterns; every small file smudges normally.)
+
+**Commit 1 — remove the stale index and restore the orphaned compliance docs:**
 
 ```bash
 git rm model.safetensors.index.json
-git commit -m "Remove stale top-level weight index
 
-References 7 non-existent transformer/diffusion_pytorch_model-0000N-of-00007
-shards. The real weight is one consolidated transformer/diffusion_pytorch_model.safetensors."
+# GPU-S2-A1: BIAS.md/EXPLAINABILITY.md/PRIVACY.md/SAFETY.md check out as raw
+# LFS-pointer text regardless of clone flags (no .gitattributes rule has ever
+# matched .md). Fetch the real object and smudge it manually, bypassing the
+# attribute-gated checkout path.
+for f in BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md; do
+  git lfs fetch --include="$f" origin
+  git show HEAD:"$f" | git-lfs smudge -- "$f" > "$f.real"
+  mv "$f.real" "$f"
+done
+wc -c BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md
+# expect: 4720 BIAS.md, 3189 EXPLAINABILITY.md, 1215 PRIVACY.md, 3677 SAFETY.md
+git add BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md
+git commit -m "Remove stale top-level weight index; restore orphaned compliance docs
+
+model.safetensors.index.json referenced 7 non-existent
+transformer/diffusion_pytorch_model-0000N-of-00007 shards; the real weight is
+one consolidated transformer/diffusion_pytorch_model.safetensors.
+
+BIAS.md/EXPLAINABILITY.md/PRIVACY.md/SAFETY.md were checking out as raw
+LFS-pointer text (no .gitattributes rule has ever matched .md, so neither a
+plain clone nor git-lfs's own tooling re-smudges them); restored their real
+content from the underlying LFS objects."
 ```
 
 **Edit `.gitattributes`** (`Edit` tool, this exact working copy): remove
@@ -56,6 +80,21 @@ these 5 lines, leave every other line (including
 *.json filter=lfs diff=lfs merge=lfs -text
 *.py filter=lfs diff=lfs merge=lfs -text
 *.jinja filter=lfs diff=lfs merge=lfs -text
+```
+
+**Pre-renormalize orphan scan (GPU-S2-A1) — before Commit 2:**
+
+```bash
+for f in $(git lfs ls-files | awk '{print $3}'); do
+  case "$f" in
+    *.safetensors|*.pt|*.mp4|*.png|*.jpg|text_tokenizer/tokenizer.json) continue ;;
+  esac
+  head -c 8 "$f" | grep -q "^version " && echo "ORPHAN (unexpected): $f"
+done
+# expect exactly 3 lines: _s2_postfix.md, _s2_rerun.md, _s2_verify.md
+# (known, intentionally left corrupted — Owner Decision 3). Any other name
+# printed here is a newly-discovered orphan: stop and fetch+smudge it like
+# the four compliance docs above before proceeding.
 ```
 
 **Commit 2 — renormalize, with the R-04 guard before committing:**
@@ -87,10 +126,13 @@ not push. If the "newly entered LFS" set is non-empty, same treatment.
 **Local verification (Task 2.5):**
 
 ```bash
-for f in config.json checkpoint.json chat_template.json load_quantized.py; do
+for f in config.json checkpoint.json chat_template.json load_quantized.py \
+         BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md; do
   head -c 20 "$f"; echo   # must NOT start with "version https://git-lfs"
 done
+wc -c BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md   # 4720/3189/1215/3677
 test ! -e model.safetensors.index.json && echo "no stale index: OK"
+head -c 8 _s2_postfix.md   # expect "version " — deliberately still corrupted
 ```
 
 ## Step 3 (Task 2.6-2.8) — FP8 push gate, push, independent verify
@@ -125,28 +167,57 @@ Record the new revision SHA — this becomes the FP8 pin for Step 6.
 Same shape as Steps 2-3, with the re-derived (not copied) recipe:
 
 ```bash
-mkdir -p "$SCRATCH/nvfp4-fix" && cd "$SCRATCH"
-export GIT_LFS_SKIP_SMUDGE=1
-git clone https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise nvfp4-fix
+mkdir -p "$SCRATCH" && cd "$SCRATCH"
+git clone -c "lfs.fetchexclude=*.safetensors,*.pt,*.mp4,*.png,*.jpg,*.jpeg" \
+  https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise nvfp4-fix
 cd nvfp4-fix
 git log --oneline -1   # confirm HEAD == b5c9332efbaefa72c99890b1b1150da12ca9256c
 cat .gitattributes   # re-confirm no blanket *.json/*.py/*.txt/*.jinja line exists
 ```
 
-**Commit 1:**
+(Same amended clone mechanism as Step 2 — targeted exclude, not blanket
+skip-smudge.)
+
+**Commit 1 — remove the stale index and restore the orphaned compliance docs:**
 
 ```bash
 git rm model.safetensors.index.json
-git commit -m "Remove stale top-level weight index
 
-References 7 non-existent transformer/model-0000N-of-00007 shards. The real
-weight is one consolidated transformer/model.safetensors."
+for f in BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md; do
+  git lfs fetch --include="$f" origin
+  git show HEAD:"$f" | git-lfs smudge -- "$f" > "$f.real"
+  mv "$f.real" "$f"
+done
+wc -c BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md
+# expect the same 4720/3189/1215/3677 bytes as FP8 (shared boilerplate, same OIDs)
+git add BIAS.md EXPLAINABILITY.md PRIVACY.md SAFETY.md
+git commit -m "Remove stale top-level weight index; restore orphaned compliance docs
+
+model.safetensors.index.json referenced 7 non-existent
+transformer/model-0000N-of-00007 shards; the real weight is one consolidated
+transformer/model.safetensors.
+
+BIAS.md/EXPLAINABILITY.md/PRIVACY.md/SAFETY.md were checking out as raw
+LFS-pointer text (same root cause and fix as the FP8 repo)."
 ```
 
 **`.gitattributes`:** expected to need **no edit** (already scoped
 correctly — confirmed during brainstorming). If the `cat` above shows a
 blanket text-extension rule after all, re-derive the removal from NVFP4's
 own current content rather than reusing FP8's diff, then proceed as below.
+
+**Pre-renormalize orphan scan (GPU-S2-A1) — before Commit 2:**
+
+```bash
+for f in $(git lfs ls-files | awk '{print $3}'); do
+  case "$f" in
+    *.safetensors|*.pt|*.mp4|*.png|*.jpg|text_tokenizer/tokenizer.json) continue ;;
+  esac
+  head -c 8 "$f" | grep -q "^version " && echo "ORPHAN (unexpected): $f"
+done
+# expect zero lines — NVFP4 has no dev-scratch equivalent to _s2_*.md, so
+# every orphan here should already be one of the four just restored above.
+```
 
 **Commit 2 — renormalize only (or renormalize + edit, if 3.3 found a gap), same R-04 guard:**
 
@@ -164,7 +235,8 @@ blanket text-extension rule was removed from .gitattributes and were never
 renormalized. Large weight files are unaffected."
 ```
 
-Local verification: same shape as Step 2's.
+Local verification: same shape as Step 2's (2.5), minus the `_s2_*.md`
+check, which doesn't apply here.
 
 **Stop.** Ask the owner explicitly: "push NVFP4 now?" — independent of FP8's
 go-ahead, standalone message.

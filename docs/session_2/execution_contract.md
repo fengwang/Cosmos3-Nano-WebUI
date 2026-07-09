@@ -7,7 +7,10 @@ branch_and_compare)
 ## Planned File Changes
 
 - External `wfen/Cosmos3-Nano-FP8-Blockwise` — 2 commits (remove stale
-  index; fix LFS tracking), pushed after an explicit go-ahead.
+  index + restore 4 orphaned compliance docs; fix LFS tracking), pushed
+  after an explicit go-ahead. (Amended, GPU-S2-A1: the compliance-doc
+  restoration was discovered during Task 1.2's baseline check, not part of
+  the original brainstorming pack — see `docs/session_2_contract.yaml`.)
 - External `wfen/Cosmos3-Nano-NVFP4-Blockwise` — 2 commits (same shape,
   independently derived), pushed after its own explicit go-ahead.
 - `docs/model_setup.md` — §1 revisions, §8/§9 workaround guidance.
@@ -98,6 +101,11 @@ named adversarial cases:
 4. Did either push happen before a recorded, explicit owner go-ahead
    immediately preceding it — check the session transcript ordering, not
    just that a go-ahead exists somewhere.
+5. (Amended, GPU-S2-A1) Do `BIAS.md`/`EXPLAINABILITY.md`/`PRIVACY.md`/
+   `SAFETY.md` actually contain their real content post-fix in both repos —
+   not just a claim that they were "restored" — and do the three FP8-only
+   `_s2_*.md` dev-scratch files remain deliberately untouched (still
+   corrupted), not accidentally fixed or accidentally further broken.
 
 ## Done Condition
 
