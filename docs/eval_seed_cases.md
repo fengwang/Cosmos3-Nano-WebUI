@@ -10,12 +10,13 @@ Hard Commitment 3).
 
 ## Public Checkpoint IDs
 
-- FP8 (generation): `wfen/Cosmos3-Nano-FP8-Blockwise` — revision pinned by
-  `GPU-S2`, replacing the pre-fix `4e181f996abf03f3425298ef692e6e5e56fd46a4`
+- FP8 (generation): `wfen/Cosmos3-Nano-FP8-Blockwise` @
+  `9bf5d6ae164688487bdb71947ccc6ebe70d12900` — pinned by `GPU-S2`, replacing
+  the pre-fix `4e181f996abf03f3425298ef692e6e5e56fd46a4`
   recorded in `docs/archive/phase-1/evidence_map.md`.
-- NVFP4 (generation): `wfen/Cosmos3-Nano-NVFP4-Blockwise` — revision pinned
-  by `GPU-S2`, replacing the pre-fix
-  `b5c9332efbaefa72c99890b1b1150da12ca9256c`.
+- NVFP4 (generation): `wfen/Cosmos3-Nano-NVFP4-Blockwise` @
+  `5514c42b9759739f545e0d0dee453db8d8525fbc` — pinned by `GPU-S2`, replacing
+  the pre-fix `b5c9332efbaefa72c99890b1b1150da12ca9256c`.
 - BF16 base (reasoner + action/forward_dynamics, unaffected by `GPU-S2`):
   `nvidia/Cosmos3-Nano` @ `fea6e03ac3d7884b4105ed8ee79fc480fca70965`.
 - vLLM-Omni fork commit (unaffected by `GPU-S1`, which only changes how it

@@ -10,8 +10,8 @@ wiring is `MIG-S6`. Evidence: `docs/archive/phase-1/session_4/hf_verification.md
 
 | Purpose | Repo id | Pinned revision | Model license |
 |---|---|---|---|
-| Quantized generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `4e181f996abf03f3425298ef692e6e5e56fd46a4` | `openmdw-1.0` |
-| Quantized generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `b5c9332efbaefa72c99890b1b1150da12ca9256c` | `openmdw-1.0` |
+| Quantized generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `9bf5d6ae164688487bdb71947ccc6ebe70d12900` | `openmdw-1.0` |
+| Quantized generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `5514c42b9759739f545e0d0dee453db8d8525fbc` | `openmdw-1.0` |
 | BF16 base (reasoner + action graft) | `nvidia/Cosmos3-Nano` | `fea6e03ac3d7884b4105ed8ee79fc480fca70965` | `other` |
 
 Consumers SHOULD pin the revision (not the mutable `main`). Do **not** use
@@ -88,9 +88,9 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
   current public FP8 (recipe `fp8_blockwise_mixed` ≠ exact `"fp8"`) or NVFP4 (no
   `modelopt_state.pt` / `quantization_config.json`; vLLM-Omni-native export) checkpoints. **The
   default `vllm_omni` container path DOES load both** (FP8 `W8A16`, NVFP4 `W4A16`) and generates
-  **T2I** on an RTX 5090 — **after removing the stale top-level `model.safetensors.index.json`
-  (see §8)**. So D1 affects the in-process oracle only; the remaining issue is a
-  published-checkpoint packaging bug (stale index), routed to an owner HF-side fix (R-03). T2I
+  **T2I** on an RTX 5090 — the stale top-level `model.safetensors.index.json` is now removed at
+  the source (`GPU-S2`, see §9), so no manual removal step is needed at the revisions in §1. So
+  D1 affects the in-process oracle only; the packaging bug (stale index, R-03) is closed. T2I
   verified; `t2v`/`t2v_audio`/`i2v`/`forward_dynamics`/`reasoning` + 720p video not yet.
 - **D2 (low):** use base id `nvidia/Cosmos3-Nano` (public); `wfen/Cosmos3-Nano` 404s.
 - **D3 (low):** the public FP8 repo ships dev-scratch (`_s2_*.md`) + loader scripts and NVFP4
@@ -103,29 +103,33 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
 1. Install `huggingface_hub`; authentication is not required (all three repos are public,
    ungated).
 2. Download or mount the checkpoint(s) you serve into the mount root, e.g. FP8 generation:
-   `huggingface-cli download wfen/Cosmos3-Nano-FP8-Blockwise --revision 4e181f99… --local-dir /path/to/Cosmos3-Nano-FP8-Blockwise`.
+   `hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision 9bf5d6ae164688487bdb71947ccc6ebe70d12900 --local-dir /path/to/Cosmos3-Nano-FP8-Blockwise`.
+   A plain `git clone` resolves cleanly too as of this revision (§9).
 3. For reasoning or action/`forward_dynamics`, also fetch the base
    `nvidia/Cosmos3-Nano` and set `COSMOS3_REASONER_MODEL_DIR` / `COSMOS3_BASE_ACTION_DIR`.
 4. Point `COSMOS3_MODEL_DIR` (and `COSMOS3_CHECKPOINT_LABEL`) at the served checkpoint.
 5. GPU inference is a manual release gate (`MIG-S8`). **T2I is now GPU-verified (2026-07-08,
    FP8 + NVFP4, RTX 5090)**; other modes and 720p video remain manual gates.
 
-## 9. Known packaging workarounds (verified 2026-07-08)
+## 9. Known packaging workarounds — fixed at the source (`GPU-S2`, 2026-07-09)
 
-Loading the public `wfen/*` checkpoints in the `vllm_omni` container currently needs two
-operator workarounds (both are checkpoint-side; owner HF-side fixes are tracked as R-03 / D1):
+Loading the public `wfen/*` checkpoints in the `vllm_omni` container previously needed two
+operator workarounds. **Both are fixed at the source as of the revisions in §1** — a plain
+`git clone` or `hf download` now resolves every file to real content with no manual step:
 
-1. **Prefer `hf download` over `git clone`.** A `git clone` of these repos may smudge only the
-   large weights and leave the small config/tokenizer files as **unresolved git-LFS/Xet
-   pointers** (which then fail to parse). Use
-   `hf download <repo> --revision <pin> --local-dir <dir>`; if you already cloned, fetch the
-   config files from the resolve endpoint or re-`hf download`.
-2. **Remove the stale weight index.** Each checkpoint ships a top-level
-   `model.safetensors.index.json` that references non-existent sharded files
+1. ~~Prefer `hf download` over `git clone`.~~ Both repos' `.gitattributes` forced every small
+   config/tokenizer/script file into LFS regardless of size, so a `git clone` left them as
+   unresolved LFS pointers. Fixed by scoping LFS to files over 10 MB or non-plain-text
+   (large weights only); small files are now regular Git blobs that resolve on any clone.
+2. ~~Remove the stale weight index.~~ Each checkpoint shipped a top-level
+   `model.safetensors.index.json` referencing non-existent sharded files
    (`transformer/diffusion_pytorch_model-0000N-of-00007.safetensors`); the real transformer
    weight is a single consolidated `transformer/{diffusion_pytorch_model,model}.safetensors`.
-   Move it aside so the loader uses the consolidated files:
-   `mv <dir>/model.safetensors.index.json <dir>/model.safetensors.index.json.bak`.
+   The stale index is now removed from both repos at the source.
+
+An operator pinned to a revision older than §1's (not recommended) still needs the manual
+`mv <dir>/model.safetensors.index.json <dir>/model.safetensors.index.json.bak` workaround and
+should prefer `hf download` over `git clone` for the reasons above.
 
 Serve (fork's OpenAI-compatible entrypoint, per `vllm-omni` `recipes/cosmos3/Cosmos3-Nano.md`):
 

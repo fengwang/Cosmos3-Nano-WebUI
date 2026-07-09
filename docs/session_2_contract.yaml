@@ -38,6 +38,13 @@ session_contract:
       - docs/eval_seed_cases.md
       - docs/handoff.md
       - docs/eval_seed_cases.md
+      # Amendment GPU-S2-A2 (owner-approved 2026-07-09, whole-repo sweep):
+      # the top-level README.md quickstart and checkpoint table cite the
+      # pre-fix revisions and were absent from the original blast radius —
+      # exactly the "not only those four files" gap Hard Commitment 3 itself
+      # anticipates. Caught by the sweep this session's own contract
+      # requires before closing.
+      - README.md
     forbidden_files:
       - api/**
       - webui/**

@@ -67,6 +67,32 @@ file) for exactly that reason — full evidence, commands, and artifact metadata
 in `docs/evidence_map.md` and `docs/session_1/`. `deploy/docker-compose.local-image.yml`
 is deleted (owner disposition: drop, not keep as a documented convenience).
 
+## GPU-S2 checkpoint index/LFS fix and re-pin (2026-07-09)
+
+Closed archived Phase-1 R-03. Both `wfen/*` checkpoint repos shipped a stale
+top-level `model.safetensors.index.json` (referencing 7 non-existent
+shards) and forced small config/tokenizer files into LFS via blanket
+extension rules, so a plain `git clone` left them as unresolved pointers.
+Fixed at the source: the stale index is removed from both repos, and
+`.gitattributes`/renormalize corrects LFS tracking to the owner's
+size/type rule (large weights stay LFS; small plain-text files are regular
+Git). A third, previously undocumented bug was also found and fixed:
+`BIAS.md`/`EXPLAINABILITY.md`/`PRIVACY.md`/`SAFETY.md` (both repos) and 28
+further NVFP4-side files were checking out as raw LFS-pointer text
+regardless of `.gitattributes` state (no rule has ever matched `.md`;
+NVFP4's text-extension rules were already removed pre-session without a
+renormalize) — restored via direct LFS object fetch. FP8's dev-scratch
+`_s2_*.md` files and NVFP4's `transformer/producer_provenance.json` have
+the identical corruption and are deliberately left untouched (Owner
+Decision 3). New revisions: FP8 `9bf5d6ae164688487bdb71947ccc6ebe70d12900`,
+NVFP4 `5514c42b9759739f545e0d0dee453db8d8525fbc` — both independently
+verified via a cache-isolated fresh `git clone` and `hf download` (weight
+bytes excluded; not needed for this check). Every in-repo reference to the
+pre-fix revisions is swept in the same session (`docs/evidence_map.md`,
+this file, `docs/eval_seed_cases.md`, `docs/risk_register.md`,
+`docs/model_setup.md`, `docs/handoff.md`). No large weight file was
+affected (R-04 — verified empty diff for every large file across the fix).
+
 ## 1. Scrub and safety (INV-1, INV-2)
 
 - [x] Private-reference scan clean over the whole tree:
@@ -137,7 +163,8 @@ is deleted (owner disposition: drop, not keep as a documented convenience).
 
 Record for each: hardware, driver/CUDA, checkpoint repo + revision, vLLM-Omni
 commit, request shape, artifact metadata, pass/fail (`EV-MIG-GPU-*`). A valid run MUST use
-vLLM-Omni `697035018b70…` + FP8 `4e181f99…` / NVFP4 `b5c9332e…` + BF16 base
+vLLM-Omni `697035018b70…` + FP8 `9bf5d6ae1646…` / NVFP4 `5514c42b9759…` (`GPU-S2` revisions;
+superseding the pre-fix `4e181f99…`/`b5c9332e…`) + BF16 base
 `nvidia/Cosmos3-Nano` @ `fea6e03a…`. GPU marker run:
 `COSMOS3_ENABLE_GPU_TESTS=1 uv run pytest -m gpu`; then the per-mode `EV-MIG-GPU-*` smokes.
 

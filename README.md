@@ -67,8 +67,8 @@ cd Cosmos3-Nano-WebUI
 
 # 2. Download a public checkpoint (ungated; no auth). FP8 shown; NVFP4 is analogous.
 pip install "huggingface_hub[cli]"
-huggingface-cli download wfen/Cosmos3-Nano-FP8-Blockwise \
-  --revision 4e181f996abf03f3425298ef692e6e5e56fd46a4 \
+hf download wfen/Cosmos3-Nano-FP8-Blockwise \
+  --revision 9bf5d6ae164688487bdb71947ccc6ebe70d12900 \
   --local-dir ./models/Cosmos3-Nano-FP8-Blockwise
 
 # 3. (Optional) configure — the defaults work for a local run
@@ -106,8 +106,8 @@ mutable `main`).
 
 | Purpose | Repo id | Pinned revision | Model license |
 |---|---|---|---|
-| Generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `4e181f99…` | `openmdw-1.0` |
-| Generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `b5c9332e…` | `openmdw-1.0` |
+| Generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `9bf5d6ae1646…` | `openmdw-1.0` |
+| Generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `5514c42b9759…` | `openmdw-1.0` |
 | BF16 base (reasoning + action) | `nvidia/Cosmos3-Nano` | `fea6e03a…` | `other` |
 
 A generation deployment serves exactly **one** of FP8 or NVFP4; reasoning and action
