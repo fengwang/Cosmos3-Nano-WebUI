@@ -81,6 +81,20 @@ recorded here and in `docs/handoff.md` for the owner or a future session with au
 - Consider a project-level rule: "after fixing a private-reference/secret scan finding, run
   the scan again after every subsequent commit in the same session, not only once."
 
+## GPU-S4 Retrospective Additions (2026-07-09)
+
+Harvested per `docs/agent_workflow/prompts/eval_harvest.md`. `GPU-S4` caught
+two useful contribution-readiness risks before branch publication: upstream
+partial overlap (some code present, some missing) and Cosmos3-specific residue
+in the imported slice. No human-reported miss occurred after the agent's
+review layers.
+
+| ID | Purpose | Inputs | Expected properties | Gate | Caught by |
+|---|---|---|---|---|---|
+| EV-GPU-UPSTREAM-PARTIAL-OVERLAP | Confirm an upstream-state check distinguishes "already fully present" from "partially present but still missing the contribution surface." | Upstream `main` tree and grep results for candidate filenames, semantic adapter symbols, quant recipes, and existing patch hunks. | The finding lists both sides explicitly: existing overlap that must not be re-imported, and missing files/behaviors that justify proceeding. A binary present/absent answer is insufficient. | GPU-S4 and any future upstream-contribution session | Task 1 upstream-state finding |
+| EV-GPU-CONTRIB-NO-DOMAIN-RESIDUE | Confirm an upstream-facing contribution branch does not leak product/session-specific residue from the downstream fork. | Branch diff against upstream plus a sweep for product names, session docs, private paths, tokens, and private markers. | The sweep returns zero matches after cleanup; any imported diagnostics use upstream-project names, not downstream product names. | GPU-S4/GPU-S5 contribution prep | Task 2 pre-commit scope sweep |
+| EV-GPU-SESSION-DOC-NO-LOCAL-PATHS | Confirm session artifacts use public placeholders for local checkouts instead of private absolute workspace paths. | `make scan` plus a direct path sweep over new `docs/session_<n>/**` artifacts. | No private absolute checkout path appears in planning, evidence, review, verifier, or handoff docs; use placeholders such as `<external-vllm-omni-checkout>` instead. | Any session writing public docs that mention sibling repos or local checkouts | Main repo `make scan` during GPU-S4 closeout |
+
 ## GPU-S2 Retrospective Additions (2026-07-09)
 
 Harvested per `docs/agent_workflow/prompts/eval_harvest.md`. Two of the
