@@ -7,18 +7,28 @@ Source: `docs/session_2/proposal.md` (New Capabilities)
 ### Requirement: Torch-Free And No Large Download
 The probe MUST NOT import `torch` or `diffusers`, and MUST NOT require
 downloading any checkpoint's large weight file (`*.safetensors`, `*.pt`) to
-reach a verdict. It relies on client-tool invocations scoped to skip large
-blobs (`GIT_LFS_SKIP_SMUDGE=1 git clone`, `hf download` with weight-file
-excludes) plus `HfApi` manifest metadata.
+reach a verdict. It relies entirely on `HfApi` manifest metadata
+(`list_repo_files` + `get_paths_info`) — no file's byte content is ever
+requested, at either the pre-fix or post-fix revision.
+
+(Amended, sharded review Correctness Finding 2/3: an earlier version of
+this probe additionally downloaded small-file content via
+`hf_hub_download` to check for orphaned LFS-pointer text. Dropped — Hub's
+resolve endpoint transparently smudges LFS pointers regardless of the
+current `.gitattributes` state, so that check could never actually detect
+an orphan; it added download volume with no working signal.
+`HfApi.get_paths_info`'s `.lfs` attribute already reports the correct,
+attribute-independent signal — is the raw git blob pointer-shaped — for
+free, from metadata alone.)
 
 #### Scenario: Probe runs without importing torch or diffusers
 WHEN `docs/session_2/probes/verify_gpu_s2_checkpoints.py` runs to completion
 THEN `torch` and `diffusers` are absent from `sys.modules`.
 
 #### Scenario: Probe completes without a full weight download
-WHEN the probe's fresh-clone step is inspected
-THEN no request for a `*.safetensors` or `*.pt` byte range larger than the
-LFS pointer-file size (≈130 bytes) is made.
+WHEN the probe's network calls are inspected
+THEN every one is a metadata-only `HfApi` call (`list_repo_files`,
+`get_paths_info`); no file content, of any size, is ever requested.
 
 ### Requirement: Detects Stale Index Presence
 The probe MUST report whether a top-level `model.safetensors.index.json`
@@ -35,9 +45,10 @@ THEN it reports `stale_index_present: false`.
 
 ### Requirement: Detects Incorrectly-LFS'd Small Files
 The probe MUST classify every file in the manifest as LFS-backed or a
-regular blob (via `HfApi.get_paths_info`'s `.lfs` attribute, or the fresh
-clone's own smudge behavior) and flag any file at or under 10 MB that is
-plain text but still LFS-backed.
+regular blob, via `HfApi.get_paths_info`'s `.lfs` attribute, and flag any
+file at or under 10 MB that is plain text but still LFS-backed. The same
+mechanism, in the opposite direction, MUST flag a large or binary file that
+has unexpectedly lost its LFS backing (the R-04 de-LFS regression case).
 
 #### Scenario: Pre-fix manifest flags known-bad files
 WHEN the probe runs against the pre-fix revision of

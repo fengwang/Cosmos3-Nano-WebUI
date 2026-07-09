@@ -49,11 +49,21 @@ WHEN `git lfs ls-files` is run against the new HEAD of either repo
 THEN `text_tokenizer/tokenizer.json` (11.4 MB, over the 10 MB threshold)
 DOES appear in its output, unchanged from before the fix.
 
-#### Scenario: Dev-scratch file storage mechanism is corrected, content untouched
+#### Scenario: Named dev-scratch orphan is left exactly as-is
 WHEN `wfen/Cosmos3-Nano-NVFP4-Blockwise`'s `transformer/producer_provenance.json`
 is inspected at the new HEAD
-THEN it is a regular Git blob, not an LFS pointer
-AND its file content and path are byte-identical to the pre-fix revision.
+THEN it is byte-identical to the pre-fix revision at the git-blob level —
+including remaining LFS-pointer-shaped content, since Owner Decision 3
+excludes this specific named file from restoration
+AND its path is unchanged.
+
+(Amended, `GPU-S2-A1`/sharded review: this requirement originally read "is a
+regular Git blob, not an LFS pointer," written before this session
+discovered the deeper orphaned-pointer bug and the owner narrowed the
+in-scope restoration to exclude this file specifically, matching FP8's
+`_s2_*.md` treatment. `hf download`/`HfApi` resolve this path's real content
+transparently regardless — Hub-side LFS resolution isn't gated by
+`.gitattributes` — but the underlying git blob is deliberately untouched.)
 
 ### Requirement: No Large Weight File Is De-LFS'd By The Fix
 The set of LFS-tracked large weight files (`transformer/*.safetensors` or
