@@ -54,6 +54,33 @@ there.
 | EV-GPU-T2V-SMOKE | Best-effort small text-to-video smoke. | FP8 or NVFP4 | Short prompt, low frame count, documented seed. | Valid video artifact, or a recorded reason it was scoped out (PRD FR-6, SHOULD). | GPU-S3 |
 | EV-GPU-JOBS-ARTIFACT | Full-stack job and artifact retrieval on the from-source build. | Either checkpoint | Async generation request observed through the api or WebUI. | Job reaches a terminal state; artifact is downloadable. | GPU-S3 |
 
+## GPU-S2 Retrospective Additions (2026-07-09)
+
+Harvested per `docs/agent_workflow/prompts/eval_harvest.md`. Two of the
+three gaps below were caught by the sharded review or adversarial
+verification, not by this session's own deterministic checks or first
+sweep — the retrospective distinction matters: it's evidence the review
+layers are doing real work, not rubber-stamping.
+
+| ID | Purpose | Inputs | Expected properties | Gate | Caught by |
+|---|---|---|---|---|---|
+| EV-GPU-SWEEP-HIDDEN-FILES | Confirm a whole-repo pin-sweep command actually scans dotfiles, not just visibly-listed files. | A tracked dotfile (e.g. `.env.example`) containing a target string; the literal sweep command from the session contract. | The sweep command finds the match. `rg`'s default directory walk skips dotfiles — any sweep command lacking `--hidden` (or an equivalent) silently under-reports. | Any session with a whole-repo string/pin sweep | Adversarial verification (missed by this session's own first sweep and by sharded review, both of which used the un-hidden form) |
+| EV-GPU-CHECKPOINT-ORPHAN-CONTENT | Confirm a checkpoint repo's small files contain real content, not LFS-pointer text, independent of whether a *current* `.gitattributes` rule matches them. | A file whose committed git blob is LFS-pointer-shaped but whose path matches no current LFS pattern (an "orphan" — e.g. from a rule removed without a renormalize). | `HfApi.get_paths_info`'s `.lfs` attribute correctly flags it regardless of current attributes; `hf_hub_download`/Hub resolve endpoints do **not** — they transparently smudge LFS pointers even for unmatched paths, so a content-download-based check can never detect this class of bug. | Any session verifying HF checkpoint packaging | Sharded review (correctness axis; empirically reproduced against a real orphan file) |
+| EV-GPU-PROBE-BIDIRECTIONAL-LFS | Confirm an automated LFS-placement check catches a large/binary file that unexpectedly lost its LFS backing (de-LFS regression), not only a small file that's wrongly LFS-backed. | A manifest entry for a known-large path with `is_lfs=False`. | The check flags it; a one-directional implementation (checking only "small file wrongly LFS" and never the reverse) silently passes a de-LFS regression — exactly the risk R-04-style contracts exist to guard. | Any session writing an automated LFS/packaging verification probe | Sharded review (correctness + tests axes, 2 independent reviewers, same finding) |
+
+**New repo rule candidates** (not applied this session — `project_contract.md`
+and `AGENTS.md` are outside `GPU-S2`'s blast radius; recorded here and in
+`docs/handoff.md` for the owner/a future session with authority to edit
+them):
+- `project_contract.md` §7's "Verification Policy" recommends `rg` sweeps
+  for stale pins; it should note that `rg` skips dotfiles by default and
+  name `--hidden` (or equivalent) as required, not optional.
+- Any future verification probe that checks "is this HF-hosted file's
+  content real" should use `HfApi`-level blob/attribute metadata, not a
+  Hub-level content-download API — the latter transparently resolves LFS
+  pointers regardless of git-attribute state and cannot detect this class
+  of packaging bug.
+
 ## GPU-S1 Retrospective Additions (2026-07-09)
 
 `EV-GPU-DOCKERFILE-BUILD` and `EV-GPU-S1-BUILD-T2I-SMOKE` above both passed —

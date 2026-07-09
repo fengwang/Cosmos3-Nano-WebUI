@@ -133,12 +133,12 @@ holds.
 
 ## 7. Session Close
 
-- [ ] 7.1 Re-run the full deterministic check list from
+- [x] 7.1 Re-run the full deterministic check list from
       `session_2_contract.yaml`.
-- [ ] 7.2 Verify `GATE-GPU-S2-CHECKPOINT`'s done condition against the
+- [x] 7.2 Verify `GATE-GPU-S2-CHECKPOINT`'s done condition against the
       recorded evidence.
-- [ ] 7.3 Write/update `docs/handoff.md`.
-- [ ] 7.4 Add eval seeds to `docs/eval_seed_cases.md`
+- [x] 7.3 Write/update `docs/handoff.md`.
+- [x] 7.4 Add eval seeds to `docs/eval_seed_cases.md`
       (`EV-GPU-CHECKPOINT-FRESH-CLONE`, `EV-GPU-REPIN-SWEEP-COMPLETE`, plus
       anything newly caught or missed this session).
-- [ ] 7.5 State remaining risks and warnings for `GPU-S3`.
+- [x] 7.5 State remaining risks and warnings for `GPU-S3`.
