@@ -64,10 +64,14 @@ def test_missing_file_returns_none_and_logs_once(tmp_path, monkeypatch, caplog):
     assert len(warnings) == 1  # graceful degradation, logged exactly once
 
 
-def test_malformed_json_returns_none(tmp_path, monkeypatch):
+def test_malformed_json_returns_none_and_logs_once(tmp_path, monkeypatch, caplog):
     _write_asset(tmp_path, "{ this is not valid json ")
     monkeypatch.setenv("COSMOS3_MODEL_DIR", str(tmp_path))
-    assert np.load_default_negative_prompt() is None  # validity gate → graceful None
+    with caplog.at_level(logging.WARNING, logger="cosmos3.preprocessing.negative_prompt"):
+        assert np.load_default_negative_prompt() is None  # validity gate → graceful None
+        assert np.load_default_negative_prompt() is None  # cache hit
+    warnings = [r for r in caplog.records if "negative-prompt default unavailable" in r.getMessage()]
+    assert len(warnings) == 1  # malformed degrades gracefully, logged exactly once
 
 
 def test_file_is_read_once_cached(tmp_path, monkeypatch):

@@ -117,6 +117,18 @@ def test_meta_carries_param_record(tmp_path, monkeypatch):
     assert m["width"] == 1280 and m["height"] == 720 and m["num_frames"] == 189
 
 
+def test_meta_matches_form_on_the_720p_default_path(tmp_path, monkeypatch):
+    # INV-P5-1 (UX-S2): a video request that OMITS dims must record the SAME 1280x720 in the job
+    # metadata as it submits in the form — the mode-aware default must not desync the two.
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    t = _FakeTransport()
+    rec = JobRecord(id="job-dflt", mode="t2v", plane=Plane.GENERATION, status=JobStatus.running,
+                    created_at="2026-07-02T00:00:00Z", params={"prompt": "x", "num_frames": 49})  # no width/height/resolution
+    result = vw.vllm_omni_work(rec, lambda _f: None, transport=t)
+    assert t.last_form["size"] == "1280x720"                          # submitted form
+    assert result.meta["width"] == 1280 and result.meta["height"] == 720  # recorded metadata — agrees
+
+
 def test_precision_reflects_the_deployed_checkpoint(tmp_path, monkeypatch):
     # S6: precision is the deployed checkpoint (COSMOS3_CHECKPOINT_LABEL), never a request-supplied value
     # (defends the "WebUI shows NVFP4 but backend served FP8" attribution case).

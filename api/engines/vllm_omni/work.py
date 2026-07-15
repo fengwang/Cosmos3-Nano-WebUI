@@ -32,6 +32,7 @@ from engines.vllm_omni.client import (
     run_image_job,
     run_video_job,
 )
+from engines.base import VIDEO_MODES
 from engines.vllm_omni.endpoints import deployed_checkpoint, endpoint_for
 from jobs import artifacts
 from jobs.runner import WorkResult
@@ -43,7 +44,8 @@ DEFAULT_GEN_TIMEOUT = 7200.0
 # Modes served by the vllm-omni plane. Async video: t2v, i2v (adds an input_reference file part),
 # t2v_audio (generate_sound). Images API: t2i (-> PNG). Sync action: forward_dynamics (-> rollout MP4).
 # Any other mode (inverse_dynamics, policy, ...) fails TYPED — never a silent wrong artifact.
-_ASYNC_VIDEO_MODES = frozenset({"t2v", "i2v", "t2v_audio"})
+# The async-video set IS the shared engine video-mode fact (single source in engines.base; UX-S2).
+_ASYNC_VIDEO_MODES = VIDEO_MODES
 _SUPPORTED_MODES = _ASYNC_VIDEO_MODES | frozenset({"t2i", "forward_dynamics"})
 _CONDITIONING_KEYS = ("image_path", "video_path", "audio_path")
 _META_KEYS = ("seed", "num_inference_steps", "guidance_scale", "flow_shift", "width", "height", "num_frames")

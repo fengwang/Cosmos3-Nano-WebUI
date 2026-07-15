@@ -50,6 +50,22 @@ class _FakeTransport:
         self.calls.append(("delete", path))
 
 
+# ── default_dimensions (pure; UX-S2; spec: video-resolution-default) ──────────
+
+@pytest.mark.parametrize("mode,resolution,expected", [
+    ("t2v", None, (1280, 720)),         # video omit dims -> 720p
+    ("i2v", None, (1280, 720)),
+    ("t2v_audio", None, (1280, 720)),
+    ("t2i", None, (480, 480)),          # image default unchanged
+    ("t2v", 480, (480, 480)),           # explicit square resolution wins over the video default
+    ("t2i", 720, (720, 720)),           # image callers keep full choice (spec scenario)
+    ("t2i", 256, (256, 256)),
+])
+def test_default_dimensions(mode, resolution, expected):
+    from engines.base import default_dimensions
+    assert default_dimensions(mode, resolution) == expected
+
+
 # ── resolved_params mode-aware resolution default (UX-S2; spec: video-resolution-default) ──
 
 @pytest.mark.parametrize("mode", ["t2v", "i2v", "t2v_audio"])
