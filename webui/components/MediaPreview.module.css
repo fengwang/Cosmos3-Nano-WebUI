@@ -1,7 +1,9 @@
 .media {
   display: block;
   max-width: 100%;
-  max-height: 60vh;
+  /* UX-S3: media is the studio centerpiece; cap by viewport height so it stays
+     responsive (shrinks on short/narrow screens) rather than a fixed size. */
+  max-height: 80vh;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--surface-sunken);
