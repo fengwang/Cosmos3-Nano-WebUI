@@ -26,17 +26,16 @@ export function buildUpstreamUrl(base: string, segments: string[], search: strin
 }
 
 /**
- * Headers to send upstream: drop hop-by-hop + host, and inject the server-side API
- * key on the `X-API-Key` header the API enforces (api/app/auth.py) — the browser never
- * holds it, and `set` overwrites any client-supplied value so it cannot be spoofed.
- * Returns a new Headers — caller's input untouched.
+ * Headers to send upstream: drop hop-by-hop + host headers. Returns a new Headers —
+ * the caller's input is untouched. There is no application-layer auth, so the proxy
+ * injects no API key; any client-supplied header is forwarded like any other and
+ * ignored by the API.
  */
-export function filterForwardHeaders(incoming: Headers, apiKey?: string): Headers {
+export function filterForwardHeaders(incoming: Headers): Headers {
   const out = new Headers();
   incoming.forEach((value, key) => {
     if (!HOP_BY_HOP.has(key.toLowerCase())) out.set(key, value);
   });
-  if (apiKey) out.set("x-api-key", apiKey);
   return out;
 }
 

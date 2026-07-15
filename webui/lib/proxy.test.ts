@@ -21,7 +21,7 @@ describe("buildUpstreamUrl", () => {
 });
 
 describe("filterForwardHeaders", () => {
-  it("strips hop-by-hop + host and injects X-API-Key when a key is given", () => {
+  it("strips hop-by-hop + host and injects no api key (UX-S1: auth removed)", () => {
     const incoming = new Headers({
       host: "webui:3000",
       connection: "keep-alive",
@@ -29,26 +29,21 @@ describe("filterForwardHeaders", () => {
       "content-type": "application/json",
       "x-request-id": "abc",
     });
-    const out = filterForwardHeaders(incoming, "secret");
+    const out = filterForwardHeaders(incoming);
     expect(out.get("host")).toBeNull();
     expect(out.get("connection")).toBeNull();
     expect(out.get("content-length")).toBeNull();
     expect(out.get("content-type")).toBe("application/json");
     expect(out.get("x-request-id")).toBe("abc");
-    // The API enforces X-API-Key (api/app/auth.py), not Authorization: Bearer (X-1).
-    expect(out.get("x-api-key")).toBe("secret");
+    expect(out.get("x-api-key")).toBeNull(); // the proxy injects nothing
     expect(out.get("authorization")).toBeNull();
   });
 
-  it("omits the API key header when no key is configured", () => {
-    const out = filterForwardHeaders(new Headers({ "content-type": "text/plain" }));
-    expect(out.get("x-api-key")).toBeNull();
-    expect(out.get("content-type")).toBe("text/plain");
-  });
-
-  it("overwrites a client-supplied X-API-Key with the server key (no spoofing)", () => {
-    const out = filterForwardHeaders(new Headers({ "x-api-key": "attacker" }), "server");
-    expect(out.get("x-api-key")).toBe("server");
+  it("forwards a client-supplied x-api-key untouched (inert; the API ignores it)", () => {
+    // Decision 2A / INV-3: auth is gone, so a leftover header passes through like any other
+    // non-hop-by-hop header — the proxy adds no special stripping.
+    const out = filterForwardHeaders(new Headers({ "x-api-key": "whatever" }));
+    expect(out.get("x-api-key")).toBe("whatever");
   });
 });
 

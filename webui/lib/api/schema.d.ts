@@ -594,9 +594,7 @@ export interface operations {
     forward_dynamics_v1_action_forward_dynamics_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -629,9 +627,7 @@ export interface operations {
     inverse_dynamics_v1_action_inverse_dynamics_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -664,9 +660,7 @@ export interface operations {
     policy_v1_action_policy_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -699,9 +693,7 @@ export interface operations {
     i2v_v1_generation_i2v_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -734,9 +726,7 @@ export interface operations {
     t2i_v1_generation_t2i_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -769,9 +759,7 @@ export interface operations {
     t2v_v1_generation_t2v_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -804,9 +792,7 @@ export interface operations {
     t2v_audio_v1_generation_t2v_audio_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -888,9 +874,7 @@ export interface operations {
     submit_job_v1_jobs_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -923,9 +907,7 @@ export interface operations {
     get_job_v1_jobs__job_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path: {
                 job_id: string;
             };
@@ -956,9 +938,7 @@ export interface operations {
     get_artifact_v1_jobs__job_id__artifact_get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path: {
                 job_id: string;
             };
@@ -989,9 +969,7 @@ export interface operations {
     cancel_job_v1_jobs__job_id__cancel_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path: {
                 job_id: string;
             };
@@ -1022,9 +1000,7 @@ export interface operations {
     stream_events_v1_jobs__job_id__events_get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path: {
                 job_id: string;
             };
@@ -1055,9 +1031,7 @@ export interface operations {
     get_trajectory_v1_jobs__job_id__trajectory_get: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path: {
                 job_id: string;
             };
@@ -1088,9 +1062,7 @@ export interface operations {
     reason_v1_reason_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-api-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };

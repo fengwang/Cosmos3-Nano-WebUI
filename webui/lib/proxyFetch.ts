@@ -27,7 +27,7 @@ export async function forward(
 ): Promise<Response> {
   const base = process.env.API_INTERNAL_URL ?? DEFAULT_API_BASE;
   const url = buildUpstreamUrl(base, segments, new URL(req.url).search);
-  const headers = filterForwardHeaders(req.headers, process.env.COSMOS3_API_KEY);
+  const headers = filterForwardHeaders(req.headers);
   const method = req.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";
 
