@@ -96,3 +96,17 @@ Out-of-scope note: a pre-existing app-shell horizontal overflow at ≤~651px
 viewport width (`webui/app/globals.css` + `app/layout.tsx`, untouched by this
 session) is flagged for a future session — the UX-S3 media enlargement itself is
 responsive.
+
+## Recorded Results — UX-S4 (2026-07-16, README/docs friendliness)
+
+Deterministic (blocking) checks, run and independently reproduced by the
+fresh-context adversarial verifier. No GPU smoke applies (docs-only).
+
+| ID | Result | Evidence |
+|---|---|---|
+| EV-UX-DOCS-LINKS-RESOLVE | **PASS** | Relative-link resolver over `README.md`/`SECURITY.md`/`CONTRIBUTING.md` → 0 unresolved (incl. in-page anchors `#status--security`, `#checkpoint-setup`); `rg -n "release_checklist\|R-16" README.md SECURITY.md` → clean (README bullet dropped; `SECURITY.md` `R-16` → live `R-01`); `rg -n "COSMOS3_API_KEY\|X-API-Key" README.md SECURITY.md` → clean. README is features-first (Features precede Quickstart) with a runnable quickstart (clone → `hf download` pinned FP8 → `make build` → `make up-fp8` → `make health` → Studio); dev/CI owned by `CONTRIBUTING.md`; slim honest Status & security callout. |
+
+WebUI suite unaffected by the copy-only `webui/app/layout.tsx` edit:
+`pnpm build && pnpm lint && pnpm typecheck && pnpm test` green (**42 files / 214
+tests**). A sharded-review **High** (false "guardrails required to fit 32 GB"
+causal claim) was caught and fixed before the adversarial pass (verifier **PASS**).

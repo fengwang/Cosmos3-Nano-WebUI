@@ -76,3 +76,14 @@ only; no product behavior beyond the four planned source edits. The
 session-contract YAML is outside this session's write-radius, so the amendment is
 recorded here and as a `docs/risk_register.md` row, mirroring the UX-S1-A1
 precedent (E-14).
+
+## UX-S4 Recorded Evidence (2026-07-16, README/docs friendliness)
+
+Confirms E-12 and records the UX-S4 close-out. Deterministic (blocking) checks
+run and independently reproduced by the fresh-context adversarial verifier.
+
+| Claim | Evidence | Source | Confidence | Gap / Risk |
+|---|---|---|---|---|
+| E-24 Every internal link in `README.md`/`SECURITY.md`/`CONTRIBUTING.md` resolves; no archived/dead reference remains. | Relative-link resolver over the three docs → 0 unresolved; `rg -n "release_checklist\|R-16" README.md SECURITY.md` → clean (README's `docs/release_checklist.md` bullet dropped; `SECURITY.md` `R-16` → live `R-01`); `rg -n "COSMOS3_API_KEY\|X-API-Key" README.md SECURITY.md` → clean. In-page anchors (`#status--security`, `#checkpoint-setup`) resolve. | Deterministic checker + adversarial re-run, 2026-07-16 | High | `EV-UX-DOCS-LINKS-RESOLVE`. Resolves R-08 (dangling links) + R-09 (no auth prose reintroduced). |
+| E-25 The development/CI workflow is owned by `CONTRIBUTING.md`, not duplicated in `README.md`. | README's "Development" command block removed; all 10 dev/CI commands (`uv python install 3.12`, `uv sync`, `ruff`, `pytest -m "not gpu"`, `pnpm install/build/lint/typecheck/test`, `gen:api`, `COSMOS3_ENABLE_GPU_TESTS=1`) present in `CONTRIBUTING.md`; README carries only a pointer. `rg "uv sync\|pnpm build\|ruff check" README.md` → none. | Diff + grep + adversarial re-run, 2026-07-16 | High | Guards the "CONTRIBUTING duplicates rather than owns" failure mode. |
+| E-26 The slim Status & security callout is honest: no-auth + trusted-LAN + loopback + root-equivalent socket + guardrails-off, without over-claiming per-mode verification. | README "Status & security" + `SECURITY.md` deployment notes cross-checked against R-01/R-05 and E-17/E-18/E-19. A sharded-review **High** caught a false causal claim ("guardrails required for 720p to fit 32 GB") — corrected to the honest reason (`cosmos_guardrail` not bundled + trusted-LAN posture; the 32 GB fit is from offload+tiling+shm, E-17). Per-mode: only t2i "GPU-verified"; others "CPU-tested · GPU gate (MIG-S8)"; the 720p t2v smoke does not promote those modes to verified. | Sharded review + adversarial verifier, 2026-07-16 | High | The false-causal-claim catch is the session's highest-value review finding (INV-4 honesty). |
