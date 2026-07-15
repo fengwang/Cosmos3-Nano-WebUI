@@ -63,12 +63,14 @@ viewports" adversarial case regardless of magnitude.
 ## Decision Axis 3 — Scope of gallery removal
 
 - Delete the route directory, the nav item, and the home link only.
-- The design-system components the gallery was the sole consumer of (`Sheet`,
-  `ProgressRing`, some `Surface` variants) are **left exported**. Pruning the
-  design system is explicitly out of scope ("no design-system overhaul"), and
-  unused barrel exports do not fail `eslint`/`tsc`. Removing them would be
-  scope creep and risk the "delete a shared component the Studio still uses"
-  adversarial case.
+- The `@/design-system` components the gallery demonstrated are **left
+  exported**. A few may now have fewer consumers (e.g. `Sheet`), but most are
+  still used by the Studio and other routes (`ProgressRing` by `RunPanel` /
+  `ActionWorkspace`, `NavRail` by `PrimaryNav`, `Card`/`PillButton`/`Surface`
+  widely). Pruning the design system is explicitly out of scope ("no
+  design-system overhaul"), and unused barrel exports do not fail `eslint`/`tsc`.
+  Touching `@/design-system` at all would risk the "delete a shared component the
+  Studio still uses" adversarial case, so it is left untouched.
 - The compare-grid (`webui/components/studio/studio.module.css .compareGrid`,
   `grid-template-columns: 1fr 1fr`) is **left untouched** — enlarging the
   media caps does not require touching it, and leaving it is the safest way to

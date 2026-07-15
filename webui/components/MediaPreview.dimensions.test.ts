@@ -21,7 +21,9 @@ describe("enlarged media viewport", () => {
 
   it("stays responsive: media keeps max-width:100% and no fixed px size", () => {
     expect(media).toMatch(/max-width:\s*100%/);
-    expect(media).not.toMatch(/[^-]height:\s*\d+px/);
-    expect(media).not.toMatch(/[^-]width:\s*\d+px/);
+    // Reject a fixed px height/width on .media (a standalone property at any
+    // position) while ignoring max-height / line-height / max-width.
+    expect(media).not.toMatch(/(?<![-\w])height:\s*\d+px/);
+    expect(media).not.toMatch(/(?<![-\w])width:\s*\d+px/);
   });
 });
