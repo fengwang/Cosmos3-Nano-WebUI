@@ -17,7 +17,8 @@ export default defineConfig({
     include: [
       "design-system/**/*.test.{ts,tsx}",
       "lib/**/*.test.{ts,tsx}",
-      "components/action-viewer/**/*.test.{ts,tsx}", // S10 pure-core Calculations co-located with the viewer
+      "app/**/*.test.{ts,tsx}", // UX-S3: run route/nav specs co-located under app/
+      "components/**/*.test.{ts,tsx}", // UX-S3: broadened from action-viewer to all components (incl. S10 pure-core)
     ],
     css: false,
   },

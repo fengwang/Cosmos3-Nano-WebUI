@@ -11,7 +11,6 @@ const ITEMS: NavItem[] = [
   { href: "/chat", label: "Reasoning" },
   { href: "/action", label: "Action" },
   { href: "/history", label: "History" },
-  { href: "/gallery", label: "Gallery" },
 ];
 
 /** Reads the active route (the Action) and renders the pure NavRail. Nested routes mark their section. */
