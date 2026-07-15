@@ -3,7 +3,7 @@
 ## State Snapshot
 - **Session:** UX-S1 — Remove API-Key Authentication (risk: high)
 - **Branch:** `phase3-session-1`
-- **Last commit:** `bd08930` (plus this docs commit)
+- **Last commit:** the gate-clearance docs commit on `phase3-session-1` (see `git log --oneline 2c29d75..HEAD`)
 - **Changed files (this session):** deleted `api/app/auth.py`, `tests/api/test_auth.py`;
   edited `api/app/{main.py,errors.py}`, `webui/lib/{proxy.ts,proxyFetch.ts,proxy.test.ts,proxyFetch.test.ts}`,
   `tests/api/{test_errors.py,test_jobs_api.py,test_sse.py,test_s7_product_surface_matrix.py,conftest.py}`,
@@ -16,8 +16,10 @@
   auth `rg --hidden` sweep (clean of plumbing); sharded review (5 axes); adversarial verifier (**PASS**).
 - **Checks not run:** GPU smokes (not applicable to UX-S1); no live Docker/Compose bring-up
   (not required by GATE-UX-S1-AUTH — deterministic gate is CPU + WebUI + sweep + OpenAPI).
-- **Current status:** GATE-UX-S1-AUTH deterministic criteria **PASS**. **Awaiting the mandatory
-  pre-merge human decision gate** (security-posture change). No push / PR / merge performed.
+- **Current status:** GATE-UX-S1-AUTH **PASS**; the mandatory pre-merge human decision gate was
+  **cleared by the owner on 2026-07-15**, so the contract `done_condition` is **fully satisfied**.
+  All work is committed on `phase3-session-1`; **no PR/push performed** (owner instruction —
+  integration handled separately).
 
 ## Narrative Context
 UX-S1 removes the optional `X-API-Key` / `COSMOS3_API_KEY` authentication mechanism entirely —
@@ -40,7 +42,8 @@ gated on a mandatory human decision before merge.
 | BFF client-supplied x-api-key | (2A) drop key param; forward untouched (inert) | (2B) actively strip | (2A) reproduces today's auth-off behavior → no new behavior (INV-3) | brainstorming |
 
 ## Next Priority Queue
-1. **Owner clears the mandatory human gate** (security-posture change) → then merge `phase3-session-1`.
+1. **Human gate: CLEARED by owner (2026-07-15).** Integrate `phase3-session-1` via the owner's
+   chosen mechanism — no PR was created.
 2. **UX-S4 (docs)** inherits the settled auth-line edits below and must fix the still-dangling
    `docs/release_checklist.md` link + live `R-16` reference in README/SECURITY (out of UX-S1 scope).
 3. **UX-S2 / UX-S3** may proceed on the request path: confirmed no auth plumbing remains.
