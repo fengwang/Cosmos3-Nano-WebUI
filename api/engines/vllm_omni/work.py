@@ -44,9 +44,9 @@ DEFAULT_GEN_TIMEOUT = 7200.0
 # Modes served by the vllm-omni plane. Async video: t2v, i2v (adds an input_reference file part),
 # t2v_audio (generate_sound). Images API: t2i (-> PNG). Sync action: forward_dynamics (-> rollout MP4).
 # Any other mode (inverse_dynamics, policy, ...) fails TYPED — never a silent wrong artifact.
-# The async-video set IS the shared engine video-mode fact (single source in engines.base; UX-S2).
-_ASYNC_VIDEO_MODES = VIDEO_MODES
-_SUPPORTED_MODES = _ASYNC_VIDEO_MODES | frozenset({"t2i", "forward_dynamics"})
+# VIDEO_MODES (t2v/i2v/t2v_audio, the async-video set) is the shared engine video-mode fact —
+# single source in engines.base (UX-S2), reused here so the two never drift.
+_SUPPORTED_MODES = VIDEO_MODES | frozenset({"t2i", "forward_dynamics"})
 _CONDITIONING_KEYS = ("image_path", "video_path", "audio_path")
 _META_KEYS = ("seed", "num_inference_steps", "guidance_scale", "flow_shift", "width", "height", "num_frames")
 

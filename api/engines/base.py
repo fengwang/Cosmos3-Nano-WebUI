@@ -20,10 +20,12 @@ VIDEO_MODES = frozenset({"t2v", "i2v", "t2v_audio"})
 
 
 def default_dimensions(mode: str, resolution: int | None) -> tuple[int, int]:
-    """Pure: the mode-aware default (width, height) when neither explicit width/height nor a square
-    ``resolution`` is supplied. Video modes default to 1280x720; other modes (t2i) to 480x480. An
-    explicit square ``resolution`` overrides the mode default; callers resolve explicit width/height
-    above this. Refs: session_2/specs/video-resolution-default.md (INV-5 keeps both overridable)."""
+    """Pure: the mode-aware default (width, height) for a generation request (UX-S2, FR-5).
+
+    Video modes -> 1280x720; other modes (t2i) -> 480x480. An explicit square ``resolution``
+    overrides the mode default; callers layer explicit width/height on top of the returned pair.
+    Refs: session_2/specs/video-resolution-default.md (INV-5 keeps both overridable).
+    """
     if resolution is not None:
         return int(resolution), int(resolution)
     return (1280, 720) if mode in VIDEO_MODES else (480, 480)

@@ -2,15 +2,25 @@
 
 Date: 2026-07-15
 Diff reviewed: `git diff abdf65f..HEAD` (UX-S2 code + tests + deploy).
-Reviewers: 5 independent read-only agents over the contract axes
-(correctness, security, tests, architecture, performance).
+Reviewers: **6** independent read-only agents over the full axis set in
+`docs/agent_workflow/prompts/sharded_review.md` — correctness, **readability/
+simplicity**, security, tests, architecture, performance.
 Routing: medium risk → sharded review + adversarial verifier.
+
+**Process correction (owner-caught):** the first pass ran only the 5 axes listed
+in `session_2_contract.yaml`'s `review_axes:` and folded readability away. The
+updated sharded-review *prompt* requires 6 (it adds readability/simplicity); the
+owner flagged the omission and the 6th reviewer was then run (findings F8–F10).
+Lesson harvested in `docs/eval_corpus/ux-s2-generation-defaults.md` §5: the prompt
+is the authoritative how-to; a contract's `review_axes` is a minimum, not a cap.
 
 ## Verdict
 
-**No Critical/High findings.** Three concrete Medium/Low findings with strong
-evidence were fixed (below); the rest were verified clean or are pre-existing /
-out-of-scope nits. CPU suite **518 passed**, ruff clean after fixes.
+**No Critical/High findings** across all 6 axes. Five concrete findings fixed
+(F1–F4 correctness/tests/arch; F8–F9 readability Nits); the rest verified clean or
+accepted as pre-existing / out-of-scope nits. Readability reviewer judged the diff
+"unusually well-documented," ACD-consistent, no dead code. CPU suite **518 passed**,
+ruff clean after fixes.
 
 ## Findings and resolutions
 
@@ -23,6 +33,9 @@ out-of-scope nits. CPU suite **518 passed**, ruff clean after fixes.
 | F5 | Tests | Low | The WebUI negative-prompt placeholder scenario is not unit-testable (vitest `include` excludes `components/studio/**`). | **Accepted + documented** — verified behaviorally via Playwright at the live run (placeholder `"Using recommended default"` renders; default draft is 1280×720). Logged as an eval seed (extend the vitest include in a future session — out of this blast radius). |
 | F6 | Architecture | Low | The `resolution` schema description now narrates the mode-aware 720/480 rule that lives in `default_dimensions` (doc in two places). | **Accepted** — the schema is the OpenAPI-facing contract; documenting the default there is defensible. Noted for maintainers. |
 | F7 | Security | Nit | `negative_prompt` has no `max_length` cap; an unbounded **user-supplied** value could be forwarded to the backend. | **Accepted (out of scope, pre-existing)** — the field + its lack of a cap predate UX-S2 (this session only adds an operator-trusted default); trusted-LAN posture; the field shape is out of the UX-S2 blast radius. |
+| F8 | Readability | Nit | After the F1 dedup, `_ASYNC_VIDEO_MODES = VIDEO_MODES` became a single-use alias (used only on the next line for `_SUPPORTED_MODES`). | **Fixed** — inlined `_SUPPORTED_MODES = VIDEO_MODES | frozenset({"t2i","forward_dynamics"})`. |
+| F9 | Readability | Nit | `default_dimensions` docstring was a dense 4-line run-on. | **Fixed** — split into a one-line summary + short body. |
+| F10 | Readability | Nit | The three single-line `JobSubmit(...)` route handlers grew to ~145 chars (`t2v_audio` already uses the multi-line form). Not a lint break (E501 not enforced); pre-existing house style. | **Accepted** — no rule break, no behavior change; consistency tidy deferred as optional. |
 
 ## Verified clean (no findings)
 

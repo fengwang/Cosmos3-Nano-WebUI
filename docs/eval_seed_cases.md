@@ -57,3 +57,26 @@ For every manual GPU smoke, record:
 - **peak VRAM (MiB) and the guardrails posture used**
 - artifact path, dimensions, streams, duration, and pass/fail result
 - known limitation if the case is not passed
+
+## Recorded Results — UX-S2 (2026-07-15, live RTX 5090)
+
+Context: RTX 5090 (32,607 MiB), driver 610.43.03, vLLM-Omni `697035018b70…`.
+Request: `t2v`, dims **and** `negative_prompt` omitted (both server defaults
+engaged), `num_frames=49`, `seed=42`, `steps=35`, `guidance=6.0`, guardrails off.
+Serving config required (baked into `deploy/docker-compose.*.yml`): `shm_size 16gb`
++ `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` + `--vae-use-tiling` +
+`--no-guardrails`; FP8 also `--enable-layerwise-offload` (NVFP4 must NOT — Marlin
+FP4 repack is CUDA-only).
+
+| ID | Result | Peak VRAM | Artifact |
+|---|---|---|---|
+| EV-UX-GPU-720-FP8-T2V | **PASS** | 14,665 MiB (< 32 GB) | 1280×720, 24 fps, 49 frames, 2.04 s MP4 |
+| EV-UX-GPU-720-NVFP4-T2V | **PASS** | 18,517 MiB (< 32 GB) | 1280×720, 24 fps, 49 frames, 2.04 s MP4 |
+| EV-UX-GPU-NEGPROMPT-APPLIED | **PASS** | — | Same-seed output differs with vs without the curated default (frame-24 md5 `e38aa2…` ≠ `c92031…`; 2.4 MB ≠ 2.8 MB) → the default reaches + affects the engine |
+
+Both stacks verified out-of-box via `make up-fp8` / `make up-nvfp4` (no override).
+Key correction to the blueprint conjecture (E-08/E-09): the bundled 189-frame
+example fit only because it used layer-wise offload and no negative prompt; the
+49-frame default does **not** fit with a naive resident/untiled config. The
+negative prompt does not change peak VRAM (embeddings pad to `max_sequence_length`).
+Artifacts recorded by metadata only (not committed — NFR-1).
