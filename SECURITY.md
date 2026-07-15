@@ -1,6 +1,6 @@
 # Security Policy
 
-Cosmos3-Nano-WebUI is a **beta / research preview**. It is not hardened for
+Cosmos3-Nano-WebUI is a **local self-hosted preview**. It is not hardened for
 untrusted, multi-tenant, or internet-facing deployment. Please treat it
 accordingly and read the deployment notes below before exposing it beyond a
 trusted local network.
@@ -52,6 +52,11 @@ Out of scope (report upstream to the respective project):
 - **Docker socket privilege.** The API container mounts the host Docker socket
   to drive the generation container (root-equivalent on the host). Access is
   confined to a fixed-verb controller, but do not expose this container to
-  untrusted callers. See `docs/risk_register.md` (R-16).
+  untrusted callers. With no application-layer auth, network placement is the
+  only remaining control — see `docs/risk_register.md` (R-01).
+- **Guardrails off by default.** The generation stack ships with content
+  guardrails disabled — the `cosmos_guardrail` model is not bundled, and the
+  trusted-LAN appliance runs guardrails-off by design — so generated output is
+  unfiltered. Do not treat generated output as content-moderated.
 
 Thank you for helping keep the project and its users safe.

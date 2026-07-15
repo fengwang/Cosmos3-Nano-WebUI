@@ -1,6 +1,6 @@
 # Contributing to Cosmos3-Nano-WebUI
 
-Thanks for your interest in contributing! This is a **beta / research preview**,
+Thanks for your interest in contributing! This is a **local self-hosted preview**,
 so expect rough edges and moving parts. Contributions of all sizes are welcome:
 bug reports, docs fixes, tests, and code.
 
@@ -49,8 +49,8 @@ pnpm typecheck
 pnpm test
 ```
 
-GPU inference is a **manual gate** (see `docs/risk_register.md` R-05 and the
-release checklist); GPU-marked tests run only with `COSMOS3_ENABLE_GPU_TESTS=1
+GPU inference is a **manual gate** (see `docs/risk_register.md` R-05 and
+`docs/evidence_map.md`); GPU-marked tests run only with `COSMOS3_ENABLE_GPU_TESTS=1
 uv run pytest -m gpu` on supported hardware.
 
 ## Pull request guidelines

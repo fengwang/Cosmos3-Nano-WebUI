@@ -9,7 +9,8 @@ import "./globals.css";
 
 export const metadata = {
   title: "Cosmos3-Nano Serving",
-  description: "Neumorphic WebUI foundation + design system (Session 8).",
+  description:
+    "Self-hostable API + Web UI for the Cosmos3-Nano world model — video, image, reasoning, and robot action, from quantized FP8/NVFP4 checkpoints.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               {children}
             </main>
           </div>
-          {/* Polite live region for async job/stream status (used from S9). */}
+          {/* Polite live region for async job/stream status. */}
           <div aria-live="polite" className="sr-only" id="live-region" />
         </Providers>
       </body>

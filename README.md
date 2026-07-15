@@ -5,7 +5,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-blue.svg">
-  <img alt="Status: beta / research preview" src="https://img.shields.io/badge/status-beta%20%2F%20research%20preview-orange.svg">
+  <img alt="Status: local self-hosted preview" src="https://img.shields.io/badge/status-local%20self--hosted%20preview-blue.svg">
   <a href="https://github.com/fengwang/Cosmos3-Nano-WebUI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/fengwang/Cosmos3-Nano-WebUI/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
@@ -18,98 +18,92 @@
   checkpoints.
 </p>
 
-> [!WARNING]
-> **Beta / research preview.** This project is not intended for production or
-> untrusted, internet-facing use. Text&rarr;image (FP8/NVFP4) is GPU-verified; every
-> other GPU inference path has **not** yet been verified in this public repository
-> — it is a manual release gate (see [Limitations](#limitations--beta-status)).
-> Runtime, hardware, and performance statements below are described as
-> capabilities-present, not proven results except where marked verified.
+> [!NOTE]
+> Built for a **trusted LAN / lab machine**: there is no application-layer auth,
+> and ports bind loopback by default (LAN access is an explicit opt-in). See
+> [Status & security](#status--security) for the honest posture and the per-mode
+> verification status.
 
-## What is this?
+## What it does
 
-Cosmos3-Nano-WebUI wraps the Cosmos3-Nano world model behind a clean HTTP API and a
-Next.js web interface so you can run generation and reasoning **on your own machine**
-from publicly available quantized checkpoints. It is designed to run locally on a
-single RTX 5090-class GPU, with the model weights downloaded from Hugging Face (never
-committed to Git or baked into images) and the generation engine running in its own
-container.
-
-The repository is a curated public migration: API, WebUI, schemas, tests, tools, and
-local-build Docker/Compose. CPU checks run in GitHub Actions; GPU inference is a
-documented manual gate for the first beta.
+Cosmos3-Nano-WebUI wraps the Cosmos3-Nano world model behind a clean HTTP API and
+a Next.js web interface, so you can run generation and reasoning **on your own
+machine** from publicly available quantized checkpoints. It targets a single
+RTX 5090-class GPU: the weights are downloaded from Hugging Face (never committed
+to Git or baked into images), and the generation engine runs in its own
+container. Open the Web UI and you land directly in the Generation Studio.
 
 ## Features
 
-Every generation/reasoning/action mode is **implemented in code and covered by CPU
-tests**. Text&rarr;image (FP8 and NVFP4) is now GPU-verified end to end, from a fresh
-checkpoint download through the from-source image, with no manual workaround; every other
-GPU inference path remains unverified in this repo (manual gate — see
-[Limitations](#limitations--beta-status)).
+Every generation / reasoning / action mode is **implemented in code and covered by
+CPU tests**. Text&rarr;image (FP8 and NVFP4) is GPU-verified end to end; other GPU
+inference paths are a documented manual gate.
 
 | Capability | Endpoint(s) | Status |
 |---|---|---|
-| Text&rarr;image (FP8, NVFP4) | `POST /v1/generation/t2i` | Implemented · **T2I-verified¹** |
-| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · GPU-unverified¹ |
-| Reasoning | `POST /v1/reason` | Implemented · GPU-unverified¹ |
-| Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · GPU-unverified¹ |
+| Text&rarr;image (FP8, NVFP4) | `POST /v1/generation/t2i` | Implemented · **GPU-verified¹** |
+| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · CPU-tested · GPU gate¹ |
+| Reasoning | `POST /v1/reason` | Implemented · CPU-tested · GPU gate¹ |
+| Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · CPU-tested · GPU gate¹ |
 | Async jobs + live progress over SSE | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `.../events`, `.../artifact`, `.../trajectory`, `.../cancel` | Implemented · CPU-tested |
 | Health & Prometheus metrics | `GET /v1/health/{live,ready}`, `GET /v1/metrics` | Implemented · CPU-tested |
 | Web UI (generation, history, 3D / robot views) | Next.js 15 + React 19 app | Implemented · CPU-tested |
 
-¹ GPU inference is a manual release gate (`MIG-S8`); see [`docs/evidence_map.md`](docs/evidence_map.md).
-A best-effort NVFP4 text&rarr;video smoke also passed, but does not itself upgrade the
-`t2v` row above — see [Limitations](#limitations--beta-status).
+¹ GPU inference is a manual release gate (`MIG-S8`). Text&rarr;image is verified
+end to end (`GPU-S3`). A recommended 720p text&rarr;video smoke has passed on both
+FP8 and NVFP4, but full validation of the video / reasoning / action modes remains
+the manual gate — no performance numbers are promised. See
+[Status & security](#status--security) and [`docs/evidence_map.md`](docs/evidence_map.md).
 
 ## Quickstart
 
-Local, single machine. Uses **public inputs only** — no private hosts, no registry
-images.
+Local, single machine, **public inputs only** — no accounts, no API keys, no
+registry images. About five minutes plus the checkpoint download.
 
 ```bash
 # 1. Clone
 git clone https://github.com/fengwang/Cosmos3-Nano-WebUI.git
 cd Cosmos3-Nano-WebUI
 
-# 2. Download a public checkpoint (ungated; no auth). FP8 shown; NVFP4 is analogous.
+# 2. Download a pinned public checkpoint (ungated; no auth). FP8 shown; NVFP4 is analogous.
 pip install "huggingface_hub[cli]"
 hf download wfen/Cosmos3-Nano-FP8-Blockwise \
   --revision 9bf5d6ae164688487bdb71947ccc6ebe70d12900 \
   --local-dir ./models/Cosmos3-Nano-FP8-Blockwise
 
 # 3. (Optional) configure — the defaults work for a local run
-cp .env.example .env      # edit for LAN binding or custom model paths
+cp .env.example .env      # edit only for LAN binding or a custom model path
 
-# 4. Build the API + WebUI images (CPU) and bring up the FP8 stack
-make build                # builds api + webui images
+# 4. Build the images (CPU) and bring up the FP8 stack
+make build                # builds the api + webui images
 make up-fp8               # webui :3000, api :8000, generation container
 
-# 5. Check health / open the UI
+# 5. Check health, then open the Studio
 make health               # GET /v1/health/ready
-# Web UI → http://localhost:3000
+# → open http://localhost:3000  (you land directly in the Generation Studio)
 ```
 
-> [!NOTE]
-> The generation service runs the Cosmos3-Nano checkpoint inside the **vLLM-Omni
-> container**, which uses a CUDA image and a GPU. Building that image and running GPU
-> inference is the current **manual gate** (`MIG-S8`) — text&rarr;image (FP8/NVFP4) is
-> verified end to end from public inputs; other generation modes are not yet verified
-> here. See [`docs/model_setup.md`](docs/model_setup.md) and
-> [Limitations](#limitations--beta-status).
+There are **no keys to set**: the API ships with no authentication, and the
+shipped defaults already apply a curated negative prompt and a **720p** video
+default, so first outputs look right without tuning. Building the vLLM-Omni GPU
+image and running GPU inference is the current **manual gate** (`MIG-S8`) —
+text&rarr;image (FP8/NVFP4) is verified end to end; other modes are not yet
+(see [`docs/model_setup.md`](docs/model_setup.md) and
+[Status & security](#status--security)).
 
 ## Requirements
 
 - **Inference:** Linux with an NVIDIA GPU (RTX 5090-class) and current CUDA drivers.
 - **Local stacks:** Docker + Docker Compose.
-- **Development:** Python 3.12 (`>=3.12,<3.13`) + [`uv`](https://docs.astral.sh/uv/);
-  Node 22 + [`pnpm`](https://pnpm.io/) 11.
 - **Disk:** several GB per checkpoint (weights are downloaded, not bundled).
+- **Development (optional):** Python 3.12 (`>=3.12,<3.13`) + [`uv`](https://docs.astral.sh/uv/);
+  Node 22 + [`pnpm`](https://pnpm.io/) 11 — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Checkpoint setup
 
-Weights live in **public Hugging Face repositories** and are downloaded or mounted by
-you — they are never committed to Git or baked into images. Pin the revision (not the
-mutable `main`).
+Weights live in **public Hugging Face repositories** and are downloaded or mounted
+by you — they are never committed to Git or baked into images. Pin the revision
+(not the mutable `main`).
 
 | Purpose | Repo id | Pinned revision | Model license |
 |---|---|---|---|
@@ -117,86 +111,77 @@ mutable `main`).
 | Generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `5514c42b9759…` | `openmdw-1.0` |
 | BF16 base (reasoning + action) | `nvidia/Cosmos3-Nano` | `fea6e03a…` | `other` |
 
-A generation deployment serves exactly **one** of FP8 or NVFP4; reasoning and action
-additionally use the BF16 base. Point `COSMOS3_MODEL_DIR` / `COSMOS3_CHECKPOINT_LABEL`
-at the checkpoint you serve.
+A generation deployment serves exactly **one** of FP8 or NVFP4; reasoning and
+action additionally use the BF16 base. The compose stacks wire the checkpoint
+mounts for you; `.env.example` and
+**[`docs/model_setup.md`](docs/model_setup.md) are the source of truth** for the
+pinned revisions and licenses (shown above as a snapshot), the exact environment
+variables, the per-mode compatibility matrix, the mount layout, and drift caveats.
 
-> **Licensing.** The repository **code is MIT** (see [`LICENSE`](LICENSE)). The **model
-> weights are not MIT** — the FP8/NVFP4 checkpoints are `openmdw-1.0` and the base is
-> `other`. These are the model owners' licenses; review them before use.
-
-**[`docs/model_setup.md`](docs/model_setup.md) is the source of truth** for the pinned
-revisions and licenses above (shown here as a snapshot), plus every environment variable,
-the per-mode compatibility matrix, mount layout, and drift caveats.
-
-## Development
-
-The commands below mirror the CPU-only CI in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-
-```bash
-# API (Python) — torch-free CPU environment
-uv python install 3.12
-uv sync --frozen --group test-cpu
-uv run ruff check api tests
-uv run pytest -m "not gpu"          # CPU suite (GPU-marked tests excluded)
-
-# WebUI (from webui/)
-cd webui && pnpm install --frozen-lockfile
-pnpm build && pnpm lint && pnpm typecheck && pnpm test
-```
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full workflow. GPU-marked tests run
-only with `COSMOS3_ENABLE_GPU_TESTS=1 uv run pytest -m gpu` on supported hardware.
-
-## Limitations & beta status
-
-This is an honest early beta. Known limits, each tracked in
-[`docs/risk_register.md`](docs/risk_register.md) and
-[`docs/evidence_map.md`](docs/evidence_map.md):
-
-- **GPU inference is unverified here, except text&rarr;image.** t2i (FP8 and NVFP4) is
-  GPU-verified end to end — fresh checkpoint download, from-source image, no manual
-  workaround, direct and full-stack (`GPU-S3`, 2026-07-09; see
-  [`docs/evidence_map.md`](docs/evidence_map.md)). t2v/t2v_audio/i2v, reasoning, and action
-  are implemented and CPU-tested, but no full GPU run, throughput, or quality result is
-  claimed for them — that is the `MIG-S8` manual release gate. A best-effort NVFP4 t2v
-  smoke passed but does not constitute full t2v validation. No performance numbers are
-  promised.
-- **Default engine is the vLLM-Omni container.** The imported in-process `diffusers`
-  engine cannot load+verify the *current* public checkpoints as-is (drift **D1**);
-  generation runs through the vLLM-Omni container, whose end-to-end compatibility is part
-  of the same manual gate.
-- **vLLM-Omni image build is heavy (CUDA).** It installs a pinned public fork commit; its
-  build and exact serve entrypoint are confirmed at the manual gate.
-- **No authentication.** The API has no application-layer auth — it assumes a trusted
-  LAN / lab machine, so all generation, jobs, action, reasoning, health, and metrics
-  routes are open. The API container mounts the host Docker socket to drive the
-  generation container (root-equivalent on the host), and ports bind `127.0.0.1` by
-  default; set `BIND_ADDR=0.0.0.0` only on a trusted network.
-- **NVFP4 model card is a stub** upstream — use [`docs/model_setup.md`](docs/model_setup.md)
-  for setup context.
-- **Not published to a registry.** Images are built locally; there are no prebuilt images
-  in this milestone.
+> **Licensing.** The repository **code is MIT** (see [`LICENSE`](LICENSE)). The
+> **model weights are not MIT** — the FP8/NVFP4 checkpoints are `openmdw-1.0` and
+> the base is `other`. These are the model owners' licenses; review them before use.
 
 ## Troubleshooting
 
-- **Compose can't find your `.env`.** Compose's project directory is `deploy/`, so a
-  repo-root `.env` is auto-passed only via `make` (`--env-file .env`). With a bare
-  `docker compose -f deploy/…`, pass `--env-file .env` or place the file at `deploy/.env`.
+- **Compose can't find your `.env`.** Compose's project directory is `deploy/`, so
+  a repo-root `.env` is auto-passed only via `make` (`--env-file .env`). With a
+  bare `docker compose -f deploy/…`, pass `--env-file .env` or place the file at
+  `deploy/.env`.
 - **Can't reach it from another machine.** Ports bind loopback by default; set
   `BIND_ADDR=0.0.0.0` for LAN access — only on a trusted network.
 - **One checkpoint at a time.** The FP8 and NVFP4 stacks share a fixed generation
   container name — bring up one stack at a time (`make up-fp8` xor `make up-nvfp4`).
-- **Cold start.** The API starts the generation container on demand; first requests wait
-  on `COSMOS3_PLANE_READY_TIMEOUT`.
+- **Cold start.** The API starts the generation container on demand; first
+  requests wait on `COSMOS3_PLANE_READY_TIMEOUT`.
 
-## Project hygiene
+## Status & security
+
+This is an honest local self-hosted preview. It is shaped for a **trusted LAN /
+lab machine**, not for untrusted or internet-facing use. Every claim below is
+tracked in [`docs/evidence_map.md`](docs/evidence_map.md) and
+[`docs/risk_register.md`](docs/risk_register.md).
+
+**Verification status.**
+
+- Text&rarr;image (FP8/NVFP4) is **GPU-verified end to end** (`GPU-S3`): fresh
+  checkpoint download, from-source image, no manual workaround.
+- Text&rarr;video / image&rarr;video / video+audio, reasoning, and robot action are
+  **implemented and CPU-tested**; full GPU validation is a manual release gate
+  (`MIG-S8`). A recommended 720p text&rarr;video smoke passed on both FP8 and
+  NVFP4, but does not by itself promote those modes to "verified".
+
+**Security posture (no auth by design).**
+
+- **No application-layer auth.** All routes (generation, jobs, action, reasoning,
+  health, metrics) are open; access control is network placement, not a
+  credential.
+- **Loopback by default.** Ports bind `127.0.0.1` (`BIND_ADDR`); LAN exposure is
+  an explicit opt-in — set `BIND_ADDR=0.0.0.0` only on a trusted network.
+- **Root-equivalent Docker socket.** The API mounts the host Docker socket to
+  drive the generation container. Do not expose this container to untrusted
+  callers. See [`SECURITY.md`](SECURITY.md).
+- **Guardrails off by default.** The generation stack ships with content
+  guardrails disabled — the `cosmos_guardrail` model is not bundled, and the
+  trusted-LAN appliance runs guardrails-off by design — so generated output is
+  unfiltered.
+
+**Generation defaults & VRAM.**
+
+- **Good output out of the box.** A curated negative prompt applies by default and
+  is overridable per request and in the UI.
+- **720p video default.** `1280×720` is the default for the video modes, served by
+  the quantized **FP8/NVFP4** path (never the BF16 base). The shipped 49-frame
+  default fits comfortably on 32 GB (measured peak ≈ 14.7 GB on FP8, ≈ 18.5 GB on
+  NVFP4); FP8's fit relies on layer-wise offload and tightens at higher frame
+  counts, so prefer **NVFP4** for more headroom.
+
+## Project
 
 - 🔒 **Security:** report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md)
   (please do not open a public issue).
-- 🤝 **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- 🤝 **Contributing & development:** [`CONTRIBUTING.md`](CONTRIBUTING.md) has the
+  dev setup, the CPU checks that mirror CI, and the PR guidelines.
 - 📜 **Code of Conduct:** [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
-- ⚖️ **License:** repo code is [MIT](LICENSE); model weights carry their own licenses
-  (see [Checkpoint setup](#checkpoint-setup)).
-- ✅ **Release readiness:** [`docs/release_checklist.md`](docs/release_checklist.md).
+- ⚖️ **License:** repo code is [MIT](LICENSE); model weights carry their own
+  licenses (see [Checkpoint setup](#checkpoint-setup)).
