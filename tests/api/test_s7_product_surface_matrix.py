@@ -62,7 +62,6 @@ def make_matrix_app(tmp_path, monkeypatch):
     def _factory(checkpoint: str | None = None):
         monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
         monkeypatch.setenv("COSMOS3_INPUT_ALLOWLIST", str(tmp_path))
-        monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
         if checkpoint is None:  # S6: single-checkpoint deployment; default = fp8
             monkeypatch.delenv("COSMOS3_CHECKPOINT_LABEL", raising=False)
         else:
@@ -186,3 +185,34 @@ def test_failed_job_exposes_no_artifact(make_matrix_app):
         assert job.get("artifact_url") is None
         assert job.get("error") is not None
         assert client.get(f"/v1/jobs/{job_id}/artifact").status_code == 404
+
+
+# --- open access: no API-key gate remains on the formerly-protected routers (UX-S1) ---
+
+
+def test_formerly_gated_routers_open_without_key(make_matrix_app):
+    """Each formerly-gated router returns a normal non-401 result with no X-API-Key (UX-S1)."""
+    with TestClient(make_matrix_app()) as client:
+        assert client.post("/v1/jobs", json={"mode": "t2i", "params": {"prompt": "x"}}).status_code == 202
+        assert client.post("/v1/generation/t2v", json={"prompt": "x"}).status_code == 202
+        # action + reasoning: even an invalid body validates (422), proving there is no auth gate in front.
+        assert client.post("/v1/action/forward_dynamics", json={}).status_code != 401
+        assert client.post("/v1/reason", json={}).status_code != 401
+
+
+def test_supplied_x_api_key_is_inert(make_matrix_app):
+    """A client-supplied X-API-Key changes nothing — the header is ignored, not a gate (Decision 2A)."""
+    with TestClient(make_matrix_app()) as client:
+        without = client.post("/v1/generation/t2v", json={"prompt": "x"})
+        withkey = client.post("/v1/generation/t2v", json={"prompt": "x"}, headers={"X-API-Key": "anything"})
+    assert without.status_code == withkey.status_code == 202
+
+
+def test_openapi_has_no_api_key(make_matrix_app):
+    """The live app's OpenAPI carries no x-api-key parameter and no auth security scheme (INV-6)."""
+    with TestClient(make_matrix_app()) as client:
+        resp = client.get("/openapi.json")
+    spec_text = resp.text
+    spec = resp.json()
+    assert "x-api-key" not in spec_text.lower()
+    assert "securitySchemes" not in (spec.get("components") or {})

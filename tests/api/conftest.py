@@ -36,7 +36,6 @@ def make_app(tmp_path, monkeypatch):
     def _factory(**env: str) -> FastAPI:
         monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
         monkeypatch.setenv("COSMOS3_INPUT_ALLOWLIST", str(tmp_path))
-        monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
         monkeypatch.delenv("COSMOS3_FP8_MODEL_DIR", raising=False)
         monkeypatch.delenv("COSMOS3_CHECKPOINT_LABEL", raising=False)  # default deployment = fp8
         for key, value in env.items():

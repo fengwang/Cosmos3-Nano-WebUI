@@ -572,24 +572,6 @@
     "/v1/action/forward_dynamics": {
       "post": {
         "operationId": "forward_dynamics_v1_action_forward_dynamics_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -631,24 +613,6 @@
     "/v1/action/inverse_dynamics": {
       "post": {
         "operationId": "inverse_dynamics_v1_action_inverse_dynamics_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -690,24 +654,6 @@
     "/v1/action/policy": {
       "post": {
         "operationId": "policy_v1_action_policy_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -749,24 +695,6 @@
     "/v1/generation/i2v": {
       "post": {
         "operationId": "i2v_v1_generation_i2v_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -808,24 +736,6 @@
     "/v1/generation/t2i": {
       "post": {
         "operationId": "t2i_v1_generation_t2i_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -867,24 +777,6 @@
     "/v1/generation/t2v": {
       "post": {
         "operationId": "t2v_v1_generation_t2v_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -926,24 +818,6 @@
     "/v1/generation/t2v_audio": {
       "post": {
         "operationId": "t2v_audio_v1_generation_t2v_audio_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1037,24 +911,6 @@
     "/v1/jobs": {
       "post": {
         "operationId": "submit_job_v1_jobs_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1105,22 +961,6 @@
               "title": "Job Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -1163,22 +1003,6 @@
               "title": "Job Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -1218,22 +1042,6 @@
             "schema": {
               "title": "Job Id",
               "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -1277,22 +1085,6 @@
               "title": "Job Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -1333,22 +1125,6 @@
               "title": "Job Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -1380,24 +1156,6 @@
     "/v1/reason": {
       "post": {
         "operationId": "reason_v1_reason_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "x-api-key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {

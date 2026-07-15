@@ -7,7 +7,6 @@ session_6/specs/api-surface-and-errors.md.
 """
 from __future__ import annotations
 
-from app.auth import UnauthorizedError
 from app.routes.checkpoint import CheckpointUnavailable
 from app.schemas import ErrorModel
 from engines.vllm.context_cap import ReasoningValidationFailed
@@ -52,8 +51,6 @@ def to_error_response(exc: Exception) -> tuple[int, ErrorModel]:
         return 409, ErrorModel(code="illegal_transition", message=str(exc))
     if isinstance(exc, JobNotFound):
         return 404, ErrorModel(code="not_found", message=str(exc))
-    if isinstance(exc, UnauthorizedError):
-        return 401, ErrorModel(code="unauthorized", message=str(exc))
     return 500, ErrorModel(code="internal_error", message="internal server error")
 
 
@@ -75,6 +72,5 @@ def install_error_handlers(app) -> None:
         IdempotencyConflict,
         JobTransitionError,
         JobNotFound,
-        UnauthorizedError,
     ):
         app.add_exception_handler(exc_type, handle)

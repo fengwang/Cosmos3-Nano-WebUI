@@ -1,7 +1,6 @@
 """Spec: api-surface-and-errors — the typed-error → ErrorModel + status matrix (E4)."""
 from __future__ import annotations
 
-from app.auth import UnauthorizedError
 from app.errors import to_error_response
 from engines.vllm.context_cap import (
     ReasoningErrorCode,
@@ -64,11 +63,6 @@ def test_illegal_transition_maps_to_409():
 def test_job_not_found_maps_to_404():
     status, body = to_error_response(JobNotFound("nope"))
     assert status == 404 and body.code == "not_found"
-
-
-def test_unauthorized_maps_to_401():
-    status, body = to_error_response(UnauthorizedError("no key"))
-    assert status == 401 and body.code == "unauthorized"
 
 
 def test_unknown_exception_maps_to_500():

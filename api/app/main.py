@@ -14,9 +14,8 @@ import os
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
-from app.auth import require_api_key
 from app.errors import install_error_handlers
 from app.health import build_health_router
 from app.jobs_router import build_jobs_router
@@ -208,13 +207,12 @@ def create_app(
     app.state.orchestrator = orchestrator
     app.state.gpu_lease = gpu_lease
     app.state.metrics = metrics
-    auth = [Depends(require_api_key)]
     app.include_router(build_health_router(holder))
     # /v1/metrics: unauth like /v1/health/* (private-net only per INV-1); include_in_schema=False (no drift).
     app.include_router(build_metrics_router(lambda: render(registry)))
-    app.include_router(build_jobs_router(store, runner, metrics), dependencies=auth)
-    app.include_router(build_generation_router(store, runner, metrics), dependencies=auth)
-    app.include_router(build_action_router(store, runner, metrics), dependencies=auth)
+    app.include_router(build_jobs_router(store, runner, metrics))
+    app.include_router(build_generation_router(store, runner, metrics))
+    app.include_router(build_action_router(store, runner, metrics))
     from engines.vllm.context_cap import ContextCapConfig  # noqa: PLC0415 — torch-free; local for tidy imports
 
     app.include_router(
@@ -222,7 +220,6 @@ def create_app(
             orchestrator, gpu_lease, stream=VllmReasonerStream(),
             cap=ContextCapConfig.from_env(), tokenizer=load_edge_tokenizer(),
         ),
-        dependencies=auth,
     )
     install_error_handlers(app)
     install_custom_openapi(app)

@@ -54,14 +54,10 @@ async def _warm(holder) -> None:
     holder.state = mark_warmed(holder.state)
 
 
-def _client(tmp_path, monkeypatch, *, api_key: str | None = None, job_work=None) -> TestClient:
+def _client(tmp_path, monkeypatch, *, job_work=None) -> TestClient:
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     monkeypatch.setenv("COSMOS3_INPUT_ALLOWLIST", str(tmp_path))
     monkeypatch.setenv("COSMOS3_SSE_HEARTBEAT_SECONDS", "0.1")
-    if api_key:
-        monkeypatch.setenv("COSMOS3_API_KEY", api_key)
-    else:
-        monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
     kwargs = {"warmup": _warm, "orchestrator": _stub_orch()}
     if job_work is not None:
         kwargs["job_work"] = job_work
@@ -202,13 +198,12 @@ def test_idempotency_replay_and_conflict(tmp_path, monkeypatch):
         assert conflict.status_code == 409 and conflict.json()["code"] == "idempotency_conflict"
 
 
-# ---- auth (RK-17) ----------------------------------------------------------------------------
+# ---- submit-side validation hygiene ----------------------------------------------------------
 def test_rejected_submit_does_not_enqueue_or_dispatch(tmp_path, monkeypatch):
     # EC-S3/EC-A4 negative side-effect: an invalid submission is rejected BEFORE enqueue/dispatch
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     monkeypatch.setenv("COSMOS3_INPUT_ALLOWLIST", str(tmp_path))
     monkeypatch.setenv("COSMOS3_MAX_IMAGE_BYTES", "1024")
-    monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
     rec_orch = _RecordingOrch()
     app = create_app(warmup=_warm, orchestrator=rec_orch)
     with TestClient(app) as client:
@@ -231,13 +226,14 @@ def test_rejected_submit_does_not_enqueue_or_dispatch(tmp_path, monkeypatch):
         assert app.state.jobs._jobs == {}  # no job was enqueued (EC-S3)
 
 
-def test_auth_enforced_with_health_and_openapi_exempt(tmp_path, monkeypatch):
-    with _client(tmp_path, monkeypatch, api_key="s3cret") as client:
-        assert client.post("/v1/jobs", json={"mode": "t2i", "params": {}}).status_code == 401
-        ok = client.post("/v1/jobs", json={"mode": "t2i", "params": {}}, headers={"X-API-Key": "s3cret"})
-        assert ok.status_code == 202
-        assert client.get("/v1/health/ready").status_code in (200, 503)  # exempt (not 401)
-        assert client.get("/openapi.json").status_code == 200  # exempt
+def test_jobs_open_without_key_health_and_openapi_exempt(tmp_path, monkeypatch):
+    # UX-S1: auth removed — the jobs router is open (no 401 for a keyless request), health stays
+    # reachable, and the OpenAPI carries no x-api-key surface.
+    with _client(tmp_path, monkeypatch) as client:
+        assert client.post("/v1/jobs", json={"mode": "t2i", "params": {}}).status_code == 202
+        assert client.get("/v1/health/ready").status_code in (200, 503)
+        schema = client.get("/openapi.json")
+        assert schema.status_code == 200 and "x-api-key" not in schema.text.lower()
 
 
 # ---- S7: the Job view surfaces precision + trajectory; the trajectory route serves the sidecar ----
@@ -272,7 +268,6 @@ def test_inline_media_persisted_to_a_trusted_path(tmp_path, monkeypatch):
     # injected into the job params (the worker consumes the path) — never silently dropped.
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     monkeypatch.setenv("COSMOS3_INPUT_ALLOWLIST", str(tmp_path))
-    monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
     app = create_app(warmup=_warm, orchestrator=_stub_orch())
     with TestClient(app) as client:
         resp = client.post(

@@ -28,13 +28,11 @@ def test_metrics_endpoint_returns_prometheus_exposition():
     assert "cosmos3_plane_resident" in body
 
 
-def test_metrics_endpoint_needs_no_api_key(monkeypatch):
-    monkeypatch.setenv("COSMOS3_API_KEY", "secret-key")
+def test_metrics_and_gated_route_open_without_key():
     client = _client()
-    # a protected route rejects without the key ...
-    protected = client.post("/v1/jobs", json={"mode": "t2v", "params": {"prompt": "x"}})
-    assert protected.status_code == 401
-    # ... but /v1/metrics does not require it (private-net scraper)
+    # UX-S1: a formerly-protected route is no longer auth-rejected without a key ...
+    assert client.post("/v1/jobs", json={"mode": "t2v", "params": {"prompt": "x"}}).status_code != 401
+    # ... and /v1/metrics is reachable too (private-net scraper)
     assert client.get("/v1/metrics").status_code == 200
 
 

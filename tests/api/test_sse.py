@@ -36,7 +36,6 @@ async def _warm(holder) -> None:
 def _client(tmp_path, monkeypatch) -> TestClient:
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     monkeypatch.setenv("COSMOS3_SSE_HEARTBEAT_SECONDS", "0.1")
-    monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
     orch = Orchestrator(lambda plane: _NoopWorker(), post_evict_wait=lambda: True)
     return TestClient(create_app(warmup=_warm, orchestrator=orch))
 
@@ -75,7 +74,6 @@ def test_sse_emits_heartbeat_for_a_running_job(tmp_path, monkeypatch):
     # RK-09: a long-running job keeps the connection observable via heartbeats (exercised over the wire)
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     monkeypatch.setenv("COSMOS3_SSE_HEARTBEAT_SECONDS", "0.05")
-    monkeypatch.delenv("COSMOS3_API_KEY", raising=False)
     release = threading.Event()
 
     def blocking_work(record, report):
