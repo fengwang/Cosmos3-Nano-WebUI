@@ -54,6 +54,7 @@ session_contract:
     - tests
     - architecture
     - performance
+    - readability
   adversarial_cases:
     - The nav item is removed but the /gallery route still resolves by URL (or vice versa), leaving a half-removed feature.
     - The home link is removed but / still renders the old stub (empty landing) instead of the Studio.

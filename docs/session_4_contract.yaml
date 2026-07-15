@@ -52,6 +52,7 @@ session_contract:
     - tests
     - architecture
     - performance
+    - readability
   adversarial_cases:
     - The README rewrite drops a must-have setup step (checkpoint download, make build/up/health) so a new user cannot actually run it.
     - A relocated dev section is deleted from README.md but never actually added to CONTRIBUTING.md (lost, not moved).
