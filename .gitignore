@@ -35,3 +35,6 @@ models/
 
 # ── Local env overrides (never commit real secrets; .env.example is tracked) ──
 .env
+
+# Playwright MCP transient scratch (snapshots/console logs)
+.playwright-mcp/
