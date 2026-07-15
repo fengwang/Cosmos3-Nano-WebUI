@@ -80,3 +80,19 @@ example fit only because it used layer-wise offload and no negative prompt; the
 49-frame default does **not** fit with a naive resident/untiled config. The
 negative prompt does not change peak VRAM (embeddings pad to `max_sequence_length`).
 Artifacts recorded by metadata only (not committed — NFR-1).
+
+## Recorded Results — UX-S3 (2026-07-15, WebUI declutter)
+
+Deterministic (blocking) checks, run and independently reproduced by the
+adversarial verifier. No GPU smoke applies (presentation-only).
+
+| ID | Result | Evidence |
+|---|---|---|
+| EV-UX-GALLERY-GONE | **PASS** | `webui/app/gallery/` deleted; nav rail = Studio/Reasoning/Action/History; home stub → `redirect("/studio")`. `rg -i "gallery\|/gallery" webui/app webui/components` → only the `HistoryList` comment; build route table has no `/gallery`; `GET /gallery`→404; `GET /`→307→`/studio`→200. |
+| EV-UX-MEDIA-ENLARGED | **PASS** | `.media max-height` 60vh→**80vh**, `.studio max-width` 60rem→**80rem** (source + shipped `.next/static/css`); `.media` keeps `max-width:100%`, no fixed px; compare-grid `1fr 1fr` intact. Playwright: studio `max-width` computes 1280px @1440; studio section 347px @375 (the enlargement does not overflow). |
+| EV-UX-CPU-SUITE-GREEN | **PASS** | `pnpm build && pnpm lint && pnpm typecheck && pnpm test` all exit 0; **42 files / 214 tests** (baseline 39/208 + 3 new UX-S3 specs, run via the broadened vitest `include`, UX-S3-A1). |
+
+Out-of-scope note: a pre-existing app-shell horizontal overflow at ≤~651px
+viewport width (`webui/app/globals.css` + `app/layout.tsx`, untouched by this
+session) is flagged for a future session — the UX-S3 media enlargement itself is
+responsive.

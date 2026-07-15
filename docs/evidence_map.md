@@ -50,3 +50,29 @@ These rows update the blueprint-time conjecture in E-08/E-09.
 | E-17 **FP8 720p/49f fits 32 GB — peak 14,665 MiB — with layer-wise offload + tiled VAE decode.** | `EV-UX-GPU-720-FP8-T2V`: valid `1280×720`, 24 fps, 49 frames, 2.04 s MP4 (`ffprobe`); nvidia-smi peak **14,665 MiB**; GPU after model load 12.24 GiB. Serving flags: `--enable-layerwise-offload --vae-use-tiling --no-guardrails` + `shm_size 16gb` + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`. | Live 5090 smoke, 2026-07-15 | High | Without offload, denoise OOMs (transformer resident 20.71 GiB); without tiling, the untiled-VAE decode OOMs; without `shm_size`, the video result transfer SIGBUSes. All baked into `deploy/docker-compose.fp8.yml`. |
 | E-18 **NVFP4 720p/49f fits 32 GB — peak 18,517 MiB — with tiled VAE decode, NO offload.** | `EV-UX-GPU-720-NVFP4-T2V`: valid `1280×720`, 24 fps, 49 frames, 2.04 s MP4; peak **18,517 MiB**; resident 16.30 GiB after load. Flags: `--vae-use-tiling --no-guardrails` + `shm_size 16gb` (NO `--enable-layerwise-offload`). | Live 5090 smoke, 2026-07-15 | High | **NVFP4 is incompatible with layer-wise offload**: its Marlin FP4 kernel runs `gptq_marlin_repack` (CUDA-only) in `process_weights_after_loading`; offloading places weights on CPU → `NotImplementedError` at startup. NVFP4 4-bit weights are resident-small enough to fit without offload. |
 | E-19 **The shipped 720p default requires a serving config the stack did not previously set.** Corrects E-08/E-09: the bundled 189-frame example fit (31,957 MiB) **only because it used layer-wise offload and had no negative prompt** — a fact E-08 omitted. | Measured: FP8 default (no offload) OOMs at denoise; +offload OOMs at the untiled-VAE decode; +tiling completes but SIGBUSes on the 64 MB `/dev/shm` video-result transfer; +`shm_size 16gb` → valid artifact. Verified out-of-box via `make up-fp8` / `up-nvfp4`. | Live 5090 smoke, 2026-07-15 | High | **R-05 CONFIRMED and remediated in-repo** (compose baked); guardrails-off posture is flagged for the UX-S4 `SECURITY.md`/`README` callout. The guardrails deployment gap (cosmos_guardrail not bundled; server default was guardrails-on → crash) is pre-existing (MIG-S8 manual gate). |
+
+## UX-S3 Recorded Evidence (2026-07-15, WebUI declutter)
+
+Confirms the blueprint claims E-10/E-11 and records the UX-S3-A1 amendment.
+
+| Claim | Evidence | Source | Confidence | Gap / Risk |
+|---|---|---|---|---|
+| E-20 The Component Gallery is fully removed; no dead route/link/nav remains. | `webui/app/gallery/` deleted; `PrimaryNav` rail is Studio/Reasoning/Action/History (a unit test pins the exact ordered set); the home stub is replaced by `redirect("/studio")`. `rg -i "gallery\|/gallery" webui/app webui/components` → only the `HistoryList` comment; `pnpm build` route table has no `/gallery`; live `GET /gallery` → 404. | Diff `7bf5388..HEAD`; deterministic gate + adversarial re-run, 2026-07-15 | High | None. Confirms E-10 (removal had no test fallout). |
+| E-21 The home route lands on the Studio via a 307 redirect. | `webui/app/page.tsx` is a server component calling `redirect("/studio")` (unit-tested: target + renders nothing); `GET /` → HTTP 307 → `/studio` → 200 (curl + Playwright). `/` renders no Studio content, so the `(studio)` `StudioProvider` never mounts there (route-group hazard structurally avoided). | Diff; curl/Playwright, 2026-07-15 | High | None. Resolves R-07. |
+| E-22 The media viewport is enlarged and stays responsive. | Shipped CSS (source + `.next/static/css`): `.media max-height 80vh` (was 60vh), `.studio max-width 80rem` (was 60rem, ≈1280px native 720p width); `.media` keeps `max-width:100%`, no fixed px; `.compareGrid` unchanged (`1fr 1fr`). Playwright: studio `max-width` computes to 1280px @1440; at 375px the studio section is 347px (fits) — the enlargement does not overflow. | Diff; Playwright 1440/375, 2026-07-15 | High | Confirms E-11. A pre-existing app-shell overflow at ≤~651px (`globals.css`/`layout.tsx`, untouched) is unrelated → out of scope, flagged for a future session. |
+| E-23 The WebUI suite is green after UX-S3, incl. 3 new co-located specs. | `pnpm build && pnpm lint && pnpm typecheck && pnpm test` all exit 0; **42 files / 214 passed** (baseline 39/208 + 3 new specs). | Deterministic gate + adversarial re-run, 2026-07-15 | High | `EV-UX-CPU-SUITE-GREEN`. |
+
+**UX-S3-A1 (blast-radius amendment, owner-approved 2026-07-15):** the contract's
+`routing` calls for spec-derived verification, but the WebUI `vitest.config.ts`
+`include` globs (`design-system/**`, `lib/**`, `components/action-viewer/**`) did
+not cover the natural co-location for this session's files (`app/**`,
+`components/**`), so a co-located spec would be **silently skipped**. The blast
+radius was expanded by three new test files
+(`app/_components/PrimaryNav.test.tsx`, `app/page.test.tsx`,
+`components/MediaPreview.dimensions.test.ts`) and one config edit
+(`webui/vitest.config.ts` `include`, broadened to `app/**` + `components/**`,
+which sweeps in exactly those 3 files — no confounder). Tests + runner config
+only; no product behavior beyond the four planned source edits. The
+session-contract YAML is outside this session's write-radius, so the amendment is
+recorded here and as a `docs/risk_register.md` row, mirroring the UX-S1-A1
+precedent (E-14).

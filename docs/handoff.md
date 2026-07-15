@@ -1,91 +1,91 @@
 # Session Handoff
 
 ## State Snapshot
-- **Session:** UX-S2 — Generation Defaults: Negative-Prompt Preset + 720p Video (risk: medium)
-- **Branch:** `phase3-session-2`
-- **Last commit:** the docs/handoff commit on `phase3-session-2` (see `git log --oneline abdf65f..HEAD`)
-- **Changed files (code):** NEW `api/preprocessing/negative_prompt.py`; edited
-  `api/app/routes/generation.py`, `api/engines/base.py`, `api/engines/vllm_omni/client.py`,
-  `api/engines/vllm_omni/work.py`, `api/orchestrator/gen_worker.py`, `api/app/schemas.py`;
-  regenerated `schemas/openapi.json`, `webui/lib/api/schema.d.ts`; edited
-  `webui/lib/studio/draft.ts`, `webui/components/studio/ComposePanel.tsx`;
-  edited `deploy/docker-compose.{base,fp8,nvfp4}.yml`; NEW/edited tests
-  (`tests/api/test_negative_prompt_default.py`, `tests/test_gen_worker_mapping.py`,
-  `tests/api/test_routes_generation.py`, `tests/api/conftest.py`, `tests/test_vllm_omni_client.py`,
-  `tests/test_vllm_omni_work.py`, `webui/lib/studio/draft.test.ts`); `.gitignore`; docs.
-- **Checks run:** CPU `uv run pytest -m "not gpu"` (**518 passed**); WebUI `pnpm build && lint &&
-  typecheck && test` (**208 passed**); OpenAPI regen + `tests/test_openapi.py` (in sync,
-  description-only diff); `ruff check api tests` (clean); scoped no-abs-path check
-  (`EV-UX-NEGPROMPT-NO-ABS-PATH` clean; 6 pre-existing fallbacks unchanged); `make scan` (clean);
-  `make config-fp8`/`config-nvfp4` (render clean); **live 5090 720p smoke FP8 + NVFP4 PASS**;
-  Playwright DOM check of the WebUI placeholder + 720p default; 6-axis sharded review; adversarial
-  verifier (**PASS**, second pass).
-- **Checks not run:** guardrails-ON GPU validation (out of scope); i2v/t2v_audio/t2i GPU runs
-  (only the recommended t2v 720p smoke was in scope); no PR/push (owner integrates separately).
-- **Current status:** GATE-UX-S2-DEFAULTS **PASS**. Deterministic criteria green; the recommended
-  FP8/NVFP4 720p smoke is **recorded green** (both produce a valid 1280×720/49f artifact out-of-box);
-  the negative default is confirmed **applied** (same-seed output differs with vs without). All work
-  committed on `phase3-session-2`.
+- **Session:** UX-S3 — WebUI Declutter: remove Gallery, land on Studio, enlarge media (risk: low)
+- **Branch:** `phase3-session-3`
+- **Last commit:** the docs/handoff commit on `phase3-session-3` (see `git log --oneline 7bf5388..HEAD`)
+- **Changed files (code):** deleted `webui/app/gallery/{page.tsx,gallery.module.css}`;
+  edited `webui/app/_components/PrimaryNav.tsx` (drop Gallery item),
+  `webui/app/page.tsx` (stub → `redirect("/studio")`),
+  `webui/components/MediaPreview.module.css` (`max-height 60vh→80vh`),
+  `webui/app/(studio)/studio/page.module.css` (`max-width 60rem→80rem`),
+  `webui/vitest.config.ts` (broaden `include`; UX-S3-A1); NEW tests
+  `webui/app/_components/PrimaryNav.test.tsx`, `webui/app/page.test.tsx`,
+  `webui/components/MediaPreview.dimensions.test.ts`; docs under `docs/session_3/**`
+  + `evidence_map.md`, `risk_register.md`, `eval_seed_cases.md`, this handoff,
+  `docs/eval_corpus/ux-s3-webui-declutter.md`.
+- **Checks run:** `pnpm build && pnpm lint && pnpm typecheck && pnpm test` all green
+  (**42 files / 214 tests**; baseline 39/208 + 3 new specs); `rg -i "gallery|/gallery"
+  webui/app webui/components` clean apart from the `HistoryList` comment; runtime curl
+  (`GET /`→307→`/studio`, `GET /gallery`→404) + Playwright DOM/computed-style
+  (studio `max-width`=1280px, media rule `max-height:80vh`, 375px no enlargement
+  overflow); 6-axis sharded review (no High/Critical); adversarial verifier **PASS**.
+- **Checks not run:** no API/CPU pytest (presentation-only, no server change); the
+  scaffolded e2e/a11y suite stays unpopulated (out of scope); no PR/push (owner integrates).
+- **Current status:** GATE-UX-S3-WEBUI **PASS**. Gallery gone (route/nav/link), `/`
+  redirects to `/studio`, media viewport enlarged (80rem / 80vh) and responsive,
+  compare-grid intact, all deterministic checks green. Work committed on `phase3-session-3`.
 
 ## Narrative Context
-UX-S2 makes good output the zero-configuration default: the API applies the curated
-`negative_prompt.json` (from `${COSMOS3_MODEL_DIR}/assets/`, verbatim JSON string, overridable,
-graceful fallback) when a request omits `negative_prompt`, and video modes default to 1280×720 via a
-pure mode-aware `default_dimensions` used by both engine paths (`t2i` unchanged; explicit values still
-win). The WebUI defaults to the `hi-720` preset and shows a "Using recommended default" placeholder.
-No public schema **shape** changed (INV-6) — only defaults + one description. The owner elected to run
-the recommended 5090 smoke **live**, which proved the defaults generate correctly **and** surfaced that
-the shipped stack could not serve 720p out-of-box; the proven serving config was then baked into the
-compose stacks so it now works via `make up-fp8` / `make up-nvfp4`.
+UX-S3 makes the WebUI task-first: the developer Component Gallery (a design-system
+showcase surfaced as a nav item + the home page's only link) is deleted; the home
+route `/` now server-redirects to the Generation Studio; and the generated-media
+viewport is enlarged (studio container 60rem→80rem ≈ native 1280px 720p width; media
+60vh→80vh) while staying responsive (caps + `max-width:100%`, compare-grid untouched).
+No API, proxy, or route-shape change (INV-7 held). A tight blast radius was expanded
+once (UX-S3-A1) to add three co-located regression specs + the vitest `include` needed
+to run them, after finding the existing globs would silently skip them.
 
 ## Decision Log
 | Decision | Chosen | Rejected | Reason | Contract Ref |
 |---|---|---|---|---|
-| Negative-prompt transport (R-04 human gate) | Serialized JSON string, verbatim, existing `str` field | Structured API field; prose flattening | Server-log precedent; no shape change (INV-6); works for both backends | Interview Q1; E-15 |
-| Defaulting architecture | Approach 2 (layer-matched): resolution in engine layer, negative at route | Edge-unified; engine-unified | Two different concerns (pure rule vs file-I/O); honors contract's engine-layer pointer; preserves INV-P5-1 | brainstorming; design D1 |
-| Loader fallback when `COSMOS3_MODEL_DIR` unset | Return `None` (no abs-path fallback) | Reuse a `/data/models` default | Keeps the loader free of any absolute literal → INV-1 clean by construction | design D3; E-15 |
-| 720p GPU smoke (human gate) | Run live now | Documented deferral | Owner elected; 5090 + local checkpoints available | Interview Q2 |
-| Make 720p serve out-of-box | Bake full serving config (shm/tiling/offload-fp8/guardrails-off) into compose | Memory-only; code-only + doc prerequisite | Owner chose "get a green artifact"; a default that OOMs is a broken deliverable | Interview Q(deploy); E-17/E-18/E-19 |
-| FP8 vs NVFP4 offload | FP8 uses `--enable-layerwise-offload`; NVFP4 does NOT | Uniform config | NVFP4 Marlin FP4 repack is CUDA-only → offload breaks it at startup | A5; E-18 |
+| `/` landing (R-07) | Server `redirect("/studio")` in `app/page.tsx` | Render Studio at `/`; `next.config` redirect | `/` renders no Studio content → the `(studio)` `StudioProvider` never mounts there (route-group hazard avoided); page-level is vitest-testable and in-radius | Interview Q1; design D1 |
+| Media magnitude | Moderate: 80rem container / 80vh media | Conservative 72/72; Bold 90/88 | 80rem≈1280px = native 720p width; 80vh keeps controls+caption visible on a laptop | Interview Q2; design D4 |
+| Test strategy (blast-radius tension) | Add co-located specs + broaden vitest `include` (UX-S3-A1) | Strict 6-file radius, no new unit tests | Honors the workflow's spec-derived tests + guards the redirect/nav/bounds against regression; recorded amendment | Interview Q3; execution_contract |
+| Gallery-imported DS components | Left exported (no pruning) | Remove now-unused exports | "No design-system overhaul"; avoids the "delete a shared component the Studio uses" case (e.g. `ProgressRing` is still used) | brainstorming A3; review F3 |
 
 ## Next Priority Queue
-1. **UX-S3 (WebUI declutter):** may proceed; the studio request path is unchanged by UX-S2 except
-   the `hi-720` default + placeholder. No blockers.
-2. **UX-S4 (README/docs) — inherits two flags from UX-S2:** (a) the **guardrails-off** deployment
-   posture (the compose now runs `--no-guardrails`) MUST get an honest `SECURITY.md`/`README` callout;
-   (b) the **R-05 720p VRAM caveat** (FP8 peak 14,665 MiB / NVFP4 18,517 MiB; requires offload/tiling/
-   shm; guardrails-off) belongs in the status callout. Also still-pending from UX-S1: the dangling
-   `release_checklist.md` link + live `R-16` reference.
-3. **Optional follow-up (out of UX-S2 scope):** resolve the guardrails deployment gap properly for
-   operators who want guardrails ON (bundle/install `cosmos_guardrail` + gated model + `HF_TOKEN`) —
-   this is the archived MIG-S8 manual GPU gate.
+1. **UX-S4 (README/docs) — runs last.** Inherits from UX-S1/S2 (still pending):
+   the **guardrails-off** deployment posture + the **R-05 720p VRAM caveat** need an
+   honest `SECURITY.md`/`README` callout; the dangling `docs/release_checklist.md`
+   link and the live `R-16` reference must be repointed/dropped.
+2. **UX-S4 also owns stale WebUI copy this session could not touch:**
+   `webui/app/layout.tsx:12,37` still says "Session 8"/"S9" in `metadata.description`
+   and a comment — outside the UX-S3 blast radius; fix alongside the docs pass.
+3. **Optional future UX polish (out of every current session's scope):** the app-shell
+   (`app/globals.css` `.app-header`/`.app-main`/`.app-shell` + `app/layout.tsx`) does
+   not collapse below ~651px, so the whole page overflows on a phone. UX-S3's media
+   enlargement is responsive; the shell is a separate, pre-existing desktop-only layout.
 
 ## Warnings And Gotchas
-- **Environment:** the shipped generation stack requires (now baked) `--no-guardrails` +
-  `--vae-use-tiling` + `shm_size 16gb`; FP8 also `--enable-layerwise-offload` (NVFP4 must not).
-  Pyright "Import could not be resolved" warnings are the `pythonpath=["api"]` static gap — not real.
+- **Environment:** after deleting a route, `tsc --noEmit` fails on **stale
+  `.next/types`** until you re-run `pnpm build` (it regenerates the generated types).
+  Classify as ENVIRONMENT, not a code bug.
+- **Silent-skip trap:** `webui/vitest.config.ts` `include` is an allowlist — a test
+  placed outside the listed globs runs **zero assertions silently**. UX-S3 broadened it
+  to `app/**` + `components/**`; keep new specs under a matched glob.
 - **Known failing tests:** none.
-- **Deferred risks:** guardrails-off posture (documented, flagged for UX-S4); R-05 residual (720p is
-  best-effort within ~32 GB — comfortable with the baked config but the operator must keep it);
-  `negative_prompt` has no length cap (pre-existing, trusted-LAN, out of scope).
-- **Files future sessions must not casually edit:** `schemas/openapi.json`,
-  `webui/lib/api/schema.d.ts` (regenerate, never hand-edit); the per-stack vllm-omni `command:` blocks
-  (the offload/tiling/guardrails posture is load-bearing for 720p — change with a re-smoke).
-- **A local untracked `.env`** pins `COSMOS3_{FP8,NVFP4}_DIR=/data/models/...` (owner host); the
-  committed compose uses repo-relative `${VAR:-../models/...}` defaults (no absolute path committed).
+- **Deferred risks:** the pre-existing app-shell narrow-viewport overflow (item 3 above).
+- **Files future sessions must not casually edit:** the `(studio)` route-group layout
+  (`StudioProvider`) — `/` deliberately only redirects and must not be made to render
+  Studio content without hoisting the provider.
 
 ## Handoff to UX-S4 (contract handoff_requirements)
-- **Transport decision recorded:** serialized JSON string, verbatim (E-15; `negative_prompt.py` docstring).
-- **Measured 720p peak VRAM + guardrails posture** recorded in `docs/evidence_map.md` (E-17/E-18/E-19)
-  and `docs/eval_seed_cases.md` (Recorded Results): FP8 14,665 MiB, NVFP4 18,517 MiB, guardrails off.
-- **R-05 residual VRAM caveat + guardrails-off posture** flagged for the UX-S4 README/SECURITY callout.
+- **Final media-viewport dimensions:** studio container `max-width: 80rem` (~1280px);
+  `MediaPreview` media `max-height: 80vh` (both caps; media keeps `max-width: 100%`).
+  Use these for the README screenshots/description of the studio.
+- **Landing behavior:** `/` issues an HTTP **307** redirect to `/studio` (no separate
+  home/landing page); the primary nav rail is **Studio / Reasoning / Action / History**
+  (no Gallery). A README "open the app → you're in the Studio" description is accurate.
 
 ## Eval Seeds
-- **Missed check:** a "preset a default" session's blast radius must include the deployment config that
-  makes the default *serve*; the api had no checkpoint mount (default silently no-op) — caught only by
-  the live smoke. → project-contract template (`docs/eval_corpus/ux-s2-generation-defaults.md` §1).
-- **New regression test candidates (added):** `default_dimensions` direct unit (incl. t2i explicit 720);
-  INV-P5-1 metadata==form on the default path; malformed-JSON log-once.
-- **Instruction update candidates:** (a) the sharded-review *prompt* (6 axes) is authoritative over a
-  contract's `review_axes` — run the superset (owner-caught, §5); (b) never `git add -A`; gitignore
-  `.playwright-mcp/` (§6); (c) grep archived phase docs for a GPU symptom before trial-and-error (§4).
+- **Missed check (would have been silent):** tests co-located outside the vitest
+  `include` allowlist don't run — a "green" suite can hide untested behavior. → seed
+  `docs/eval_corpus/ux-s3-webui-declutter.md` §1 (promote: contract should point new
+  webui tests at an included glob, or the include should cover `app/**`+`components/**`).
+- **New regression tests (added):** exact-ordered nav rail; `/`→`/studio` redirect +
+  renders-nothing; media `80vh`/`80rem` + responsiveness (fs-content asserts, since
+  CSS-module values aren't observable in jsdom).
+- **Instruction update candidate:** after deleting an App-Router route, a `tsc` failure
+  on `.next/types/**` is expected-until-rebuild — classify ENVIRONMENT, run `pnpm build`
+  before treating it as a defect (§2).
