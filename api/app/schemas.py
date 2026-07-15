@@ -93,7 +93,11 @@ class GenerationBody(BaseModel):
 
     prompt: str = Field(..., description="The generation prompt.")
     negative_prompt: str | None = Field(default=None, description="Optional negative prompt.")
-    resolution: int | None = Field(default=None, description="Square resolution ∈ {256,480,720} (default 480).")
+    resolution: int | None = Field(
+        default=None,
+        description="Square resolution ∈ {256,480,720}. When width/height are omitted, video modes "
+        "(t2v/i2v/t2v_audio) default to 1280×720 and t2i defaults to 480.",
+    )
     height: int | None = Field(default=None, description="Frame height (∈ the resolution families).")
     width: int | None = Field(default=None, description="Frame width (∈ the resolution families).")
     num_frames: int | None = Field(default=None, description="Frame count (t2i is forced to 1); ≤ the public cap.")

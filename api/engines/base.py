@@ -15,6 +15,19 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+# Public video generation modes (share the mode-aware 720p default; UX-S2, FR-5).
+VIDEO_MODES = frozenset({"t2v", "i2v", "t2v_audio"})
+
+
+def default_dimensions(mode: str, resolution: int | None) -> tuple[int, int]:
+    """Pure: the mode-aware default (width, height) when neither explicit width/height nor a square
+    ``resolution`` is supplied. Video modes default to 1280x720; other modes (t2i) to 480x480. An
+    explicit square ``resolution`` overrides the mode default; callers resolve explicit width/height
+    above this. Refs: session_2/specs/video-resolution-default.md (INV-5 keeps both overridable)."""
+    if resolution is not None:
+        return int(resolution), int(resolution)
+    return (1280, 720) if mode in VIDEO_MODES else (480, 480)
+
 
 class Precision(Enum):
     """The numeric precision an engine actually ran (not a bare bool/string — no precision blindness)."""

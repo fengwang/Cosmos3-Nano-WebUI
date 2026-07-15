@@ -28,10 +28,13 @@ _GENERATION_MODES = frozenset({"t2i", "t2v", "i2v", "t2v_audio"})
 
 def _to_generation_request(request: dict):
     """Pure mapping: the IPC request → a deterministic ``GenerationRequest`` (engines.base is torch-free)."""
-    from engines.base import GenerationRequest  # noqa: PLC0415 — torch-free, but keep engine imports local
+    from engines.base import GenerationRequest, default_dimensions  # noqa: PLC0415 — torch-free, keep local
 
     params = request.get("params", {})
-    res = params.get("resolution", 480)
+    p_res = params.get("resolution")
+    # Mode-aware default (UX-S2): mirrors the deployed vLLM-Omni path so a COSMOS3_GEN_ENGINE switch
+    # never changes the shipped default resolution. Video -> 1280x720, t2i -> 480; explicit values win.
+    dw, dh = default_dimensions(request["mode"], int(p_res) if p_res is not None else None)
     return GenerationRequest(
         mode=request["mode"],
         case_id=request.get("job_id", ""),
@@ -41,8 +44,8 @@ def _to_generation_request(request: dict):
         generate_sound=bool(params.get("generate_sound")),
         seed=int(params.get("seed", 123)),
         num_frames=int(params.get("num_frames", 1)),
-        height=int(params.get("height", res)),
-        width=int(params.get("width", res)),
+        height=int(params.get("height", dh)),
+        width=int(params.get("width", dw)),
         num_inference_steps=int(params.get("num_inference_steps", 8)),
     )
 

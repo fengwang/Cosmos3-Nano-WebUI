@@ -409,7 +409,7 @@ export interface components {
             prompt: string;
             /**
              * Resolution
-             * @description Square resolution ∈ {256,480,720} (default 480).
+             * @description Square resolution ∈ {256,480,720}. When width/height are omitted, video modes (t2v/i2v/t2v_audio) default to 1280×720 and t2i defaults to 480.
              */
             resolution?: number | null;
             /**

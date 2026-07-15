@@ -50,6 +50,35 @@ class _FakeTransport:
         self.calls.append(("delete", path))
 
 
+# ── resolved_params mode-aware resolution default (UX-S2; spec: video-resolution-default) ──
+
+@pytest.mark.parametrize("mode", ["t2v", "i2v", "t2v_audio"])
+def test_video_modes_default_to_720p_when_dims_omitted(mode):
+    rp = vc.resolved_params(_rec(prompt="x", mode=mode))
+    assert (rp["width"], rp["height"]) == (1280, 720)
+
+
+def test_t2i_default_dims_unchanged():
+    rp = vc.resolved_params(_rec(prompt="x", mode="t2i"))
+    assert (rp["width"], rp["height"]) == (480, 480)
+
+
+def test_explicit_dims_win_over_video_default():
+    rp = vc.resolved_params(_rec(prompt="x", mode="t2v", width=640, height=480))
+    assert (rp["width"], rp["height"]) == (640, 480)
+
+
+def test_explicit_square_resolution_wins_over_video_default():
+    rp = vc.resolved_params(_rec(prompt="x", mode="t2v", resolution=480))
+    assert (rp["width"], rp["height"]) == (480, 480)
+
+
+def test_video_form_size_reflects_720p_default():
+    # form + recorded metadata share resolved_params, so both land on 1280x720 (INV-P5-1, no desync).
+    form = vc.build_video_form(_rec(prompt="x", mode="t2v"))
+    assert form["size"] == "1280x720"
+
+
 # ── build_video_form (pure) ──────────────────────────────────────────────────
 
 def test_build_video_form_pins_flagship_params():

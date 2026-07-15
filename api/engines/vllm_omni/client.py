@@ -25,6 +25,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from engines.base import default_dimensions  # torch-free shared mode-aware resolution default
+
 # Terminal statuses (fork `VideoGenerationStatus`); `queued`/`in_progress` are pending.
 _COMPLETED = "completed"
 _FAILED = "failed"
@@ -75,12 +77,14 @@ def resolved_params(record: Any) -> dict:
     harness / protocol DEFAULT_FPS (INV-P5-3).
     """
     p = dict(getattr(record, "params", {}) or {})
-    res = int(p.get("resolution", 480))
+    p_res = p.get("resolution")
+    # Mode-aware default (UX-S2): video omitting dims -> 1280x720, t2i -> 480; explicit dims/resolution win.
+    dw, dh = default_dimensions(str(getattr(record, "mode", "") or ""), int(p_res) if p_res is not None else None)
     return {
         "prompt": str(p.get("prompt", "") or ""),
         "negative_prompt": str(p["negative_prompt"]) if p.get("negative_prompt") else None,
-        "width": int(p.get("width", res)),
-        "height": int(p.get("height", res)),
+        "width": int(p.get("width", dw)),
+        "height": int(p.get("height", dh)),
         "num_frames": int(p.get("num_frames", 1)),
         "num_inference_steps": int(p.get("num_inference_steps", 35)),
         "guidance_scale": float(p.get("guidance_scale", 6.0)),
