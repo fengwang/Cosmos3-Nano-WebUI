@@ -10,9 +10,8 @@ services:
     image: cosmos3-nano-webui:local
     environment:
       API_INTERNAL_URL: http://api:8000        # server-side BFF target (service DNS)
-      COSMOS3_API_KEY: ${COSMOS3_API_KEY:-}
     ports:
-      # Loopback by default (auth is off when COSMOS3_API_KEY is empty); set BIND_ADDR=0.0.0.0 for LAN.
+      # Loopback by default; set BIND_ADDR=0.0.0.0 for LAN.
       - "${BIND_ADDR:-127.0.0.1}:${WEBUI_PORT:-3000}:3000"
     depends_on:
       - api
@@ -28,7 +27,6 @@ services:
       COSMOS3_VLLM_OMNI_URL: http://vllm-omni:8000            # generation container URL
       COSMOS3_GEN_CONTAINER: cosmos3-nano-webui-vllm-omni     # container it starts/stops
       COSMOS3_CHECKPOINT_LABEL: ${COSMOS3_CHECKPOINT_LABEL:-fp8}
-      COSMOS3_API_KEY: ${COSMOS3_API_KEY:-}
     ports:
       # Loopback by default (the api also mounts docker.sock); set BIND_ADDR=0.0.0.0 for LAN.
       - "${BIND_ADDR:-127.0.0.1}:${API_PORT:-8000}:8000"

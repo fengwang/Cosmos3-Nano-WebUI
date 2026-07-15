@@ -78,7 +78,7 @@ hf download wfen/Cosmos3-Nano-FP8-Blockwise \
   --local-dir ./models/Cosmos3-Nano-FP8-Blockwise
 
 # 3. (Optional) configure — the defaults work for a local run
-cp .env.example .env      # edit for auth (COSMOS3_API_KEY), LAN binding, or custom paths
+cp .env.example .env      # edit for LAN binding or custom model paths
 
 # 4. Build the API + WebUI images (CPU) and bring up the FP8 stack
 make build                # builds api + webui images
@@ -169,11 +169,11 @@ This is an honest early beta. Known limits, each tracked in
   of the same manual gate.
 - **vLLM-Omni image build is heavy (CUDA).** It installs a pinned public fork commit; its
   build and exact serve entrypoint are confirmed at the manual gate.
-- **Auth is off by default.** Set `COSMOS3_API_KEY` to require an `X-API-Key` on the
-  generation, jobs, action, and reasoning routes — health and metrics stay open (the
-  WebUI forwards it end to end). The API container mounts the
-  host Docker socket to drive the generation container — ports bind `127.0.0.1` by
-  default; keep it that way until you have enabled auth and network controls (R-16).
+- **No authentication.** The API has no application-layer auth — it assumes a trusted
+  LAN / lab machine, so all generation, jobs, action, reasoning, health, and metrics
+  routes are open. The API container mounts the host Docker socket to drive the
+  generation container (root-equivalent on the host), and ports bind `127.0.0.1` by
+  default; set `BIND_ADDR=0.0.0.0` only on a trusted network.
 - **NVFP4 model card is a stub** upstream — use [`docs/model_setup.md`](docs/model_setup.md)
   for setup context.
 - **Not published to a registry.** Images are built locally; there are no prebuilt images
@@ -185,7 +185,7 @@ This is an honest early beta. Known limits, each tracked in
   repo-root `.env` is auto-passed only via `make` (`--env-file .env`). With a bare
   `docker compose -f deploy/…`, pass `--env-file .env` or place the file at `deploy/.env`.
 - **Can't reach it from another machine.** Ports bind loopback by default; set
-  `BIND_ADDR=0.0.0.0` (and enable `COSMOS3_API_KEY`) for LAN access.
+  `BIND_ADDR=0.0.0.0` for LAN access — only on a trusted network.
 - **One checkpoint at a time.** The FP8 and NVFP4 stacks share a fixed generation
   container name — bring up one stack at a time (`make up-fp8` xor `make up-nvfp4`).
 - **Cold start.** The API starts the generation container on demand; first requests wait

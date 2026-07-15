@@ -187,11 +187,11 @@ def test_failed_job_exposes_no_artifact(make_matrix_app):
         assert client.get(f"/v1/jobs/{job_id}/artifact").status_code == 404
 
 
-# --- open access: no API-key gate remains on the formerly-protected routers (UX-S1) ---
+# --- open access: no auth gate remains on the formerly-protected routers (UX-S1) ---
 
 
 def test_formerly_gated_routers_open_without_key(make_matrix_app):
-    """Each formerly-gated router returns a normal non-401 result with no X-API-Key (UX-S1)."""
+    """Each formerly-gated router returns a normal non-401 result with no auth header (UX-S1)."""
     with TestClient(make_matrix_app()) as client:
         assert client.post("/v1/jobs", json={"mode": "t2i", "params": {"prompt": "x"}}).status_code == 202
         assert client.post("/v1/generation/t2v", json={"prompt": "x"}).status_code == 202
@@ -200,16 +200,22 @@ def test_formerly_gated_routers_open_without_key(make_matrix_app):
         assert client.post("/v1/reason", json={}).status_code != 401
 
 
-def test_supplied_x_api_key_is_inert(make_matrix_app):
-    """A client-supplied X-API-Key changes nothing — the header is ignored, not a gate (Decision 2A)."""
+def test_supplied_auth_header_is_inert(make_matrix_app):
+    """A leftover client auth header changes nothing — it is ignored, not a gate (Decision 2A).
+
+    The header is sent in its canonical lowercase form (the former OpenAPI param name);
+    the point is that the now-auth-free API forwards and ignores it identically.
+    """
     with TestClient(make_matrix_app()) as client:
         without = client.post("/v1/generation/t2v", json={"prompt": "x"})
-        withkey = client.post("/v1/generation/t2v", json={"prompt": "x"}, headers={"X-API-Key": "anything"})
-    assert without.status_code == withkey.status_code == 202
+        withhdr = client.post(
+            "/v1/generation/t2v", json={"prompt": "x"}, headers={"x-api-key": "anything"}
+        )
+    assert without.status_code == withhdr.status_code == 202
 
 
-def test_openapi_has_no_api_key(make_matrix_app):
-    """The live app's OpenAPI carries no x-api-key parameter and no auth security scheme (INV-6)."""
+def test_openapi_has_no_auth_surface(make_matrix_app):
+    """The live app's OpenAPI carries no auth header parameter and no security scheme (INV-6)."""
     with TestClient(make_matrix_app()) as client:
         resp = client.get("/openapi.json")
     spec_text = resp.text
