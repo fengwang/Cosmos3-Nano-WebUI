@@ -27,6 +27,7 @@ session_contract:
       - docs/risk_register.md
       - docs/eval_seed_cases.md
       - docs/handoff.md
+      - webui/app/layout.tsx
     forbidden_files:
       - any api/**, webui/**, deploy/**, schemas/**, tests/** file
       - .env, .env.example
