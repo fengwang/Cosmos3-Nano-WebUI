@@ -1,18 +1,8 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import { Card } from "@/design-system";
-
+// The home route lands users on the Generation Studio (UX-S3). The Studio owns its
+// own (studio) route-group provider, so `/` only redirects — it renders no Studio
+// content itself and needs no provider.
 export default function Home() {
-  return (
-    <Card title="Cosmos3-Nano Serving">
-      <p>Neumorphic WebUI foundation (Session 8). The generation/reasoning studio arrives in Session 9.</p>
-      <p>
-        <Link href="/gallery">Open the component gallery →</Link>
-      </p>
-      <p>
-        API readiness is proxied same-origin at <code>/api/health</code> (INV-1) — the
-        browser never reaches the api directly.
-      </p>
-    </Card>
-  );
+  redirect("/studio");
 }
