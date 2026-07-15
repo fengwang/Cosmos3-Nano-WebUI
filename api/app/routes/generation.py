@@ -18,18 +18,31 @@ from app.schemas import GenerationBody, Job, JobSubmit
 from jobs.runner import JobRunner
 from jobs.store import JobStore
 from preprocessing.media import MediaErrorCode, MediaValidationError, MediaValidationFailed
+from preprocessing.negative_prompt import load_default_negative_prompt
 
 if TYPE_CHECKING:
     from app.observability.metrics import Metrics
 
 
-def _params(body: GenerationBody, *, num_frames: int | None, generate_sound: bool = False) -> dict:
-    """Map the typed body → the JobSubmit params (checkpoint resolved at the edge; absent fields dropped)."""
+def _params(
+    body: GenerationBody,
+    *,
+    num_frames: int | None,
+    generate_sound: bool = False,
+    negative_prompt_default: str | None = None,
+) -> dict:
+    """Map the typed body → the JobSubmit params (checkpoint resolved at the edge; absent fields dropped).
+
+    ``negative_prompt_default`` is the curated overridable default (UX-S2, INV-5): a user value wins,
+    otherwise the default is applied when present, otherwise the field is omitted (graceful fallback).
+    """
     params: dict = {"prompt": body.prompt, "seed": body.seed, "checkpoint": resolve_checkpoint(body.checkpoint)}
     for key in ("negative_prompt", "resolution", "height", "width", "num_inference_steps", "image_path"):
         value = getattr(body, key)
         if value is not None:
             params[key] = value
+    if params.get("negative_prompt") is None and negative_prompt_default is not None:
+        params["negative_prompt"] = negative_prompt_default
     if num_frames is not None:  # the route's mode-specific override (t2i → 1)
         params["num_frames"] = num_frames
     elif body.num_frames is not None:
@@ -46,13 +59,15 @@ def build_generation_router(store: JobStore, runner: JobRunner, metrics: Metrics
     @router.post("/t2i", status_code=status.HTTP_202_ACCEPTED, response_model=Job)
     async def t2i(body: GenerationBody) -> Job:
         return await submit_and_enqueue(
-            JobSubmit(mode="t2i", params=_params(body, num_frames=1), media=body.image), store, runner, metrics=metrics
+            JobSubmit(mode="t2i", params=_params(body, num_frames=1, negative_prompt_default=load_default_negative_prompt()), media=body.image),
+            store, runner, metrics=metrics,
         )
 
     @router.post("/t2v", status_code=status.HTTP_202_ACCEPTED, response_model=Job)
     async def t2v(body: GenerationBody) -> Job:
         return await submit_and_enqueue(
-            JobSubmit(mode="t2v", params=_params(body, num_frames=None), media=body.image), store, runner, metrics=metrics
+            JobSubmit(mode="t2v", params=_params(body, num_frames=None, negative_prompt_default=load_default_negative_prompt()), media=body.image),
+            store, runner, metrics=metrics,
         )
 
     @router.post("/i2v", status_code=status.HTTP_202_ACCEPTED, response_model=Job)
@@ -64,13 +79,18 @@ def build_generation_router(store: JobStore, runner: JobRunner, metrics: Metrics
                 )
             )
         return await submit_and_enqueue(
-            JobSubmit(mode="i2v", params=_params(body, num_frames=None), media=body.image), store, runner, metrics=metrics
+            JobSubmit(mode="i2v", params=_params(body, num_frames=None, negative_prompt_default=load_default_negative_prompt()), media=body.image),
+            store, runner, metrics=metrics,
         )
 
     @router.post("/t2v_audio", status_code=status.HTTP_202_ACCEPTED, response_model=Job)
     async def t2v_audio(body: GenerationBody) -> Job:
         return await submit_and_enqueue(
-            JobSubmit(mode="t2v_audio", params=_params(body, num_frames=None, generate_sound=True), media=body.image),
+            JobSubmit(
+                mode="t2v_audio",
+                params=_params(body, num_frames=None, generate_sound=True, negative_prompt_default=load_default_negative_prompt()),
+                media=body.image,
+            ),
             store, runner, metrics=metrics,
         )
 

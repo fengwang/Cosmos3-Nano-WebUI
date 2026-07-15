@@ -38,6 +38,9 @@ def make_app(tmp_path, monkeypatch):
         monkeypatch.setenv("COSMOS3_INPUT_ALLOWLIST", str(tmp_path))
         monkeypatch.delenv("COSMOS3_FP8_MODEL_DIR", raising=False)
         monkeypatch.delenv("COSMOS3_CHECKPOINT_LABEL", raising=False)  # default deployment = fp8
+        # Deterministic negative-prompt default (UX-S2): tests opt in via COSMOS3_MODEL_DIR, so a
+        # stray host value can't silently inject the curated default into unrelated route assertions.
+        monkeypatch.delenv("COSMOS3_MODEL_DIR", raising=False)
         for key, value in env.items():
             monkeypatch.setenv(key, value)
         orch = Orchestrator(lambda plane: _NoopWorker(), post_evict_wait=lambda: True)

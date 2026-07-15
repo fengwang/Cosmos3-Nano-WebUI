@@ -76,3 +76,44 @@ def test_i2v_with_trusted_image_path_accepted(make_app, tmp_path):
     with TestClient(app) as client:
         resp = client.post("/v1/generation/i2v", json={"prompt": "x", "image_path": str(cond)})
         assert resp.status_code == 202 and resp.json()["mode"] == "i2v"
+
+
+# ── negative-prompt overridable default (UX-S2; spec: negative-prompt-default) ────────────────
+
+def _with_negative_asset(tmp_path, text: str = '{"subjects": [], "background_setting": "flat"}'):
+    (tmp_path / "assets").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "assets" / "negative_prompt.json").write_text(text, encoding="utf-8")
+    return text
+
+
+def test_negative_prompt_default_applied_when_omitted(make_app, tmp_path):
+    text = _with_negative_asset(tmp_path)
+    app = make_app(COSMOS3_MODEL_DIR=str(tmp_path))
+    with TestClient(app) as client:
+        job_id = client.post("/v1/generation/t2v", json={"prompt": "x", "num_frames": 8}).json()["id"]
+    assert app.state.jobs.get(job_id).params["negative_prompt"] == text  # file-sourced default reaches params
+
+
+def test_user_negative_prompt_overrides_default(make_app, tmp_path):
+    _with_negative_asset(tmp_path)
+    app = make_app(COSMOS3_MODEL_DIR=str(tmp_path))
+    with TestClient(app) as client:
+        job_id = client.post(
+            "/v1/generation/t2v", json={"prompt": "x", "negative_prompt": "my custom negative", "num_frames": 8}
+        ).json()["id"]
+    assert app.state.jobs.get(job_id).params["negative_prompt"] == "my custom negative"  # user value wins
+
+
+def test_missing_negative_prompt_file_omits_field(make_app, tmp_path):
+    app = make_app(COSMOS3_MODEL_DIR=str(tmp_path))  # model dir set, no asset file → graceful
+    with TestClient(app) as client:
+        job_id = client.post("/v1/generation/t2v", json={"prompt": "x", "num_frames": 8}).json()["id"]
+    assert "negative_prompt" not in app.state.jobs.get(job_id).params  # degraded: field omitted, no crash
+
+
+def test_t2i_also_receives_negative_default(make_app, tmp_path):
+    text = _with_negative_asset(tmp_path)
+    app = make_app(COSMOS3_MODEL_DIR=str(tmp_path))
+    with TestClient(app) as client:
+        job_id = client.post("/v1/generation/t2i", json={"prompt": "x"}).json()["id"]
+    assert app.state.jobs.get(job_id).params["negative_prompt"] == text  # default is mode-agnostic
