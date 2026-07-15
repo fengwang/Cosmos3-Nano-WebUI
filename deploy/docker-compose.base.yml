@@ -27,6 +27,9 @@ services:
       COSMOS3_VLLM_OMNI_URL: http://vllm-omni:8000            # generation container URL
       COSMOS3_GEN_CONTAINER: cosmos3-nano-webui-vllm-omni     # container it starts/stops
       COSMOS3_CHECKPOINT_LABEL: ${COSMOS3_CHECKPOINT_LABEL:-fp8}
+      # Where the api reads the curated negative-prompt default (UX-S2). The per-stack file mounts the
+      # checkpoint's assets/ read-only here; if the mount is absent the loader degrades gracefully.
+      COSMOS3_MODEL_DIR: ${COSMOS3_MODEL_DIR:-/models/checkpoint}
     ports:
       # Loopback by default (the api also mounts docker.sock); set BIND_ADDR=0.0.0.0 for LAN.
       - "${BIND_ADDR:-127.0.0.1}:${API_PORT:-8000}:8000"
@@ -45,8 +48,13 @@ services:
       dockerfile: deploy/vllm-omni.Dockerfile
     image: cosmos3-nano-vllm-omni:local
     container_name: cosmos3-nano-webui-vllm-omni   # fixed name the api controls by
+    # 720p video result transfer (worker<->API-server) rides shared memory; Docker's 64 MB default
+    # /dev/shm overflows -> SIGBUS after a successful pipeline. Sized for the video result (UX-S2).
+    shm_size: "16gb"
     environment:
       COSMOS3_MODEL_DIR: ${COSMOS3_MODEL_DIR:-/models/checkpoint}   # in-container mount target
+      # Reduce 720p CUDA fragmentation at the 32 GB edge (the OOM error recommends it; UX-S2 smoke).
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
     restart: "no"                                   # orchestrator owns start/stop
     deploy:
       resources:

@@ -8,7 +8,29 @@ services:
   api:
     environment:
       COSMOS3_CHECKPOINT_LABEL: fp8
+    volumes:
+      # The api reads only the curated negative-prompt default from the checkpoint's assets/ (UX-S2),
+      # so it mounts assets/ read-only — not the weights (minimal surface). Matches the vllm-omni source.
+      - ${COSMOS3_FP8_DIR:-../models/Cosmos3-Nano-FP8-Blockwise}/assets:/models/checkpoint/assets:ro
   vllm-omni:
+    # Serving config proven by the UX-S2 5090 smoke to fit the shipped 720p default (1280x720, 49f) in
+    # 32 GB on FP8: layer-wise offload streams the transformer (denoise fit) + tiled VAE decode (decode
+    # fit). --no-guardrails is the documented local-run posture (cosmos_guardrail is not bundled; the
+    # trusted-LAN appliance runs guardrails-off — SECURITY/README note is UX-S4). Peak ~14.7 GiB.
+    command:
+      - vllm
+      - serve
+      - /models/checkpoint
+      - --omni
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --init-timeout
+      - "1800"
+      - --no-guardrails
+      - --vae-use-tiling
+      - --enable-layerwise-offload
     volumes:
       # Operator-supplied FP8 checkpoint (download first — see .env.example), read-only.
       # Default is <repo>/models/... (../ is relative to the deploy/ project dir).

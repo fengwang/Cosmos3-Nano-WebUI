@@ -8,7 +8,29 @@ services:
   api:
     environment:
       COSMOS3_CHECKPOINT_LABEL: nvfp4
+    volumes:
+      # The api reads only the curated negative-prompt default from the checkpoint's assets/ (UX-S2),
+      # so it mounts assets/ read-only — not the weights (minimal surface). Matches the vllm-omni source.
+      - ${COSMOS3_NVFP4_DIR:-../models/Cosmos3-Nano-NVFP4-Blockwise}/assets:/models/checkpoint/assets:ro
   vllm-omni:
+    # Serving config proven by the UX-S2 5090 smoke to fit the shipped 720p default (1280x720, 49f) in
+    # 32 GB on NVFP4: tiled VAE decode. NVFP4 deliberately does NOT use --enable-layerwise-offload — its
+    # Marlin FP4 kernel repacks weights on CUDA after load (gptq_marlin_repack is CUDA-only), which
+    # offloading (weights on CPU) breaks. NVFP4 4-bit weights are resident at ~16.3 GiB, so it fits
+    # without offload. --no-guardrails as in the FP8 stack. Peak ~18.5 GiB.
+    command:
+      - vllm
+      - serve
+      - /models/checkpoint
+      - --omni
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --init-timeout
+      - "1800"
+      - --no-guardrails
+      - --vae-use-tiling
     volumes:
       # Operator-supplied NVFP4 checkpoint (download first — see .env.example), read-only.
       # Default is <repo>/models/... (../ is relative to the deploy/ project dir).
