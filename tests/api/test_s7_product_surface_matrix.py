@@ -187,24 +187,29 @@ def test_failed_job_exposes_no_artifact(make_matrix_app):
         assert client.get(f"/v1/jobs/{job_id}/artifact").status_code == 404
 
 
-# --- open access: no auth gate remains on the formerly-protected routers (UX-S1) ---
+# --- open access: the formerly-protected routers respond without any auth (UX-S1) ---
+#
+# These document the SHIPPED open behavior (every formerly-gated router responds non-401
+# with no key). The guard against silently re-introducing the removed header mechanism is
+# `test_openapi_has_no_auth_surface` below (plus tests/test_openapi.py): re-adding the
+# Header-based dependency re-adds the `x-api-key` parameter to the schema and fails them.
 
 
 def test_formerly_gated_routers_open_without_key(make_matrix_app):
-    """Each formerly-gated router returns a normal non-401 result with no auth header (UX-S1)."""
+    """Each formerly-gated router responds non-401 for a keyless request (the shipped open contract)."""
     with TestClient(make_matrix_app()) as client:
         assert client.post("/v1/jobs", json={"mode": "t2i", "params": {"prompt": "x"}}).status_code == 202
         assert client.post("/v1/generation/t2v", json={"prompt": "x"}).status_code == 202
-        # action + reasoning: even an invalid body validates (422), proving there is no auth gate in front.
-        assert client.post("/v1/action/forward_dynamics", json={}).status_code != 401
-        assert client.post("/v1/reason", json={}).status_code != 401
+        # action + reasoning validate the body (422) rather than 401 — no auth gate precedes validation.
+        assert client.post("/v1/action/forward_dynamics", json={}).status_code == 422
+        assert client.post("/v1/reason", json={}).status_code == 422
 
 
 def test_supplied_auth_header_is_inert(make_matrix_app):
-    """A leftover client auth header changes nothing — it is ignored, not a gate (Decision 2A).
+    """A leftover client auth header is ignored, not treated as a gate (Decision 2A).
 
-    The header is sent in its canonical lowercase form (the former OpenAPI param name);
-    the point is that the now-auth-free API forwards and ignores it identically.
+    Sent in its canonical lowercase form (the former OpenAPI param name); the now-auth-free
+    API forwards and ignores it, so the response is identical to the keyless request.
     """
     with TestClient(make_matrix_app()) as client:
         without = client.post("/v1/generation/t2v", json={"prompt": "x"})
@@ -215,7 +220,11 @@ def test_supplied_auth_header_is_inert(make_matrix_app):
 
 
 def test_openapi_has_no_auth_surface(make_matrix_app):
-    """The live app's OpenAPI carries no auth header parameter and no security scheme (INV-6)."""
+    """Reintroduction guard: the live app's OpenAPI has no auth header parameter or security scheme.
+
+    Re-adding the removed Header-based auth dependency would re-add the `x-api-key` parameter
+    here (and break tests/test_openapi.py's committed-vs-live check) — INV-6.
+    """
     with TestClient(make_matrix_app()) as client:
         resp = client.get("/openapi.json")
     spec_text = resp.text
