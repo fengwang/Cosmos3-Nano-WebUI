@@ -1,0 +1,96 @@
+session_contract:
+  id: UX-S2
+  objective: >
+    Preset good output as the zero-configuration default: apply the curated negative prompt from
+    the model assets as an overridable server-side default, and make 1280x720 the default for video
+    modes at both the API server layer and the WebUI default preset, leaving text->image defaults
+    and the resolution picker intact.
+  risk_level: medium
+  routing: worker_plus_reviewers  # worker + sharded review + adversarial verifier; human gate on the negative-prompt transport decision and to accept/defer the recommended 720p GPU smoke.
+  in_scope:
+    - Load the curated negative prompt and apply it when a request omits negative_prompt; a user value overrides it.
+    - Resolve the negative-prompt file path from the configurable model-directory env var; graceful fallback (log once, no negative prompt) if absent.
+    - Decide and record whether the vLLM-Omni backend takes the structured JSON object or a serialized string, and wire accordingly.
+    - Show a "using recommended default" placeholder on the WebUI negative-prompt field.
+    - Make video modes (t2v/i2v/t2v_audio) default to 1280x720 via mode-aware server defaulting; leave t2i unchanged; update the resolution field description.
+    - Make hi-720 the WebUI default-selected preset for video; keep standard-480 and the full picker available.
+    - Record a recommended 5090 smoke that the shipped 720p video default fits 32 GB for FP8 and NVFP4 at the shipped frame count, negative prompt engaged, guardrails posture noted (non-blocking).
+  out_of_scope:
+    - Auth (UX-S1), WebUI declutter/media (UX-S3), README (UX-S4).
+    - Any change to t2i (image) resolution defaults.
+    - Changing checkpoint revisions or the vLLM-Omni pin.
+    - Guardrails-on GPU validation or full validation of any mode beyond the recommended 720p video smoke.
+  blast_radius:
+    allowed_files:
+      - api/app/schemas.py
+      - api/app/routes/generation.py
+      - api/orchestrator/gen_worker.py
+      - api/engines/vllm_omni/client.py
+      - api/engines/base.py
+      - api/preprocessing/**            # a new loader/helper for the negative-prompt default may live here
+      - .env.example                    # a new env var documenting the negative-prompt path/toggle, if introduced
+      - deploy/docker-compose.base.yml  # only if the API container needs the model-assets mount to read the file
+      - deploy/docker-compose.fp8.yml
+      - deploy/docker-compose.nvfp4.yml
+      - webui/lib/studio/presets.ts
+      - webui/lib/studio/draft.ts
+      - webui/lib/studio/types.ts
+      - webui/lib/studio/request.ts
+      - webui/components/studio/ComposePanel.tsx
+      - tests/**                        # new/updated tests for both defaults
+      - docs/session_2/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - api/app/auth.py and any auth plumbing (removed in UX-S1)
+      - webui/app/gallery/**, webui/app/page.tsx, PrimaryNav.tsx, media CSS (UX-S3)
+      - README.md restructure, CONTRIBUTING.md (UX-S4)
+      - any checkpoint revision pin or the vLLM-Omni commit pin
+      - docs/archive/**
+      - model weight or generated media files (artifacts are recorded by metadata, not committed)
+  invariants:
+    - The negative-prompt file is referenced via a configurable model-directory variable, never a hardcoded absolute path (INV-1).
+    - Both presets are overridable defaults (per-request via the API and via the WebUI), never hard locks (INV-5).
+    - No public API request/response schema shape changes; only default values change (INV-6).
+    - The 720p video default is served only by the quantized FP8/NVFP4 path, never the BF16 base; heavier-than-default configs surface a documented advisory, not a silent OOM (INV-8).
+  acceptance_criteria:
+    - A request omitting negative_prompt sends the file-sourced default to the engine; a supplied value overrides; a missing file degrades gracefully without crashing.
+    - No hardcoded absolute path in the loader; the path derives from the model-directory env var.
+    - Video defaults to 1280x720 at both server and UI; t2i default unchanged; the picker still offers all families; server default and UI default preset agree for video.
+    - The CPU suite and WebUI build/lint/typecheck/test are green.
+    - The recommended FP8/NVFP4 720p smoke is recorded green or carries a documented, owner-accepted deferral.
+  deterministic_checks:
+    - "rg -n \"/data/models\" api/"
+    - "uv run pytest -m \"not gpu\""
+    - "cd webui && pnpm build && pnpm lint && pnpm typecheck && pnpm test"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The negative-prompt path is hardcoded to /data/models/... and works only on the owner's host (INV-1 breach; wrong mount in-container).
+    - The structured JSON is stuffed into the string field and the backend receives malformed data or silently ignores it.
+    - Flipping the video default also changes t2i (mode-awareness missing).
+    - The WebUI defaults to hi-720 but the API server default stays 480, so API-only clients still get 480 ("720p default" only half-true).
+    - The 720p FP8 default OOMs with guardrails on or at a higher-than-default frame count (thin headroom, R-05).
+    - A missing negative_prompt.json crashes generation instead of degrading gracefully.
+  failure_modes_to_watch:
+    - The API container cannot actually read the model-assets file at runtime (mount not present in that service).
+    - num_frames scaling makes the 49-frame default heavier than assumed; peak VRAM not measured on the shipped config.
+    - Preset change ripples into unrelated draft/request unit tests.
+  done_condition: GATE-UX-S2-DEFAULTS passes; the recommended 720p smoke is recorded or deferred with owner acceptance.
+  handoff_requirements:
+    - The recorded negative-prompt transport decision (structured vs serialized string).
+    - Measured 720p peak VRAM per checkpoint and the guardrails posture, into docs/evidence_map.md.
+    - Any residual VRAM caveat (R-05) flagged for the README status callout in UX-S4.
+  eval_seed_candidates:
+    - EV-UX-NEGPROMPT-DEFAULT-APPLIED
+    - EV-UX-NEGPROMPT-NO-ABS-PATH
+    - EV-UX-RESOLUTION-DEFAULT-VIDEO-720
+    - EV-UX-GPU-720-FP8-T2V
+    - EV-UX-GPU-720-NVFP4-T2V
+    - EV-UX-GPU-NEGPROMPT-APPLIED

@@ -1,0 +1,100 @@
+session_contract:
+  id: UX-S1
+  objective: >
+    Remove the X-API-Key / COSMOS3_API_KEY authentication mechanism entirely from the API, the
+    WebUI BFF, configuration, tests, and the auth-specific documentation lines, without changing
+    the default network binding and without leaving any dangling reference.
+  risk_level: high
+  routing: branch_and_compare  # high-risk router realized as: independent test writer (tests assert the NEW open contract, not just deletions) + sharded review + adversarial verifier + mandatory pre-merge human gate.
+  in_scope:
+    - Delete api/app/auth.py and its wiring in api/app/main.py (import at :19, auth list at :211, dependencies=auth on the four routers at :215-217 and :220-226).
+    - Remove the UnauthorizedError->401 mapping and handler registration in api/app/errors.py.
+    - Remove WebUI BFF key injection (webui/lib/proxy.ts:39) and the COSMOS3_API_KEY env read (webui/lib/proxyFetch.ts:30), keeping the same-origin proxy otherwise intact.
+    - Remove COSMOS3_API_KEY from .env, .env.example, and deploy/docker-compose.base.yml (both service passthroughs); leave BIND_ADDR and its loopback default unchanged.
+    - Regenerate schemas/openapi.json (and webui/lib/api/schema.d.ts) from code so no x-api-key parameter or security scheme remains.
+    - Rewrite the affected tests to assert the new open contract, not merely delete old assertions.
+    - Edit ONLY the auth-specific lines of README.md (:81,:172,:188) and SECURITY.md (:46-49) into a slim honest note.
+  out_of_scope:
+    - The README features-first restructure and CONTRIBUTING relocation (UX-S4).
+    - Any generation-default change (UX-S2) or WebUI declutter (UX-S3).
+    - Changing BIND_ADDR, adding TLS, or adding any replacement auth/authorization mechanism.
+    - Docker-socket hardening (archived R-16).
+  blast_radius:
+    allowed_files:
+      - api/app/auth.py            # deleted
+      - api/app/main.py
+      - api/app/errors.py
+      - webui/lib/proxy.ts
+      - webui/lib/proxyFetch.ts
+      - webui/lib/proxy.test.ts
+      - webui/lib/proxyFetch.test.ts
+      - webui/lib/api/schema.d.ts  # regenerated, not hand-edited
+      - .env
+      - .env.example
+      - deploy/docker-compose.base.yml
+      - schemas/openapi.json       # regenerated, not hand-edited
+      - tests/api/test_auth.py     # deleted
+      - tests/api/test_jobs_api.py
+      - tests/api/test_sse.py
+      - tests/api/test_s7_product_surface_matrix.py
+      - tests/api/conftest.py
+      - tests/test_metrics_endpoint.py
+      - README.md                  # auth-specific lines only
+      - SECURITY.md                # auth-specific lines only
+      - docs/session_1/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - any api/** file other than auth.py, main.py, errors.py
+      - any generation/engine/orchestrator logic (UX-S2 owns that path)
+      - any webui/** file other than the proxy + its tests + the regenerated schema (UX-S3 owns UI)
+      - deploy/** other than docker-compose.base.yml
+      - the BIND_ADDR default value (must stay 127.0.0.1)
+      - docs/archive/**
+      - model weight or generated media files
+  invariants:
+    - Health (/v1/health/{live,ready}) and metrics (/v1/metrics) stay reachable and behaviorally unchanged (INV-2).
+    - No new capability or behavior regression beyond dropping the X-API-Key gate; the Docker-socket controller surface is unchanged (INV-3).
+    - The default published-port binding stays loopback (BIND_ADDR=127.0.0.1); LAN exposure remains an explicit opt-in (INV-4).
+    - No public API request/response schema shape changes except removing the X-API-Key parameter; schemas/openapi.json is regenerated from code (INV-6).
+    - The WebUI keeps its same-origin BFF posture; the browser never calls the API directly (INV-7).
+  acceptance_criteria:
+    - A whole-repo `rg --hidden` sweep for the auth tokens is clean outside docs/archive/** and this pack's own prose.
+    - schemas/openapi.json regenerates with no x-api-key; tests/test_openapi.py passes.
+    - The CPU suite and the WebUI build/lint/typecheck/test are green.
+    - Health and metrics respond without a key; the formerly-protected routers return their normal non-401 responses.
+    - README.md/SECURITY.md carry the slim honest note; no dangling auth prose; BIND_ADDR default unchanged.
+  deterministic_checks:
+    - "rg --hidden -n \"COSMOS3_API_KEY|X-API-Key|x_api_key|api_key|apiKey|require_api_key|UnauthorizedError\" -g '!docs/archive/**'"
+    - "uv run pytest -m \"not gpu\""
+    - "cd webui && pnpm build && pnpm lint && pnpm typecheck && pnpm test"
+    - "uv run pytest tests/test_openapi.py"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The dependency is removed from main.py but a router still enforces auth via a leftover Depends elsewhere.
+    - The sweep passes only because it ran without --hidden and skipped .env/.env.example (archived phase-2 R-03 recurrence).
+    - schemas/openapi.json is hand-edited to drop x-api-key instead of regenerated, so it silently drifts from code.
+    - Auth tests are deleted (suite green) but nothing asserts the new open contract, so a re-introduced gate would pass unnoticed.
+    - proxy.ts still forwards a client-supplied x-api-key header after server injection is removed (residual spoofing seam).
+    - BIND_ADDR is flipped to 0.0.0.0 "to match trusted-LAN", exposing the socket-mounted API by default (INV-4 breach).
+  failure_modes_to_watch:
+    - webui/lib/api/schema.d.ts / schemas/openapi.json regen not run, so the CI schema-sync check fails.
+    - Removing the conftest auth fixture perturbs unrelated tests that assumed the env var unset.
+    - Health/metrics behavior accidentally altered by a broad edit to main.py.
+  done_condition: GATE-UX-S1-AUTH passes and the mandatory pre-merge human decision gate (security-posture change) is cleared.
+  handoff_requirements:
+    - The exact auth-related lines changed in README.md/SECURITY.md (so UX-S4 rewrites on the settled state).
+    - Confirmation that no auth plumbing remains in the request path UX-S2/UX-S3 will touch.
+    - The regenerated OpenAPI diff.
+  eval_seed_candidates:
+    - EV-UX-AUTH-SWEEP-CLEAN
+    - EV-UX-OPENAPI-INSYNC
+    - EV-UX-HEALTH-OPEN-NOAUTH
+    - EV-UX-CPU-SUITE-GREEN

@@ -1,0 +1,72 @@
+session_contract:
+  id: UX-S3
+  objective: >
+    Declutter the WebUI for a task-first experience: remove the design-system Component Gallery
+    entirely, land users on the Studio, and enlarge the generated-media viewport, without a
+    structural redesign of the Studio.
+  risk_level: low
+  routing: single_agent  # single agent + deterministic checks + one review.
+  in_scope:
+    - Remove the gallery route directory webui/app/gallery/ (page.tsx, gallery.module.css).
+    - Remove the gallery nav item (webui/app/_components/PrimaryNav.tsx:14).
+    - Replace the stale home page so / renders or redirects to the Studio (webui/app/page.tsx).
+    - Raise MediaPreview max-height (above 60vh) and the studio container max-width (above 60rem), keeping the layout responsive and the Review compare-grid intact.
+  out_of_scope:
+    - Auth (UX-S1), generation defaults (UX-S2), README (UX-S4).
+    - A structural redesign of the Studio, a new landing/marketing page beyond the redirect, or a design-system overhaul.
+    - Removing or rewriting the Reasoning / Action / History routes.
+    - Populating the scaffolded (currently empty) e2e/a11y suite.
+  blast_radius:
+    allowed_files:
+      - webui/app/gallery/**            # deleted
+      - webui/app/page.tsx
+      - webui/app/_components/PrimaryNav.tsx
+      - webui/components/MediaPreview.module.css
+      - webui/app/(studio)/studio/page.module.css
+      - webui/components/studio/studio.module.css
+      - docs/session_3/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - api/** (no server changes)
+      - any auth plumbing (UX-S1) or generation-default code (UX-S2)
+      - README.md, CONTRIBUTING.md, SECURITY.md (UX-S4)
+      - the Reasoning / Action / History route or component files
+      - docs/archive/**
+      - model weight or generated media files
+  invariants:
+    - No public API interaction changes; this is a presentation-only session.
+    - The same-origin BFF posture is unchanged; the browser never calls the API directly (INV-7).
+    - The media viewport enlargement stays responsive on small screens (no fixed oversize that breaks mobile/narrow layouts).
+  acceptance_criteria:
+    - No /gallery route, nav item, or home link remains; / renders or redirects to the Studio.
+    - An rg -i sweep for gallery in webui/app and webui/components is clean apart from the unrelated HistoryList history/gallery comment.
+    - MediaPreview max-height and the studio container max-width are increased vs the 60vh/60rem baseline; the compare-grid still renders side by side.
+    - The WebUI build/lint/typecheck/test are green.
+  deterministic_checks:
+    - "rg -i \"gallery|/gallery\" webui/app webui/components"
+    - "cd webui && pnpm build && pnpm lint && pnpm typecheck && pnpm test"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The nav item is removed but the /gallery route still resolves by URL (or vice versa), leaving a half-removed feature.
+    - The home link is removed but / still renders the old stub (empty landing) instead of the Studio.
+    - Media max-height is enlarged with a fixed pixel value that overflows narrow viewports or breaks the compare-grid.
+    - A shared design-system component the gallery imported is deleted, breaking a component the Studio still uses.
+  failure_modes_to_watch:
+    - Next.js route-group nuance: the redirect for / interacts badly with the (studio) layout group.
+    - Removing gallery.module.css leaves a dangling import elsewhere.
+    - Enlarged media changes snapshot/visual tests that assert the old dimensions.
+  done_condition: GATE-UX-S3-WEBUI passes with the gallery gone, / on the Studio, and an enlarged, responsive media viewport.
+  handoff_requirements:
+    - The final media-viewport dimensions and the landing behavior, for the README description/screenshots in UX-S4.
+  eval_seed_candidates:
+    - EV-UX-GALLERY-GONE
+    - EV-UX-MEDIA-ENLARGED
+    - EV-UX-CPU-SUITE-GREEN

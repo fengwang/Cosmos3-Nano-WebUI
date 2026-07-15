@@ -1,0 +1,70 @@
+session_contract:
+  id: UX-S4
+  objective: >
+    Make README.md user-first: lead with features and a few-minute quickstart, relocate
+    development/CI detail into CONTRIBUTING.md, keep a slim honest security/status callout, and
+    leave every internal link resolving. Runs last, on the settled post-UX-S1/UX-S2/UX-S3 state.
+  risk_level: low
+  routing: single_agent  # single agent + deterministic checks + one review.
+  in_scope:
+    - Restructure README.md to lead with features and a ~5-minute quickstart, reflecting the post-UX-S1 no-auth flow and the post-UX-S2 defaults.
+    - Relocate the development/CI workflow (uv sync, ruff, pytest, pnpm build/lint/typecheck/test, CI mirror) into CONTRIBUTING.md.
+    - Keep a slim honest security/status callout (no auth, trusted-LAN assumption, loopback default, LAN opt-in, root-equivalent Docker socket; honest per-mode verification status).
+    - Tighten "Checkpoint setup" to the essentials with a pointer to docs/model_setup.md.
+    - Fix every dangling internal link (repoint/drop docs/release_checklist.md and the SECURITY.md R-16 pointer); update SECURITY.md deployment notes to the no-auth posture.
+  out_of_scope:
+    - Any code, config, or WebUI change (UX-S1/UX-S2/UX-S3).
+    - Reintroducing auth prose that UX-S1 removed.
+    - Editing docs/archive/** or the substance of docs/model_setup.md beyond link correctness.
+    - Publishing images, marketing copy, or a new site.
+  blast_radius:
+    allowed_files:
+      - README.md
+      - CONTRIBUTING.md
+      - SECURITY.md
+      - docs/session_4/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - any api/**, webui/**, deploy/**, schemas/**, tests/** file
+      - .env, .env.example
+      - docs/archive/**
+      - docs/model_setup.md substance (link-correctness edits only, if any)
+      - model weight or generated media files
+  invariants:
+    - No code, config, or WebUI behavior changes; this is a documentation-only session.
+    - The security/status callout stays honest: it states there is no auth and the deployment assumes a trusted LAN (INV-4); it does not claim untested capabilities.
+    - Every relative link in the edited docs resolves to a file that exists in the tree.
+  acceptance_criteria:
+    - README.md leads with features and a quickstart a new user can follow in minutes; no development/CI clutter remains in it.
+    - The development/CI workflow lives in CONTRIBUTING.md.
+    - A slim honest security/status callout is present and accurate.
+    - No reference to the archived docs/release_checklist.md; no live R-16 reference; no residual auth prose; every internal link resolves.
+  deterministic_checks:
+    - "rg -n \"release_checklist|R-16\" README.md SECURITY.md"
+    - "rg -n \"COSMOS3_API_KEY|X-API-Key\" README.md SECURITY.md"
+    - "# verify every relative link in README.md / SECURITY.md / CONTRIBUTING.md resolves to an existing file"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+  adversarial_cases:
+    - The README rewrite drops a must-have setup step (checkpoint download, make build/up/health) so a new user cannot actually run it.
+    - A relocated dev section is deleted from README.md but never actually added to CONTRIBUTING.md (lost, not moved).
+    - The rewrite reintroduces auth instructions that UX-S1 removed.
+    - A slimmed security note becomes dishonest (implies untested modes work, or hides the socket/no-auth posture).
+    - A "friendly" link points at a file that does not exist (release_checklist.md, an archived path).
+  failure_modes_to_watch:
+    - Internal links to docs that moved to docs/archive/** during earlier phases.
+    - Per-mode verification claims drifting ahead of docs/evidence_map.md.
+    - CONTRIBUTING.md duplicating rather than owning the dev workflow.
+  done_condition: GATE-UX-S4-DOCS passes with a features-first README, dev detail in CONTRIBUTING.md, a slim honest callout, and all internal links resolving.
+  handoff_requirements:
+    - Confirmation that docs/risk_register.md, docs/evidence_map.md, and docs/eval_seed_cases.md reflect the closed state of UX-S1..UX-S4.
+    - Any residual item recorded in the closing handoff (e.g. R-05 VRAM caveat, deferred R-16).
+  eval_seed_candidates:
+    - EV-UX-DOCS-LINKS-RESOLVE
