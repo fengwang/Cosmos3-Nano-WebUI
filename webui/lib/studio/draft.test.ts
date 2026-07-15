@@ -6,12 +6,13 @@ import type { AttachedMedia, Draft } from "@/lib/studio/types";
 const image: AttachedMedia = { kind: "image", mime: "image/png", name: "a.png", bytes: 10, dataBase64: "QQ==" };
 
 describe("initialDraft", () => {
-  it("defaults to t2v with the standard-480 preset applied", () => {
+  it("defaults to t2v with the hi-720 video preset applied (UX-S2: 720p default)", () => {
     const d = initialDraft();
     expect(d.mode).toBe("t2v");
-    expect(d.preset).toBe("standard-480");
-    expect(d.params.height).toBe(480);
-    expect(d.params.width).toBe(640);
+    expect(d.preset).toBe("hi-720");
+    expect(d.params.height).toBe(720);
+    expect(d.params.width).toBe(1280);
+    expect(d.params.num_frames).toBe(49);
   });
 
   it("carries no checkpoint field (S6/FR-12: the deployed stack's checkpoint is implicit)", () => {
@@ -47,7 +48,7 @@ describe("draft reducer", () => {
   it("setParam updates a single field", () => {
     const d = draft(initialDraft(), { type: "setParam", key: "seed", value: 42 });
     expect(d.params.seed).toBe(42);
-    expect(d.params.height).toBe(480);
+    expect(d.params.height).toBe(720); // hi-720 default preserved; only seed changed
   });
 
   it("setParam with undefined clears the field", () => {

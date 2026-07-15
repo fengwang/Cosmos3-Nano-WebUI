@@ -67,6 +67,7 @@ export function ComposePanel() {
         />
         <Input
           label="Negative prompt (optional)"
+          placeholder="Using recommended default"
           value={draft.negativePrompt ?? ""}
           onChange={(e) => dispatch({ type: "setNegative", value: e.target.value })}
         />

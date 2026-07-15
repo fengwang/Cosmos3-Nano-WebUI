@@ -15,10 +15,11 @@ export type DraftAction =
   | { type: "clearMedia" }
   | { type: "reset" };
 
-const DEFAULT_PRESET: PresetId = "standard-480";
+const DEFAULT_PRESET: PresetId = "hi-720";
 
-/** A fresh default draft (t2v, the standard 480 preset). S6: the served checkpoint is implicit in the
- * deployed stack — the WebUI no longer selects it (FR-12). */
+/** A fresh default draft (t2v, the hi-720 720p preset — UX-S2: 720p is the default for video, agreeing
+ * with the server's mode-aware default). standard-480 stays available. S6: the served checkpoint is
+ * implicit in the deployed stack — the WebUI no longer selects it (FR-12). */
 export function initialDraft(): Draft {
   return applyPreset({ mode: "t2v", prompt: "", preset: DEFAULT_PRESET, params: {} }, DEFAULT_PRESET);
 }
