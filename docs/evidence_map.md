@@ -68,6 +68,28 @@ tests (`tests/api/test_orchestrator_stub.py`).
 | E-19 Emoji are tolerated in small, purposeful doses across all three (ChatGPT restrictive: "sparingly, never the sole signal, not decorative in every heading"; QWen "cautiously for"; Gemini neutral). | ChatGPT emoji rule; QWen sample template uses two section emoji; Gemini does not object. | Provider reports, 2026-07-24 | High (that sparing use is safe) | Adopt sparing section-anchor emoji, never the only signal — consensus-compatible. Not a MUST. |
 | E-20 The honest facts that MUST survive the rewrite (from the settled phase-2/3 state). | Only text→image is GPU-verified end to end (`GPU-S3`); other modes are implemented · CPU-tested · GPU gate `MIG-S8`; no application auth; loopback default with LAN opt-in; root-equivalent Docker socket; guardrails-off; thin FP8 720p headroom. All in the current `README.md:36-56,138-177` and the archived phase-3 pack (`docs/archive/phase-3/evidence_map.md` rows E-17..E-26 and `docs/archive/phase-3/risk_register.md` rows R-01/R-05 — phase-3 IDs, distinct from this phase's). | `README.md`; archived phase-3 pack | High | The honesty invariant (INV-6) and the `R-04` adversarial pass exist to keep these intact under a punchier hook. |
 
+## LX-S2 execution harvest — 2026-07-24
+
+`LX-S2` closed. `README.md` was rewritten to the ADHD-friendly design
+(`docs/session_2/refining.md`) and verified by a deterministic checker (16/16),
+an independent 6-axis review (`docs/session_2/sharded_review.md`, no High/Critical),
+and the mandatory fresh-context adversarial honesty pass
+(`docs/session_2/adversarial_verification.md`, **PASS**).
+
+| Claim | Evidence | Confidence |
+|---|---|---|
+| E-21 The rewrite preserves every honest fact (E-20) and adds none unverified. | New Status & security is a strict **superset** of the prior section (all five posture facts, visible, at the end); only text→image is "GPU-verified end to end"; the 720p t2v smoke is stated as "passed" but explicitly **not** promoted to "verified". Confirmed by the adversarial pass (cases 1/2/9) and the checker's t2i-only subset assert. | High |
+| E-22 The runnable quickstart (INV-5) survives intact. | Checker P1: clone → pinned `hf download` (`9bf5d6ae1646…`, matches `docs/model_setup.md`) → `make build` → `make up-fp8` → `make health` → open the Studio, ordered, in a fenced block; every `make` target exists in `Makefile`. | High |
+| E-23 The Mermaid map is faithful and small (INV-8). | 5 nodes (Browser → Next.js BFF → FastAPI → Orchestrator → vLLM-Omni container); after the review's INV-8 note the control plane (Docker-socket start/stop) and data plane (generate over HTTP) are shown as separate edges. Faithful to `webui/app/api/[...path]/route.ts`, `api/orchestrator/*`, `deploy/**`. | High |
+| E-24 The 30-min idle keep-warm behavior is documented accurately (R-03/R-04). | README states: model stays resident after a job; evicted after 30 idle min to free VRAM; `COSMOS3_IDLE_TIMEOUT_SECONDS` default 1800, `0` never evicts; a different-model request preempts immediately. Matches `api/app/main.py`, `api/orchestrator/manager.py`, E-02/E-05. | High |
+| E-25 Links resolve, no cloud CTA, single file (INV-7, FR-9/FR-10). | Checker P5: 34 link targets resolve; zero codespace/devcontainer/cloud matches. Depth linked to `CONTRIBUTING.md` / `docs/model_setup.md`, not inlined. | High |
+
+Residual (out of scope): `docs/model_setup.md` records only the NVFP4 720p t2v
+smoke, while the README (pre-existing wording, unchanged by LX-S2) says the smoke
+passed on both FP8 and NVFP4. The broader claim is backed by the phase-3 archive
+(`docs/archive/phase-3/evidence_map.md` E-17/E-18); `model_setup.md` is outside
+LX-S2's blast radius. Noted for a future doc-consistency pass, not changed here.
+
 ## Speculative / owner-decision markers
 
 - **Owner decisions (not evidence-derived), binding as contract constraints:**

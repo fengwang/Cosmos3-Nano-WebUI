@@ -53,6 +53,46 @@ Workflow lessons (eval-harvest):
 - **Subtle correctness trap:** ellipsis redaction requires U+2026, not `...`. Promotion: `EV-LX-ARCHIVE-SCRUB-ELLIPSIS` above + a scrub-practice note.
 - **Effective design (kept):** pinning the *app-wired* value through `create_app()` rather than a module literal is what makes the wiring test non-hollow — the adversarial verifier tamper-tested exactly this. Promotion: already the headline test; pattern worth reusing for future "default value" changes.
 
+## LX-S2 execution harvest — 2026-07-24
+
+`LX-S2` closed. The five LX-S2 deterministic checks passed with concrete evidence
+(scratchpad `check_readme.py`, 16/16; independent 6-axis review with no
+High/Critical; fresh-context adversarial honesty pass **PASS**).
+
+| ID | Result | Evidence |
+|---|---|---|
+| EV-LX-README-RUNNABLE-QUICKSTART | PASS | Checker P1 — clone → pinned `hf download` (`9bf5d6ae1646…`, matches `docs/model_setup.md`) → `make build` → `make up-fp8` → `make health` → open the Studio, ordered, fenced; all `make` targets exist in `Makefile` (E-22). |
+| EV-LX-README-HONEST-CAVEATS | PASS | Checker P2 — `## Status & security` visible (not in `<details>`), final third; five posture facts + the 30-min idle keep-warm behavior present. Adversarial case 2: a strict superset of the prior section (E-21/E-24). |
+| EV-LX-README-VERIFIED-SUBSET | PASS | Checker P3 — 6 "GPU-verified" claims, all t2i-scoped (wrap-robust context-window scan); adversarial cases 1/9 (E-21). |
+| EV-LX-README-STRUCTURE | PASS | Checker P4 — "TL;DR" near the top; one `mermaid` fence with 5 nodes; two `<details>` each with a blank line after `</summary>`; 12 in-page anchor links (E-23). |
+| EV-LX-DOCS-LINKS-RESOLVE | PASS | Checker P5 — 34 link/anchor targets resolve; zero codespace/devcontainer/cloud matches (E-25). |
+
+New seed harvested this session:
+
+| ID | Purpose | Inputs | Expected properties | Gate |
+|---|---|---|---|---|
+| EV-LX-README-CHECKPOINT-PIN | The README's checkpoint repo ids / pinned revisions / licenses must not drift from `docs/model_setup.md` (the source of truth). | Compare the README "Checkpoint setup" table against `docs/model_setup.md`. | Each repo id, pinned-revision prefix, and license in the README matches `docs/model_setup.md`. This session verified the match manually and via the adversarial pass; the deterministic gate did **not** assert it (a real Nit from the review). | LX-S2 (met manually) |
+
+Workflow lessons (eval-harvest):
+
+- **Checker false positive caught by self-review, not by the gate:** the honesty
+  assert (P3) first used a 90-char backward window and flagged the word "action"
+  from a *preceding implementation sentence* ("...and action mode is implemented
+  and covered by CPU tests.") as if it were the subject of the adjacent
+  "GPU-verified end to end" claim. Fix: scope to the immediate subject clause
+  (55 chars) and keep a **negative control** proving real conflations
+  ("text→video is GPU-verified") are still caught. Promotion: reuse the
+  "assert with a negative control" pattern for any honesty/subset checker.
+- **Pre-existing out-of-scope nuance surfaced by the adversarial pass:**
+  `docs/model_setup.md` records only the NVFP4 720p t2v smoke while the README
+  (pre-existing wording) says both FP8 and NVFP4. The broader claim is backed by
+  the phase-3 archive; `model_setup.md` is outside LX-S2's blast radius. Promotion:
+  `EV-LX-README-CHECKPOINT-PIN` above + a future doc-consistency pass (not this session).
+- **Effective (kept):** writing the deterministic checker *first* and running it
+  on the *current* README to prove it bites (10/16 — the 6 failing asserts being
+  exactly the ADHD moves LX-S2 must add) gave a genuine red→green signal for a
+  documentation task, not just a green rubber-stamp.
+
 ## Manual GPU Smokes
 
 **None this phase.** Both sessions are fully verifiable with the deterministic,
