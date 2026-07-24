@@ -1,0 +1,81 @@
+session_contract:
+  id: LX-S1
+  objective: >
+    Extend the idle keep-warm timeout from 10 to 30 minutes so a single RTX 5090 is comfortable with
+    default settings: change COSMOS3_IDLE_TIMEOUT_SECONDS's shipped default 600->1800 at both sources of
+    truth (api/app/main.py and the Orchestrator constructor), surface the knob in .env.example, add a CPU
+    unit test, and record the audit that generation/cold-start ceilings already cover >=30-min work. Runs
+    first; does not touch README.md.
+  risk_level: low
+  routing: single_agent  # single agent + deterministic checks + one review. No GPU, no human gate.
+  in_scope:
+    - Set the COSMOS3_IDLE_TIMEOUT_SECONDS fallback "600"->"1800" at api/app/main.py:173.
+    - Align the Orchestrator constructor default idle_timeout 600.0->1800.0 at api/orchestrator/manager.py:46 so a directly-constructed orchestrator cannot drift.
+    - Add COSMOS3_IDLE_TIMEOUT_SECONDS to .env.example with a one-line comment (idle keep-warm seconds; default 1800 = 30 min; 0 = never evict).
+    - Add/extend a CPU unit test asserting the app wires idle_timeout==1800 with no env, honors an explicit override, and treats 0 as disabled (no timer scheduled).
+    - Record the generation/cold-start audit in docs/evidence_map.md (COSMOS3_GEN_TIMEOUT 2400/7200; COSMOS3_PLANE_READY_TIMEOUT 1800) confirming the idle change is the one that serves the goal.
+  out_of_scope:
+    - Any timeout other than COSMOS3_IDLE_TIMEOUT_SECONDS (gen, plane-ready, reasoner, WebUI SSE heartbeat) - audited, not changed.
+    - Editing README.md (owned by LX-S2) or any WebUI file.
+    - Any public API schema/route change; any GPU work or GPU smoke.
+    - Changing the notify_idle semantics, the eviction mechanism, network binding, auth, checkpoints, or the vLLM-Omni pin.
+  blast_radius:
+    allowed_files:
+      - api/app/main.py                 # the env fallback default 600 -> 1800
+      - api/orchestrator/manager.py     # the Orchestrator constructor default 600.0 -> 1800.0
+      - .env.example                    # surface + document the idle keep-warm knob
+      - tests/**                        # new/updated CPU unit test pinning the wired default
+      - docs/session_1/**               # session working docs (created when the session executes)
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - README.md                       # owned by LX-S2 (shared-surface guard, R-05)
+      - any api/** file other than main.py and orchestrator/manager.py
+      - any webui/** file; any deploy/** file; schemas/openapi.json
+      - api/jobs/gen_client.py, api/engines/vllm_omni/work.py, api/app/routes/reasoning.py  # other timeouts - audit only
+      - docs/archive/**
+      - model weight or generated media files
+  invariants:
+    - The idle keep-warm value stays an overridable operator setting via COSMOS3_IDLE_TIMEOUT_SECONDS; 0 still disables eviction (notify_idle contract unchanged) (INV-2).
+    - No public API request/response schema shape, no route behavior, and no timeout other than idle keep-warm changes; schemas/openapi.json is unaffected (INV-3).
+    - Raising the idle window cannot starve another plane - acquire() cancels the idle timer and evicts-before-load (INV-4, E-05).
+    - No new absolute path, secret, or binary is introduced (INV-1).
+  acceptance_criteria:
+    - The app built with no timeout env wires an idle keep-warm of 1800 s; an explicit override is honored; 0 disables eviction.
+    - Both the main.py fallback and the Orchestrator constructor default read 1800.
+    - .env.example documents COSMOS3_IDLE_TIMEOUT_SECONDS consistently with the code default.
+    - The generation/cold-start audit is recorded in docs/evidence_map.md; no other timeout/schema/route changed.
+    - uv run pytest -m "not gpu" is green; README.md is untouched.
+  deterministic_checks:
+    - "rg -n \"COSMOS3_IDLE_TIMEOUT_SECONDS\" api/app/main.py .env.example"
+    - "rg -n \"idle_timeout\" api/orchestrator/manager.py"
+    - "uv run pytest -m \"not gpu\""
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - Only api/app/main.py is changed, leaving api/orchestrator/manager.py at 600.0, so a directly-constructed orchestrator silently stays at 10 min (R-02).
+    - The change is applied to a generation timeout (gen_client.py / work.py) instead of the idle keep-warm, so the "cold reload after a pause" pain is unfixed and generation behavior is perturbed (R-01).
+    - The default is hard-coded so the env override or the 0-disables case no longer works (INV-2 breach).
+    - README.md is edited to document the new default, colliding with LX-S2's rewrite (R-05).
+    - The unit test asserts the constant literal rather than the app-wired value, so a main.py wiring regression passes unnoticed.
+  failure_modes_to_watch:
+    - An existing orchestrator idle-eviction test hard-codes 600 and now fails - update it to the new default rather than reverting the change.
+    - .env.example value drifts from the code default (documents 600 while code says 1800, or vice versa).
+    - The 0-disables branch (notify_idle only schedules when idle_timeout > 0) is not covered by the test.
+  done_condition: GATE-LX-S1-TIMEOUT passes - idle keep-warm defaults to 1800 at both definitions, proven by a CPU unit test, documented in .env.example, with the generation/cold-start audit recorded and README.md untouched.
+  handoff_requirements:
+    - Confirmation the idle keep-warm default is now 1800 s, for the LX-S2 README status callout.
+    - Confirmation README.md was not edited (shared-surface guard, R-05).
+    - Note that the WebUI SSE heartbeat (E-08, R-03) remains an out-of-scope future consideration.
+  eval_seed_candidates:
+    - EV-LX-IDLE-DEFAULT-1800
+    - EV-LX-ENV-EXAMPLE-DOC
+    - EV-LX-TIMEOUT-AUDIT
+    - EV-LX-CPU-SUITE-GREEN
