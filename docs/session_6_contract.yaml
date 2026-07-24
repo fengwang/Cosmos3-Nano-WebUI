@@ -1,0 +1,81 @@
+session_contract:
+  id: AM-S6
+  objective: >
+    Teach each mode by example, honestly. Add a lean README "See it in action" section
+    (per-mode example input -> what to expect) linking a separate docs/walkthrough.md
+    (per-mode step-by-step with example input -> expected output and docs/images/...
+    placeholders the owner fills). Update the README per-mode verification status to the
+    final AM-S2..AM-S5 matrix (only owner-passed modes/formats are "GPU-verified"), and
+    reconcile the BF16-base license discrepancy (E-14) in docs/model_setup.md. Docs only.
+  risk_level: low
+  routing: single_agent  # single agent + deterministic checks + one review, PLUS a mandatory adversarial no-over-claim / no-lost-caveat honesty pass
+  in_scope:
+    - README "See it in action" - a concise per-mode section (example input + what to expect) linking docs/walkthrough.md; lean, no inlined screenshots.
+    - docs/walkthrough.md - per-mode step-by-step (exact prompt/input, command/UI action, expected output written against real owner-approved runs, and an ![...](docs/images/<mode>-<example>.png) placeholder per step). No image binary committed.
+    - Honest per-mode status - update the README Features/Status verification to the final matrix; anything that did not pass (e.g. an NVFP4-format limitation) stated honestly, not hidden; reflect zero-BF16 onboarding.
+    - License reconciliation - resolve the BF16-base license (E-14) against the HF source and state it once, consistently, in docs/model_setup.md (and the README table if present).
+    - Verify - every internal link/anchor resolves; the adversarial honesty pass finds no surviving over-claim or lost caveat.
+  out_of_scope:
+    - Any code, config, deploy/**, or webui/** change (docs only). A doc-surfaced product bug is filed, not fixed here.
+    - Adding image binaries (placeholders only, INV-1).
+    - Changing any verified behavior or per-mode result - this session reports AM-S2..AM-S5 outcomes, it does not create them.
+    - Editing docs/archive/**.
+  blast_radius:
+    allowed_files:
+      - README.md                                # "See it in action" section + honest per-mode status
+      - docs/walkthrough.md                       # NEW - per-mode example -> expected output + placeholders
+      - docs/model_setup.md                       # license reconciliation + zero-BF16 setup facts
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+      - docs/session_6/**
+    forbidden_files:
+      - any api/** file; any webui/** file; any deploy/** file; Makefile; .env.example
+      - docs/images/**                            # placeholders reference these paths; the OWNER adds the binaries
+      - schemas/openapi.json
+      - docs/archive/**
+      - model weight, checkpoint, or generated-media files
+  invariants:
+    - Every "GPU-verified" claim in README.md is a subset of the modes/formats with a recorded run AND owner quality PASS (INV-6).
+    - A mode/format that did not pass is documented honestly, not hidden or over-claimed (INV-7).
+    - docs/walkthrough.md commits no image binary; every image link is a placeholder under docs/images/ (INV-1).
+    - Every internal link/anchor in the edited docs resolves; the BF16-license statement is single and consistent (R-09).
+    - No code/config/deploy/webui change; expected-output prose matches real owner-approved runs, never a pre-run guess (R-13).
+  acceptance_criteria:
+    - README has a "See it in action" section linking docs/walkthrough.md; the walkthrough has a per-mode example (input -> expected output) with a docs/images/... placeholder per step and no committed binary.
+    - The README verified set is a subset of the owner-passed set (per format, per mode); zero-BF16 onboarding is reflected.
+    - The BF16-base license discrepancy is reconciled; every internal link resolves.
+    - The adversarial honesty pass finds no surviving over-claim or lost caveat.
+  deterministic_checks:
+    - "rg -n \"GPU-verified\" README.md"
+    - "rg -n \"docs/images/\" docs/walkthrough.md"
+    - "git status --porcelain docs/images"
+    - "python - <<'PY' # relative-link + anchor resolver over README.md, docs/walkthrough.md, docs/model_setup.md\nprint('links resolve check runs here')\nPY"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - A mode is called "GPU-verified" in the README although its owner quality gate was FAIL or unrecorded (INV-6 breach).
+    - An NVFP4-format limitation from AM-S5 is omitted, implying NVFP4 all-modes (INV-7 breach).
+    - docs/walkthrough.md states an "expected output" for a mode/format that never ran on GPU (R-13 breach).
+    - A screenshot binary is committed instead of a placeholder (INV-1 breach; caught by git status docs/images).
+    - The BF16-base license is stated two different ways across README and docs/model_setup.md (R-09 breach).
+    - A caveat (guardrails-off, no-auth, per-mode status) is dropped or softened while adding the upbeat examples (honesty regression).
+  failure_modes_to_watch:
+    - An image link points outside docs/images/ or to a path the owner cannot easily populate - normalize to docs/images/<mode>-<example>.png.
+    - A "See it in action" example implies a capability that only passed on one format - scope the claim to the passing format.
+    - The link resolver misses an in-page anchor - keep a negative control that a deliberately broken link is caught.
+  done_condition: GATE-AM-S6-DOCS passes - README "See it in action" links docs/walkthrough.md; the walkthrough has per-mode example input -> expected output + docs/images/ placeholders with no committed binary; the README verified set is a subset of what passed the owner gate; the BF16 license is reconciled; every internal link resolves; and the adversarial honesty pass finds no surviving over-claim or lost caveat.
+  handoff_requirements:
+    - Confirmation that the README verified set matches the owner-passed matrix and no caveat was dropped.
+    - The list of docs/images/... placeholder paths the owner will populate, in walkthrough order.
+    - Any residual owner-decided limitation (e.g. an NVFP4-format gap) recorded; the phase-5 (AM) pack ready to archive per convention.
+  eval_seed_candidates:
+    - EV-AM-README-VERIFIED-SUBSET
+    - EV-AM-WALKTHROUGH-STRUCTURE
+    - EV-AM-DOCS-LINKS-RESOLVE

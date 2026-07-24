@@ -1,0 +1,92 @@
+session_contract:
+  id: AM-S4
+  objective: >
+    Collapse the deploy surface so a plain `make up-fp8` brings up all three modes
+    (Studio + Reasoning + Action) off the quantized-only FP8 checkpoint, orchestrator
+    swapping residency on demand. Remove the docker-compose.reasoning.yml overlay
+    dependency and the WITH_REASONING default build split; reconcile Makefile,
+    .env.example, deploy/**, and docs/model_setup.md so no BF16 base is required. Prove
+    it with a full all-modes GPU smoke; keep t2i non-regressed.
+  risk_level: high
+  routing: worker_plus_reviewers  # worker + sharded review + adversarial verifier + full all-modes GPU smoke + owner confirmation
+  in_scope:
+    - Fold the AM-S2/AM-S3 reasoning+action wiring into the default docker-compose.fp8.yml / docker-compose.base.yml so `make up-fp8` alone serves all three modes.
+    - Remove the BF16 surface from the default path - no BF16 base bind-mount in the rendered config; the default api image builds without WITH_REASONING=1; retire/demote up-fp8-reasoning, COSMOS3_BASE_DIR, and the BF16 reasoner/action defaults in .env.example/Makefile/deploy/**.
+    - Reconcile docs/model_setup.md so the setup contract requires only the quantized checkpoint(s) for all modes (drop the "reasoning/action also need the BF16 base" instruction), reflecting any new pinned action-bundled revision (README prose stays for AM-S6).
+    - Preserve the residency safety net across the all-modes deployment; if Studio+Reasoning share one resident model, record the OOM-free trace; update coresidency.py documented footprints if the BF16-reasoner assumption no longer holds (R-08).
+    - Full all-modes GPU smoke on one make up-fp8 (GPU-AM-ALLMODES-FP8) - each mode works, on-demand swaps succeed, t2i non-regressed (GPU-AM-T2I-NOREGRESS), CPU suite green.
+  out_of_scope:
+    - NVFP4 GPU verification (AM-S5) - keep the nvfp4 stack buildable/renderable but do not GPU-verify it here.
+    - README.md / docs/walkthrough.md prose (AM-S6).
+    - Any diffusers t2v routing (INV-3); auth/guardrails/network changes.
+    - New public API routes/schema shapes unless authorized (INV-8).
+  blast_radius:
+    allowed_files:
+      - deploy/docker-compose.base.yml          # unify all-modes wiring
+      - deploy/docker-compose.fp8.yml
+      - deploy/docker-compose.reasoning.yml     # retire/repoint (may be deleted if fully folded in)
+      - deploy/api.Dockerfile                    # drop WITH_REASONING default split
+      - deploy/vllm-omni.Dockerfile              # only if the all-modes serving requires it
+      - Makefile                                 # `up-fp8` == all modes; retire up-fp8-reasoning
+      - .env.example                             # remove BF16 defaults; document zero-BF16 all-modes
+      - api/app/main.py                          # finalize the default worker/engine wiring
+      - api/orchestrator/**                       # residency wiring for the unified stack
+      - api/engines/**                            # finalize reasoning/action serving in the default path
+      - docs/model_setup.md                       # setup contract: quantized-only, no BF16
+      - tests/**                                  # compose-render / wiring tests updated
+      - docs/session_4/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - README.md; docs/walkthrough.md; docs/images/**   # owned by AM-S6
+      - any webui/** file                                 # out of scope unless a bug surfaces (R-12)
+      - schemas/openapi.json                              # no shape change unless authorized (INV-8)
+      - docs/archive/**
+      - model weight, checkpoint, or generated-media files
+  invariants:
+    - A single make up-fp8 serves all three modes off the quantized-only checkpoint; no BF16 base mount, no overlay, no WITH_REASONING in the default path (INV-4, EV-AM-ZERO-BF16-WIRING).
+    - t2i (vllm-omni, FP8) remains GPU-verified end to end; the t2i smoke re-passes (INV-2).
+    - Only modes that passed their AM-S2/AM-S3 gates are enabled by default (INV-7).
+    - The residency safety net holds under the all-modes deployment - a different-mode request preempts without OOM; any plane-merge has a recorded OOM-free trace (INV-5).
+    - schemas/openapi.json shape unchanged unless authorized; no weight/media binary committed (INV-8/INV-1).
+  acceptance_criteria:
+    - The rendered docker compose -f deploy/docker-compose.fp8.yml config shows an all-modes wiring with no BF16 base mount and no reasoning overlay required.
+    - The default api image builds without WITH_REASONING=1; `rg` finds no remaining documented all-modes path via up-fp8-reasoning.
+    - A single `make up-fp8` GPU smoke runs Studio, Reasoning, and Action with correct on-demand swaps; t2i non-regressed.
+    - docs/model_setup.md requires only the quantized checkpoint(s); the CPU suite is green.
+  deterministic_checks:
+    - "uv run pytest -m \"not gpu\""
+    - "docker compose -f deploy/docker-compose.fp8.yml config"
+    - "rg -n \"up-fp8-reasoning|WITH_REASONING|COSMOS3_BASE_DIR\" Makefile deploy .env.example"
+    - "git diff --exit-code schemas/openapi.json"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - A BF16 base mount or WITH_REASONING=1 survives in the default stack, so "zero-BF16 by default" is false (INV-4 breach; caught by EV-AM-ZERO-BF16-WIRING).
+    - A mode that never passed its gate is enabled by default, so `make up-fp8` errors on that mode (INV-7 breach; caught by GPU-AM-ALLMODES-FP8).
+    - t2i regresses under the unification and no t2i smoke was re-run (INV-2 breach).
+    - The reasoning overlay is "removed" from docs but the all-modes path still silently depends on it at runtime (config-vs-runtime drift).
+    - coresidency.py still documents a 26 GiB BF16 reasoner while runtime is quantized, misleading a future reader (R-08).
+  failure_modes_to_watch:
+    - A compose-render test hard-codes the old three-posture layout - update it to the unified all-modes stack.
+    - Deleting docker-compose.reasoning.yml breaks a Makefile target or a test that referenced it - repoint or remove consistently.
+    - The unified stack fits FP8 but the nvfp4 render breaks - keep nvfp4 renderable (AM-S5 verifies it on GPU).
+  done_condition: GATE-AM-S4-ORCHESTRATION passes - `make up-fp8` serves all three modes with no BF16 required, overlay + WITH_REASONING default split removed, config shows no BF16 mount, the full all-modes FP8 smoke passes, t2i non-regressed, and the CPU suite is green.
+  handoff_requirements:
+    - The unified FP8 all-modes design (compose/env/orchestrator shape) as the template for AM-S5 (NVFP4).
+    - The residency model (swap vs merge) and its VRAM evidence; the checkpoint revision(s) in use.
+    - For AM-S6 - the final per-mode FP8 verification status and the zero-BF16 setup facts.
+  eval_seed_candidates:
+    - EV-AM-CPU-SUITE-GREEN
+    - EV-AM-ZERO-BF16-WIRING
+    - EV-AM-NO-OVERLAY-DEFAULT
+    - EV-AM-SCHEMA-STABLE
+    - GPU-AM-ALLMODES-FP8
+    - GPU-AM-T2I-NOREGRESS

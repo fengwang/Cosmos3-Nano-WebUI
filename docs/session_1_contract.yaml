@@ -1,0 +1,78 @@
+session_contract:
+  id: AM-S1
+  objective: >
+    Feasibility spike on the RTX 5090 (FP8 only): determine whether vllm-omni
+    (vllm serve --omni) can serve reasoning (/v1/chat/completions) and action off the
+    quantized-only checkpoint; confirm the action-tensor gap (E-06) against the real
+    checkpoint; and decide, per mode, option (a) vs (c) plus the zero-BF16 action
+    packaging path (bundle bf16 action_* adapters via tools/checkpoint_prep vs
+    alternative). Output is an owner-approved decision record + evidence, not shipped
+    production code; throwaway/dev wiring is acceptable.
+  risk_level: high
+  routing: branch_and_compare  # option a vs c per mode + evidence capture + owner decision gate
+  in_scope:
+    - Probe reasoning - attempt /v1/chat/completions (and the fork's --omni surface) on the running FP8 vllm-omni container off the quantized transformer; capture load/response/coherence; reproduce the "reasoning not currently working" state (E-05).
+    - Probe action - determine whether vllm-omni exposes any action-capable surface; if not, characterize the (c) fallback (the diffusers_action graft as its own residency plane).
+    - Confirm E-06 against the real FP8 checkpoint (no action_* tensors) and evaluate tools/checkpoint_prep for bundling the bf16 adapters (go/no-go + rough recipe).
+    - Record VRAM footprints (quantized generation resident; quantized-transformer chat server resident; whether Studio+Reasoning could share one resident model vs must swap).
+    - Write the per-mode (a)/(c) decision, the zero-BF16 action packaging decision, and the residency implication into the AM-S1 working doc + docs/evidence_map.md; get owner sign-off.
+  out_of_scope:
+    - Production wiring of reasoning/action (AM-S2/AM-S3).
+    - NVFP4 (AM-S5); this spike is FP8-only.
+    - The owner's final quality verdict on output (gated in AM-S2/AM-S3); this session establishes feasibility, not quality.
+    - Editing README.md, docs/walkthrough.md, or any webui/** file.
+    - Committing any re-exported checkpoint or weights.
+  blast_radius:
+    allowed_files:
+      - docs/session_1/**              # session working docs + captured probe evidence
+      - docs/evidence_map.md           # resolve S-A/S-C/S-E direction; confirm E-06; AM-S1 audit
+      - docs/risk_register.md          # R-01/R-02 progress
+      - docs/eval_seed_cases.md        # EV-AM-SPIKE-DECISION-RECORDED harvest
+      - docs/handoff.md
+    forbidden_files:
+      - any api/** file                # a spike must not ship production wiring
+      - any deploy/** file; Makefile; .env.example
+      - tools/checkpoint_prep/**       # evaluated, not modified, this session
+      - README.md; docs/walkthrough.md; docs/images/**
+      - schemas/openapi.json
+      - docs/archive/**
+      - model weight, checkpoint, or generated-media files
+  invariants:
+    - No production serving/orchestration code is permanently changed by the spike (INV-2 baseline preserved).
+    - No BF16 dependency is introduced as a default; the spike only characterizes paths (INV-4).
+    - No secret, private path, weight, or media binary is committed (INV-1).
+    - Feasibility findings are recorded as spike-gated evidence, never as shipped capabilities (INV-9).
+  acceptance_criteria:
+    - A per-mode (a)/(c) decision for reasoning and action is recorded with captured evidence.
+    - The zero-BF16 action packaging path is decided (bundle vs alternative), with the action-tensor gap confirmed against the real checkpoint.
+    - The residency implication (swap vs possible Studio+Reasoning plane-merge) is recorded with VRAM samples.
+    - The owner has signed off on the chosen paths; the CPU baseline (uv run pytest -m "not gpu") is still green.
+  deterministic_checks:
+    - "uv run pytest -m \"not gpu\""
+    - "rg -n \"action_\" api/engines/diffusers_action/loader.py"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - A "reasoning works" claim is recorded from a server that loaded but returned incoherent or empty completions (feasibility conflated with quality).
+    - The action-tensor gap (E-06) is assumed rather than re-confirmed against the actual downloaded checkpoint.
+    - A permanent production edit sneaks in under the guise of a spike (blast-radius breach).
+    - The decision omits the (c) fallback for action, leaving AM-S3 with no path if (a) fails.
+    - VRAM headroom is asserted without an nvidia-smi trace.
+  failure_modes_to_watch:
+    - The vllm-omni fork exposes no chat surface at all, forcing (c) for reasoning too (record it, do not force (a)).
+    - tools/checkpoint_prep cannot express the action-adapter bundle (record the limitation; escalate the packaging decision to the owner).
+    - The quantized-transformer chat server OOMs or fails to load (capture the error; it reshapes AM-S2).
+  done_condition: GATE-AM-S1-SPIKE passes - per-mode (a)/(c) + zero-BF16 action packaging decisions recorded, the action-tensor gap confirmed, and owner sign-off obtained, with the CPU baseline green.
+  handoff_requirements:
+    - The chosen mechanism per mode (reasoning a/c; action a/c) for AM-S2/AM-S3.
+    - The zero-BF16 action packaging recipe, or the explicit owner decision if deferred.
+    - The residency implication (Studio+Reasoning swap vs share) and any vllm-omni fork capability/limitation found.
+    - A recommendation on whether AM-S1 folds forward into AM-S2.
+  eval_seed_candidates:
+    - EV-AM-SPIKE-DECISION-RECORDED
+    - EV-AM-CPU-SUITE-GREEN

@@ -1,0 +1,92 @@
+session_contract:
+  id: AM-S2
+  objective: >
+    Make Reasoning (/v1/reason) run end to end on the FP8 stack off the quantized-only
+    checkpoint - no BF16 base mount, no docker-compose.reasoning.yml overlay, no
+    WITH_REASONING build - by the AM-S1 mechanism (option (a): route /v1/reason to the
+    vllm-omni chat endpoint; or option (c): a reasoner residency pointed at the quantized
+    checkpoint). Re-verify t2i is non-regressed and obtain the owner's manual
+    reasoning-quality PASS.
+  risk_level: high
+  routing: worker_plus_reviewers  # worker + sharded review + adversarial verifier + independent t2i-non-regression check + owner quality gate
+  in_scope:
+    - Serve reasoning off the quantized FP8 checkpoint by the AM-S1 mechanism (option (a) vllm-omni chat, or option (c) a reasoner residency at the quantized mount, evict-before-load vs generation).
+    - Remove the reasoning BF16 dependency from this path (no BF16 mount, no overlay, no WITH_REASONING default build).
+    - If option (a) merges Studio+Reasoning into one resident model, record the OOM-free VRAM trace (coresidency.handoff_ok/within_budget); else keep the swap.
+    - Keep the WebUI Reasoning tab (/chat) working and the /v1/reason API shape unchanged unless authorized.
+    - GPU-verify /v1/reason end to end (GPU-AM-REASON-FP8); re-run the t2i smoke (GPU-AM-T2I-NOREGRESS).
+    - Owner quality gate - owner runs custom prompts and records OWNER-AM-REASON-QUALITY; keep the CPU suite green, updating tests that pinned the old reasoner wiring.
+  out_of_scope:
+    - Action (AM-S3) and the default-on orchestration merge (AM-S4); a transitional/minimal wiring to run reasoning is acceptable here.
+    - NVFP4 (AM-S5); README.md / docs/walkthrough.md (AM-S6).
+    - Any BF16 reintroduction as a default (INV-4); any diffusers t2v change (INV-3).
+    - New public API routes/schema shapes unless explicitly authorized (INV-8).
+  blast_radius:
+    allowed_files:
+      - api/app/main.py                        # worker factory / reasoning wiring
+      - api/app/routes/reasoning.py            # reasoning route target (a: vllm-omni chat)
+      - api/orchestrator/**                     # residency spec for the reasoner (planes/manager/worker)
+      - api/engines/vllm/**                     # ReasonerConfig / loader / coresidency (point at quantized)
+      - api/engines/vllm_omni/**                # if reasoning is served via the omni container
+      - deploy/docker-compose.base.yml          # reasoning wiring on the FP8 path (transitional ok)
+      - deploy/docker-compose.fp8.yml           # FP8 stack reasoning wiring
+      - .env.example                            # reasoner env surface (drop BF16 defaults on this path)
+      - tests/**                                # updated/added CPU tests for the new wiring
+      - docs/session_2/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - README.md; docs/walkthrough.md; docs/images/**   # owned by AM-S6
+      - any webui/** file                                 # WebUI is out of scope unless a bug surfaces (R-12)
+      - api/engines/diffusers_action/**; api/app/routes/action.py  # action is AM-S3
+      - deploy/docker-compose.nvfp4.yml                   # NVFP4 is AM-S5
+      - schemas/openapi.json                              # no shape change unless authorized (INV-8)
+      - docs/archive/**
+      - model weight, checkpoint, or generated-media files
+  invariants:
+    - t2i (vllm-omni, FP8) remains GPU-verified end to end after the change; the t2i smoke re-passes (INV-2).
+    - No BF16 base mount, no reasoning overlay, no WITH_REASONING on the reasoning path (INV-4).
+    - The residency safety net holds - a different-mode request preempts; any plane-merge is backed by an OOM-free VRAM trace (INV-5).
+    - Reasoning is marked verified only after a recorded run AND the owner's quality PASS (INV-6).
+    - schemas/openapi.json shape is unchanged unless the contract authorizes it (INV-8).
+    - No secret, private path, weight, or media binary is committed (INV-1).
+  acceptance_criteria:
+    - /v1/reason streams a coherent completion off the quantized-only FP8 checkpoint from both the API and the WebUI Reasoning tab.
+    - No BF16 base / overlay / WITH_REASONING is required on the reasoning path (docker compose ... config shows no BF16 mount).
+    - The t2i smoke re-passes (INV-2); the CPU suite is green; the API schema shape is unchanged.
+    - The owner's OWNER-AM-REASON-QUALITY verdict is recorded PASS (else an explicit owner decision).
+  deterministic_checks:
+    - "uv run pytest -m \"not gpu\""
+    - "docker compose -f deploy/docker-compose.fp8.yml config"
+    - "git diff --exit-code schemas/openapi.json"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - Reasoning is marked verified from a single run with no owner quality verdict recorded (INV-6 breach).
+    - A BF16 base mount or WITH_REASONING=1 remains on the reasoning path, so "zero-BF16" is only half-true (INV-4 breach).
+    - t2i silently regresses because the t2i smoke was not re-run after the serving-path change (INV-2 breach).
+    - A plane-merge is adopted without a recorded OOM-free VRAM trace, risking OOM under load (INV-5 breach).
+    - A unit test asserts a stub reasoner rather than the app-wired quantized path, so a wiring regression passes unnoticed.
+  failure_modes_to_watch:
+    - An existing test hard-codes the BF16 reasoner dir or the WITH_REASONING build - update it to the new default, do not revert the change.
+    - The quantized-transformer chat path loads but degrades quality (owner gate FAIL) - escalate as an explicit owner decision, do not silently reintroduce BF16.
+    - Removing the separate reasoner subprocess breaks the reasoning readiness/health probe - re-wire the probe to the new target.
+  done_condition: GATE-AM-S2-REASONING passes - reasoning runs end to end on FP8 off the quantized-only checkpoint, t2i non-regressed, CPU suite green, and the owner's reasoning-quality verdict recorded PASS.
+  handoff_requirements:
+    - The exact reasoning wiring adopted (a/c) and whether Studio+Reasoning share one resident model or swap.
+    - The reasoner env/mount surface now that BF16 is gone; any transitional wiring AM-S4 must finalize.
+    - The owner quality verdict and the prompts used.
+  eval_seed_candidates:
+    - EV-AM-CPU-SUITE-GREEN
+    - EV-AM-ZERO-BF16-WIRING
+    - EV-AM-SCHEMA-STABLE
+    - GPU-AM-REASON-FP8
+    - GPU-AM-T2I-NOREGRESS
+    - OWNER-AM-REASON-QUALITY

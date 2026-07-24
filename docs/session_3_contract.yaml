@@ -1,0 +1,93 @@
+session_contract:
+  id: AM-S3
+  objective: >
+    Make Action (/v1/action/{forward_dynamics,inverse_dynamics,policy}) run end to end
+    on the FP8 stack off a quantized-only checkpoint, and obtain the owner's manual
+    action-quality PASS, without regressing t2i. Because the quantized checkpoint ships
+    without action tensors (E-06), zero-BF16 action requires bundling the bf16 action_*
+    adapters into a re-exported quantized checkpoint (via tools/checkpoint_prep) or the
+    AM-S1 (c) fallback, with any residual BF16 dependency an explicit owner decision.
+  risk_level: high
+  routing: worker_plus_reviewers  # worker + sharded review + adversarial verifier + checkpoint-integrity probe + owner quality gate
+  in_scope:
+    - If AM-S1 chose bundling, use tools/checkpoint_prep (mutation/rewrite/safetensors_io) to bundle bf16 action_* adapters into a re-exported FP8 checkpoint; run integrity_probe; pin a NEW immutable revision; record it in docs/model_setup.md; never mutate in place or repoint main.
+    - Serve action by the AM-S1 mechanism (option (a) via vllm-omni if feasible, else option (c) the diffusers_action graft as its own residency plane, evict-before-load) pointed at the quantized(-bundled) checkpoint, not the BF16 base (COSMOS3_BASE_ACTION_DIR retired/redirected).
+    - Re-verify t2i against the (possibly new) checkpoint revision (GPU-AM-T2I-NOREGRESS).
+    - GPU-verify action for the v1-scope embodiments (agibotworld 29-D policy/forward_dynamics; av 9-D inverse_dynamics) via the Action tab viewer (GPU-AM-ACTION-FP8).
+    - Owner quality gate - owner inspects trajectories/artifacts, records OWNER-AM-ACTION-QUALITY; keep the CPU suite green, updating test_action_* pinned to the old base-dir graft.
+  out_of_scope:
+    - Reasoning (AM-S2) and the default-on merge (AM-S4); NVFP4 (AM-S5); README/walkthrough (AM-S6).
+    - Deleting the dormant diffusers gen_worker path unless it actively conflicts (R-11).
+    - Committing any checkpoint/weights (only the pinned revision id is recorded; INV-1).
+    - New public API routes/schema shapes unless authorized (INV-8); any diffusers t2v change (INV-3).
+  blast_radius:
+    allowed_files:
+      - api/engines/diffusers_action/**         # action loader/adapter (redirect off BF16 base)
+      - api/app/routes/action.py                # action route wiring if needed
+      - api/app/main.py                          # action worker/engine wiring
+      - api/orchestrator/**                       # action residency plane (if option c)
+      - api/engines/vllm_omni/**                  # if action is served via the omni container
+      - tools/checkpoint_prep/**                  # bundle action adapters into a re-exported checkpoint
+      - deploy/docker-compose.base.yml            # action mount/wiring on the FP8 path (transitional ok)
+      - deploy/docker-compose.fp8.yml
+      - .env.example                              # action env surface (drop BF16 base defaults)
+      - docs/model_setup.md                       # record the new pinned action-bundled revision (NFR-5)
+      - tests/**                                  # tests/checkpoint_prep/** + updated action tests
+      - docs/session_3/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - README.md; docs/walkthrough.md; docs/images/**   # owned by AM-S6
+      - any webui/** file                                 # out of scope unless a bug surfaces (R-12)
+      - api/app/routes/reasoning.py; api/engines/vllm/**  # reasoning is AM-S2
+      - deploy/docker-compose.nvfp4.yml                   # NVFP4 is AM-S5
+      - schemas/openapi.json                              # no shape change unless authorized (INV-8)
+      - docs/archive/**
+      - model weight, checkpoint, or generated-media files (weights stay external; only the revision id is recorded)
+  invariants:
+    - t2i (vllm-omni, FP8) remains GPU-verified end to end at the checkpoint revision in use; the t2i smoke re-passes (INV-2).
+    - A re-exported checkpoint pins a NEW immutable revision and passes integrity_probe; the public main/prior revision is untouched (R-10, NFR-5).
+    - Action is served off the quantized(-bundled) checkpoint; any residual BF16 dependency is an explicit, recorded owner decision, not a silent default (INV-4).
+    - The residency safety net holds - action shares/preempts the GPU slot without OOM (INV-5).
+    - Action is marked verified only after a recorded run AND the owner's quality PASS (INV-6).
+    - No weight/media binary is committed; schemas/openapi.json shape unchanged unless authorized (INV-1/INV-8).
+  acceptance_criteria:
+    - /v1/action/{forward_dynamics,inverse_dynamics,policy} produce valid trajectories/artifacts for the v1-scope embodiments off a quantized-only checkpoint.
+    - If re-exported, the checkpoint has a new pinned revision recorded in docs/model_setup.md with an integrity-probe pass; t2i re-passes at that revision.
+    - The CPU suite is green; the API schema shape is unchanged.
+    - The owner's OWNER-AM-ACTION-QUALITY verdict is recorded PASS (else an explicit owner decision).
+  deterministic_checks:
+    - "uv run pytest -m \"not gpu\""
+    - "uv run pytest tests/checkpoint_prep -q"
+    - "git diff --exit-code schemas/openapi.json"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - The checkpoint is mutated in place or main is repointed, so a fresh download no longer matches the pinned revision (R-10).
+    - Action is served but silently still reads action_* from the BF16 base (COSMOS3_BASE_ACTION_DIR), so "zero-BF16" is false (INV-4 breach).
+    - t2i regresses because the re-export corrupted a shared tensor and no t2i smoke was re-run at the new revision (INV-2 breach).
+    - Action is marked verified from one run with no owner quality verdict (INV-6 breach).
+    - The bundle collides GEN and action keys (merge_state_dicts collision) and is silently forced instead of failing (correctness breach).
+  failure_modes_to_watch:
+    - tools/checkpoint_prep cannot express the bundle - escalate the packaging decision to the owner (INV-4), do not fall back to a BF16 default silently.
+    - vllm-omni cannot serve action - use the (c) diffusers_action residency plane per AM-S1, keeping INV-3 (no diffusers t2v) intact.
+    - Removing COSMOS3_BASE_ACTION_DIR breaks an action test that assumed the base graft - update the test to the quantized(-bundled) path.
+  done_condition: GATE-AM-S3-ACTION passes - action runs end to end on FP8 off a quantized-only checkpoint, any re-export pinned + integrity-probed + t2i-re-verified, t2i non-regressed, CPU suite green, and the owner's action-quality verdict recorded PASS.
+  handoff_requirements:
+    - The action serving mechanism and the checkpoint revision now in use (superseding the generation checkpoint or a separate mount).
+    - The env/mount surface with COSMOS3_BASE_ACTION_DIR retired/redirected; whether the dormant diffusers path was left in place.
+    - The owner quality verdict and the prompts/demos used.
+  eval_seed_candidates:
+    - EV-AM-CPU-SUITE-GREEN
+    - EV-AM-CHECKPOINT-INTEGRITY
+    - EV-AM-SCHEMA-STABLE
+    - GPU-AM-ACTION-FP8
+    - GPU-AM-T2I-NOREGRESS
+    - OWNER-AM-ACTION-QUALITY

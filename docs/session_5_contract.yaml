@@ -1,0 +1,86 @@
+session_contract:
+  id: AM-S5
+  objective: >
+    Extend the verified FP8 all-modes design (AM-S4) to the NVFP4 stack and GPU-verify
+    Studio, Reasoning, and Action on NVFP4 off the quantized-only NVFP4 checkpoint,
+    handling the 4-bit Blackwell kernel risk. Enable each mode by default on NVFP4 only
+    after it passes on NVFP4 (owner quality PASS); a mode that cannot be served on NVFP4
+    off quantized weights is an explicit, documented owner decision (INV-7). Keep t2i
+    (NVFP4) non-regressed.
+  risk_level: high
+  routing: branch_and_compare  # per-mode a/c + kernel fallback + adversarial verifier + owner per-mode quality gate
+  in_scope:
+    - Apply the AM-S4 all-modes design to docker-compose.nvfp4.yml (reasoning + action served off the quantized-only NVFP4 checkpoint by the FP8-chosen mechanism; no BF16 base).
+    - Handle NVFP4 kernel reality per mode - where the 4-bit path cannot serve reasoning/action (S-D), attempt the (c) fallback; if still infeasible, record an explicit owner decision and document the NVFP4-format limitation (INV-7). Respect NVFP4's no-layerwise-offload constraint.
+    - GPU-verify each mode on NVFP4 (GPU-AM-ALLMODES-NVFP4) with on-demand swaps; t2i (NVFP4) non-regressed (GPU-AM-T2I-NOREGRESS).
+    - Owner quality gate per mode on NVFP4 (OWNER-AM-REASON-QUALITY, OWNER-AM-ACTION-QUALITY); only PASS modes are enabled by default on NVFP4. Record NVFP4 VRAM footprints; keep the CPU suite green.
+  out_of_scope:
+    - Any change to the FP8 stack's verified behavior (a regression there blocks).
+    - README.md / docs/walkthrough.md prose (AM-S6).
+    - Introducing diffusers t2v (INV-3); auth/guardrails/network changes; new API schema shapes unless authorized (INV-8).
+    - Forcing a mode onto NVFP4 if kernels cannot support it (that becomes a documented owner decision, not a risky workaround).
+  blast_radius:
+    allowed_files:
+      - deploy/docker-compose.nvfp4.yml          # NVFP4 all-modes wiring
+      - deploy/docker-compose.base.yml           # only NVFP4-conditional wiring shared with the base
+      - .env.example                             # NVFP4 all-modes notes (still zero-BF16)
+      - api/app/main.py; api/orchestrator/**; api/engines/**   # NVFP4-specific serving/kernel handling only
+      - docs/model_setup.md                       # NVFP4 per-mode status / any NVFP4 action-bundled revision
+      - tests/**                                  # NVFP4 render/wiring tests
+      - docs/session_5/**
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - README.md; docs/walkthrough.md; docs/images/**   # owned by AM-S6
+      - any webui/** file                                 # out of scope unless a bug surfaces (R-12)
+      - deploy/docker-compose.fp8.yml                     # the FP8 stack is frozen-verified (regressions block)
+      - schemas/openapi.json                              # no shape change unless authorized (INV-8)
+      - docs/archive/**
+      - model weight, checkpoint, or generated-media files
+  invariants:
+    - t2i (vllm-omni, NVFP4) remains GPU-verified end to end; the t2i (NVFP4) smoke re-passes (INV-2).
+    - No BF16 base on the NVFP4 default path (INV-4).
+    - A mode is enabled by default on NVFP4 only after a recorded NVFP4 run AND the owner's NVFP4 quality PASS (INV-6/INV-7).
+    - A mode that cannot run on NVFP4 off quantized weights is a documented owner decision, not a hidden gap or a t2i-risking hack (INV-7).
+    - The FP8 stack's verified behavior is unchanged; the residency safety net holds (INV-5); no weight/media binary committed (INV-1).
+  acceptance_criteria:
+    - The rendered docker compose -f deploy/docker-compose.nvfp4.yml config shows an all-modes wiring with no BF16 mount.
+    - Each mode is GPU-verified on NVFP4 (owner PASS) or its NVFP4 limitation is recorded as an explicit owner decision.
+    - t2i (NVFP4) non-regressed; the CPU suite is green; the API schema shape is unchanged.
+    - Default-on on NVFP4 applies only to modes that passed on NVFP4.
+  deterministic_checks:
+    - "uv run pytest -m \"not gpu\""
+    - "docker compose -f deploy/docker-compose.nvfp4.yml config"
+    - "git diff --exit-code schemas/openapi.json"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - NVFP4 fails to serve reasoning/action but the stack enables them by default anyway, so `make up-nvfp4` errors (INV-7 breach).
+    - A mode's NVFP4 limitation is hidden or the README (later) claims NVFP4 all-modes when a format gap exists (INV-6/INV-7 breach; caught downstream by EV-AM-README-VERIFIED-SUBSET).
+    - An NVFP4 workaround (e.g. forcing layerwise offload, which its Marlin kernel forbids) regresses t2i (INV-2 breach).
+    - NVFP4 reasoning loads but quality is poor and is passed off as verified without the owner gate (INV-6 breach).
+    - A shared-base edit intended for NVFP4 leaks into and regresses the FP8 stack (blast-radius/regression breach).
+  failure_modes_to_watch:
+    - The NVFP4 4-bit LM/action kernels are unsupported on sm_120 for this fork - record it; try (c); escalate to an owner decision, do not risk t2i.
+    - NVFP4 resident footprint + a second plane exceeds 32 GiB - keep the swap discipline (INV-5), do not co-reside without a trace.
+    - A base-file change for NVFP4 unintentionally alters FP8 rendering - guard with a compose-render test for both stacks.
+  done_condition: GATE-AM-S5-NVFP4 passes - the AM-S4 design is applied to NVFP4, each mode is GPU-verified on NVFP4 (owner PASS) or its limitation is a recorded owner decision, t2i (NVFP4) non-regressed, no BF16 on the NVFP4 default path, and the CPU suite is green.
+  handoff_requirements:
+    - The final per-mode, per-format (FP8 / NVFP4) verification matrix - which modes passed the owner gate on which format.
+    - Any NVFP4-format limitation as an explicit owner decision, for honest documentation in AM-S6.
+    - NVFP4 VRAM footprints and the residency model on NVFP4.
+  eval_seed_candidates:
+    - EV-AM-CPU-SUITE-GREEN
+    - EV-AM-ZERO-BF16-WIRING
+    - EV-AM-SCHEMA-STABLE
+    - GPU-AM-ALLMODES-NVFP4
+    - GPU-AM-T2I-NOREGRESS
+    - OWNER-AM-REASON-QUALITY
+    - OWNER-AM-ACTION-QUALITY
