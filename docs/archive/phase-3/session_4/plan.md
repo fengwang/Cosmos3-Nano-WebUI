@@ -6,7 +6,7 @@ fail on the current tree (red), edit, watch it pass (green).
 
 ## Conventions
 
-- Repo root: `/workspace/github.repo/Cosmos3-Nano-WebUI`.
+- Repo root: `/workspace/…` (repo checkout root; path redacted — INV-1 scan hygiene).
 - Checker script (session-local, not committed to the app):
   `scratchpad/check_docs.py` — link resolver + spec-derived greps.
 - Commit points marked ⎇; commit only at clean checkpoints.

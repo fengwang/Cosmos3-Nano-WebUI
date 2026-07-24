@@ -31,6 +31,26 @@ Rules:
 | E-07 No timeout environment variable is surfaced in `.env.example`, so "default settings" means the code default. | `.env.example` (68 lines) documents WebUI/API wiring, engine selector, checkpoint dirs, mounts, and the vLLM pin — no `COSMOS3_*TIMEOUT*` entry. | Direct source inspection, 2026-07-24 | High | `LX-S1` both changes the code default (so no `.env` edit is needed) and surfaces the knob in `.env.example` for discoverability (FR-3). |
 | E-08 The WebUI SSE `heartbeatTimeoutMs` is a 30-second **liveness** timeout, not a total-duration cap. | `heartbeatTimeoutMs: 30_000` in the Studio job stream (`webui/app/(studio)/StudioProvider.tsx:144`), with an `AbortController` for teardown (`:141,164`). It aborts only if the server goes silent for 30 s; while progress/heartbeat events flow it stays connected for arbitrarily long jobs. | Direct source inspection, 2026-07-24 | Medium (behavioral read of the client; not re-derived by test here) | Out of scope this phase; recorded as a consideration (`R-03`). A long, genuinely quiet server phase is a separate concern, not the idle keep-warm. |
 
+## LX-S1 execution audit — 2026-07-24
+
+Recorded at execution of `LX-S1` (FR-4). The idle keep-warm default was raised; the
+generation-duration and cold-start ceilings were re-confirmed to already cover ≥30-min work and
+were **left unchanged**.
+
+| Timeout | Source | Default | ≥30 min? | LX-S1 action |
+|---|---|---|---|---|
+| Idle keep-warm | `COSMOS3_IDLE_TIMEOUT_SECONDS` (`api/app/main.py`; `Orchestrator` ctor) | **1800 s (30 min)** — was 600 s | the knob itself | **Changed** 600→1800 at both sources of truth; surfaced in `.env.example`; pinned by `tests/test_idle_keepwarm_default.py`. |
+| Generation (IPC) | `COSMOS3_GEN_TIMEOUT` (`api/jobs/gen_client.py:129`) | 2400 s (40 min) | Yes | Audited, **unchanged** (E-03). |
+| Generation (vLLM-Omni HTTP) | `DEFAULT_GEN_TIMEOUT` (`api/engines/vllm_omni/work.py:41,128`) | 7200 s (2 h) | Yes | Audited, **unchanged** (E-03). |
+| Cold-start readiness | `COSMOS3_PLANE_READY_TIMEOUT` (`api/app/main.py:177`) | 1800 s (30 min) | Yes | Audited, **unchanged** (E-04). |
+
+Conclusion: the idle keep-warm timeout was the only sub-30-min default and the one that caused the
+"cold reload after a pause" pain (E-01/E-02); raising it to 1800 s serves the goal without
+perturbing generation duration or cold start (FR-4/FR-5, INV-3). No other timeout, schema, or
+route changed. Verified by `tests/test_idle_keepwarm_default.py` (the app wires 1800 s with no env;
+an explicit override is honored; `0` disables eviction) and the existing orchestrator idle-eviction
+tests (`tests/api/test_orchestrator_stub.py`).
+
 ## README & ADHD-report evidence (LX-S2)
 
 | Claim | Evidence | Source | Confidence | Gap / Risk |

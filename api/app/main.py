@@ -170,7 +170,9 @@ def create_app(
     # The orchestrator is wrapped to time plane acquisition (model-load + swap); the job-work to time/count
     # each job; both delegate verbatim so the frozen FSM/runner behavior (INV-4/INV-5) is unchanged.
     metrics, registry = build_metrics()
-    idle_timeout = float(os.environ.get("COSMOS3_IDLE_TIMEOUT_SECONDS", "600"))
+    # Idle keep-warm: keep the resident plane warm 30 min (LX-S1) so a think-and-iterate pause
+    # survives instead of paying a cold reload; COSMOS3_IDLE_TIMEOUT_SECONDS overrides, 0 = never evict.
+    idle_timeout = float(os.environ.get("COSMOS3_IDLE_TIMEOUT_SECONDS", "1800"))
     # Generous plane-readiness ceiling for the vllm-omni container cold start (matches --init-timeout;
     # R-07). Harmless for the fast reasoning subprocess — wait_ready returns as soon as it is ready or
     # its process dies, never waiting out the ceiling.

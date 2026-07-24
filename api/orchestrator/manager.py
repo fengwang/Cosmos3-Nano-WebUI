@@ -43,7 +43,7 @@ class Orchestrator:
         idle_bytes: int = DEFAULT_IDLE_BYTES,
         vram_timeout: float = 180.0,
         post_evict_wait: VramWait | None = None,
-        idle_timeout: float = 600.0,
+        idle_timeout: float = 1800.0,
     ) -> None:
         self._factory = factory
         self._ready_timeout = ready_timeout

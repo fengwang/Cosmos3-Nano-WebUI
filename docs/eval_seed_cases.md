@@ -30,6 +30,29 @@ required or blocking** (PRD Decision 9). GPU inference remains the standing
 | EV-LX-README-STRUCTURE | The ADHD structural techniques are present (properties, not prose). | Structure asserts over `README.md`: a hook precedes deep install; a TL;DR block near the top; at least one ` ```mermaid ` fenced block (≤7 nodes); at least one `<details>`/`<summary>` for verbose content; in-page anchors / a TOC. | Each property present; the Mermaid block parses and has ≤7 nodes; each `<details>` has a blank line after `</summary>`. | LX-S2 |
 | EV-LX-DOCS-LINKS-RESOLVE | Every internal link resolves and there is no cloud CTA. | Relative-link + in-page-anchor resolver over `README.md` (and any doc it links that the session edits); `rg -in "codespace\|devcontainer\|open in cloud\|launch in the cloud" README.md`. | Every relative link and anchor points at an existing target; zero Codespaces/cloud call-to-action matches. | LX-S2 |
 
+## LX-S1 execution harvest — 2026-07-24
+
+`LX-S1` closed. The four LX-S1 deterministic checks passed with concrete evidence:
+
+| ID | Result | Evidence |
+|---|---|---|
+| EV-LX-IDLE-DEFAULT-1800 | PASS | `tests/test_idle_keepwarm_default.py` — app-wired 1800 via `create_app()`, override 900, `0`, constructor default 1800.0, and `0`-schedules-no-timer. Tamper-verified: reverting `main.py` to 600 fails the headline test. |
+| EV-LX-ENV-EXAMPLE-DOC | PASS | `.env.example:20-23` — `COSMOS3_IDLE_TIMEOUT_SECONDS=1800` + comment; documented default matches the code default; `0` = never evict noted. |
+| EV-LX-TIMEOUT-AUDIT | PASS | `docs/evidence_map.md` "LX-S1 execution audit" — gen 2400/7200, cold-start 1800 recorded ≥30 min and **unchanged**. |
+| EV-LX-CPU-SUITE-GREEN | PASS | `uv run pytest -m "not gpu"` → 523 passed, 0 failed (incl. the new module and the now-clean private-ref scan). |
+
+New seed harvested this session:
+
+| ID | Purpose | Inputs | Expected properties | Gate |
+|---|---|---|---|---|
+| EV-LX-ARCHIVE-SCRUB-ELLIPSIS | A redacted `/workspace/…` path must actually defeat the private-ref scanner (a real trap hit this session). | `uv run python tests/test_private_ref_scan.py`; the redaction character used in any scrubbed path. | Scan reports 0 findings; the redaction uses the single char U+2026 (`…`) — never three ASCII dots, because `.` is inside the scanner's `[A-Za-z0-9._/-]+` class, so a `/workspace/`-prefixed path written with three ASCII dots (instead of the ellipsis) would still match and leave the leak unfixed. | LX-S1 (met) |
+
+Workflow lessons (eval-harvest):
+
+- **Caught by the baseline check, not by review:** a pre-existing leaked `/workspace/<name>` path in `docs/archive/phase-3/session_4/plan.md` failed the private-ref scan. Running the full baseline suite *before* editing surfaced it early, so it became a deliberate owner decision rather than a late surprise. Promotion: none needed (procedure already followed); reinforced in the handoff.
+- **Subtle correctness trap:** ellipsis redaction requires U+2026, not `...`. Promotion: `EV-LX-ARCHIVE-SCRUB-ELLIPSIS` above + a scrub-practice note.
+- **Effective design (kept):** pinning the *app-wired* value through `create_app()` rather than a module literal is what makes the wiring test non-hollow — the adversarial verifier tamper-tested exactly this. Promotion: already the headline test; pattern worth reusing for future "default value" changes.
+
 ## Manual GPU Smokes
 
 **None this phase.** Both sessions are fully verifiable with the deterministic,
