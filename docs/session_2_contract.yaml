@@ -1,0 +1,88 @@
+session_contract:
+  id: LX-S2
+  objective: >
+    Rewrite README.md into an ADHD-friendly on-ramp: a punchy but factually-true hook, a copy-paste TL;DR
+    that preserves the runnable quickstart, a <=7-node Mermaid map, collapsible <details> for verbose
+    content, sparing callouts, and in-page navigation - while keeping every fact and relocating (never
+    deleting or hiding) the honest Status & security caveats to the end. Single file; depth stays linked
+    to CONTRIBUTING.md / docs/model_setup.md. Runs last, on the settled post-LX-S1 state (idle keep-warm
+    now 30 min).
+  risk_level: low
+  routing: single_agent  # single agent + deterministic checks + one review, PLUS a mandatory adversarial no-over-claim / no-lost-caveat pass (R-04). Owner read of the rendered README recommended before merge.
+  in_scope:
+    - Open with a factually-true one/two-line hook, immediately followed by a copy-paste TL;DR preserving the runnable quickstart (clone -> pinned hf download -> make build -> make up-fp8 -> make health -> open the Studio); drop the current top honesty banner (content moves to the bottom, not away).
+    - Add one <=7-node Mermaid map of the real WebUI -> API -> generation-container flow, faithful to deploy/** and api/orchestrator/**.
+    - Move verbose/advanced/troubleshooting content into collapsible <details>/<summary> (blank line after </summary>); never collapse essential setup or caveats.
+    - Add in-page anchors / a short TOC; tighten prose into short chunks; keep tables for features and checkpoints; sparing callouts and sparing purposeful emoji.
+    - Keep the FULL Status & security section visible (not in <details>) at the end - the five posture facts plus the new 30-min idle keep-warm behavior.
+    - Ensure every internal link/anchor resolves; link depth to CONTRIBUTING.md / docs/model_setup.md; no cloud/Codespaces CTA anywhere.
+  out_of_scope:
+    - Any code, config, or WebUI change (timeout is LX-S1); any GPU work.
+    - Splitting the README into new documents or creating a marketing site; adding a Codespaces/DevContainer/remote-dev path.
+    - Committing any image, GIF, or binary (the map is text/Mermaid; a demo image, if any, reuses an existing repo asset).
+    - Rewriting CONTRIBUTING.md / SECURITY.md / docs/model_setup.md substance (link-correctness only).
+    - Editing docs/archive/**.
+  blast_radius:
+    allowed_files:
+      - README.md
+      - docs/session_2/**               # session working docs (created when the session executes)
+      - docs/evidence_map.md
+      - docs/risk_register.md
+      - docs/eval_seed_cases.md
+      - docs/handoff.md
+    forbidden_files:
+      - any api/**, webui/**, deploy/**, schemas/**, tests/** file
+      - .env, .env.example                # LX-S1 owns the timeout knob; LX-S2 does not touch config
+      - api/app/main.py, api/orchestrator/manager.py   # LX-S1's files
+      - CONTRIBUTING.md, SECURITY.md, docs/model_setup.md   # substance owned elsewhere; link-correctness only if forced, otherwise untouched
+      - docs/archive/**
+      - any image / GIF / model weight / generated media binary
+  invariants:
+    - Honesty (INV-6):the hook and every benefit line are factually true; only text->image is called "GPU-verified end to end"; all other modes are "implemented - CPU-tested - GPU gate MIG-S8"; the full caveats stay in the README, visible (never inside <details>), relocated to the end; every "why" claim traces to an evidence row.
+    - The runnable quickstart is preserved - the pinned public-checkpoint download and the make build / make up-fp8 / make health targets stay accurate against the Makefile; no setup step dropped (INV-5).
+    - Every internal link/anchor resolves; no cloud/Codespaces CTA; typography specs treated as non-normative (INV-7).
+    - The Mermaid map is <=7 nodes and faithful to the real component flow; text only, no committed binary (INV-8, INV-1).
+    - Documentation-only: no code/config/WebUI behavior changes.
+  acceptance_criteria:
+    - README opens with a factually-true hook and a runnable copy-paste TL;DR; every referenced make target exists in the Makefile.
+    - A <=7-node Mermaid block, at least one <details> for verbose content, in-page anchors/TOC, and tighter chunking are present.
+    - The full Status & security section is present, visible (not collapsed), and in the final third, with the five posture facts and the 30-min idle behavior.
+    - Only text->image is claimed GPU-verified; no hook/benefit line implies an unverified mode is verified.
+    - Every internal link/anchor resolves; zero Codespaces/cloud CTA; the README stays a single file with depth linked out.
+  deterministic_checks:
+    - "# relative-link + in-page-anchor resolver over README.md (and any doc it links that this session edits) -> 0 unresolved"
+    - "rg -in \"codespace|devcontainer|open in cloud|launch in the cloud\" README.md   # expect: none"
+    - "rg -n \"make (build|up-fp8|health)\" README.md   # present; cross-check each target in Makefile"
+    - "# structure asserts: a ```mermaid fence (<=7 nodes); a <details>/<summary> with a blank line after </summary>; a TL;DR block near the top; a visible Status & security section in the final third (not inside <details>)"
+    - "# honesty assert: README 'GPU-verified' claims are a subset of the evidence-map verified set (t2i only)"
+  review_axes:
+    - correctness
+    - security
+    - tests
+    - architecture
+    - performance
+    - readability
+  adversarial_cases:
+    - The punchy hook implies every mode works / is production-ready, over-claiming beyond t2i-only GPU verification (INV-6, R-04).
+    - A caveat (no-auth, guardrails-off, socket, per-mode status, VRAM headroom) is dropped, softened, or hidden inside a <details> during the restructure (R-04).
+    - The rewrite adds a "run it in the cloud / open in Codespaces" CTA that cannot work on this local-GPU project (R-06, E-12).
+    - The TL;DR drops or reorders a required setup step (checkpoint download / make build / up-fp8 / health) so a new user cannot actually run it (INV-5, R-08).
+    - A <details> is missing the blank line after </summary> and renders broken, or essential content is only reachable by expanding it (R-09).
+    - A "why"/benefit claim is added that no evidence row supports (INV-6).
+    - The Mermaid map has too many nodes or misrepresents the flow, adding load or misleading (R-10).
+    - An internal link/anchor points at a moved/nonexistent target after the restructure (R-08).
+  failure_modes_to_watch:
+    - Per-mode verification wording drifting ahead of docs/evidence_map.md (E-20) - e.g. calling t2v "verified" because a smoke ran.
+    - The relocated Status & security section ending up thinner than the current one (lost content counts as a regression, not a simplification).
+    - Emoji/callouts overused so visual hierarchy is destroyed ("if everything is emphasized, nothing is").
+    - Depth inlined back into the README instead of linked, re-bloating the single file (FR-10).
+  done_condition: GATE-LX-S2-README passes - a punchy true hook + runnable TL;DR, a small Mermaid map, progressive disclosure via <details>, in-page navigation, the full honest caveats visible at the end, only t2i claimed verified, every link resolving and no cloud CTA - with the adversarial honesty pass recording no surviving over-claim or lost/hidden caveat.
+  handoff_requirements:
+    - Confirmation docs/evidence_map.md, docs/risk_register.md, and docs/eval_seed_cases.md reflect the closed LX-S1/LX-S2 state, including the honesty-pass result.
+    - The out-of-scope WebUI SSE heartbeat (E-08, R-03) recorded as a residual future consideration in the closing handoff.
+  eval_seed_candidates:
+    - EV-LX-README-RUNNABLE-QUICKSTART
+    - EV-LX-README-HONEST-CAVEATS
+    - EV-LX-README-VERIFIED-SUBSET
+    - EV-LX-README-STRUCTURE
+    - EV-LX-DOCS-LINKS-RESOLVE
