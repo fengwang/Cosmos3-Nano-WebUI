@@ -25,7 +25,7 @@ Rules:
 | E-03 Each quantized checkpoint is **self-contained** for the diffusers pipeline and ships an LM chat template + tokenizer. | "Each checkpoint is self-contained … ships `model_index.json`, `config.json`, `generation_config.json`, `vae/`, `text_tokenizer/`, `vision_encoder/`, `sound_tokenizer/`, `scheduler/`" (`docs/model_setup.md:33-34`); the repo also ships `chat_template.json`, `tokenizer.json`, `merges.txt`, `vocab.json` (checkpoint dir listing). | Direct source inspection | High | Supports zero-BF16 reasoning: the LM-serving assets are present in the quantized repo. |
 | E-04 Reasoning today is a **separate `vllm serve` subprocess** (port 8765, `/health` probe, `--enforce-eager`) at `COSMOS3_REASONER_MODEL_DIR` (the BF16 base), gated by the `WITH_REASONING=1` build (torch + vLLM 0.23.0). | `reasoning_spec(ReasonerConfig, vllm_bin, port, ...)` → `PlaneSpec(plane=REASONING, probe=/health, strip_parent_env=True)` (`api/orchestrator/planes.py:49-64`); constructed at `api/app/main.py:128-134`; build split `ARG WITH_REASONING=0` / `FROM base-${WITH_REASONING}` / `uv pip install vllm==0.23.0` (`deploy/api.Dockerfile:10,22,37-39`); overlay wires it (`deploy/docker-compose.reasoning.yml`). | Direct source inspection | High | Reasoning is a build-time + overlay-time opt-in, not a default. |
 | E-05 A plain `make up-fp8` ships **no reasoner**; only `make up-fp8-reasoning` (overlay) does — and the owner reports reasoning is not actually working even then. | `up-fp8: $(COMPOSE) $(FP8) up -d` vs `up-fp8-reasoning: $(COMPOSE) $(FP8) $(REASON) up -d` (`Makefile`); reasoner dir defaults to the BF16 base (`.env.example:52`). | Direct source inspection + owner report | High (unreachable-by-default) / Medium (the "even the overlay is broken" report is not independently reproduced here) | `AM-S1` reproduces the current reasoning state before rebuilding it. |
-| E-06 **Action requires bf16 `action_*` adapter tensors read from the BF16 base transformer; the quantized checkpoint ships without them**, and the load raises `FileNotFoundError` if they are absent. | "Enables `action_gen=True` on a quantized … checkpoint that ships **without** action tensors, by grafting the base-model bf16 action adapters"; `read_action_adapter_tensors(base_action_dir)` reads only `action_*` keys and `raise FileNotFoundError` if none (`api/engines/diffusers_action/loader.py:1-3,74-92`); default `COSMOS3_BASE_ACTION_DIR=/data/models/Cosmos3-Nano/transformer` (`:36`). | Direct source inspection | High | **Zero-BF16 action is a checkpoint-packaging problem**, not a serving-config one (R-01). |
+| E-06 **Action requires bf16 `action_*` adapter tensors read from the BF16 base transformer; the quantized checkpoint ships without them**, and the load raises `FileNotFoundError` if they are absent. | "Enables `action_gen=True` on a quantized … checkpoint that ships **without** action tensors, by grafting the base-model bf16 action adapters"; `read_action_adapter_tensors(base_action_dir)` reads only `action_*` keys and `raise FileNotFoundError` if none (`api/engines/diffusers_action/loader.py:1-3,74-92`); default `COSMOS3_BASE_ACTION_DIR=/data/models/Cosmos3-Nano/transformer` (`:36`). | Direct source inspection | High (code) / **REFUTED at checkpoint (AM-S1)** | **Zero-BF16 action is a checkpoint-packaging problem**, not a serving-config one (R-01). **⚠ AM-S1 (2026-07-24): E-06 REFUTED against the real checkpoint — the quantized FP8 (deployed `4e181f9` + pinned public `9bf5d6ae`) and NVFP4 already ship the 5 BF16 `action_*` tensors (`action_gen:true`, real values); the gap was closed by the prior P6-S5 `checkpoint_prep mutate`. Not a live blocker — see the AM-S1 execution audit below + R-01.** |
 | E-07 Action is implemented only under the **dormant `diffusers` engine**; the default `vllm_omni` container's action-serving path is unverified/absent. | Generation runs `vllm_omni` by default, `diffusers` is "(dormant)" (`api/app/main.py:94-110`); action route enqueues jobs onto the shared runner (`api/app/routes/action.py:43-64`), whose `work` is `vllm_omni_work` by default (`api/app/main.py:108-110`); the matrix lists action's serving path as the "in-process `diffusers_action` graft" (`docs/model_setup.md:81`). | Direct source inspection | High | Serving action via `vllm-omni` (option a) is unproven; the `(c)` side-car fallback exists (spike-gated, S-C). |
 | E-08 A **single-slot residency FSM** swaps `Plane.GENERATION` ↔ `Plane.REASONING` by process-kill (evict-before-load); the two heavy residents **never co-reside** in the 32 GiB budget. | `class Plane(GENERATION, REASONING)` (`api/orchestrator/planes.py:20-24`); `CoResidencyContract(mechanism="stop_start", eviction="process_kill")`, `VRAM_BUDGET_BYTES = 32*1024**3`, reasoner ~16 GiB bf16 → ~26 GiB @ `gpu_memory_utilization=0.85`, generation ~9 GiB; "planes never CO-reside … room freed by the process KILL" (`api/engines/vllm/coresidency.py:19-42`). | Direct source inspection | High | Under zero-BF16 the VRAM math changes (reasoner becomes ~quantized); the swap discipline is the safety net (INV-5, R-08). |
 | E-09 On-demand switching already works: one shared GPU lease serializes the job runner and the reasoning stream, and `acquire` evicts-before-loads so a different-residency request preempts immediately. | `gpu_lease = asyncio.Lock()` shared by the runner and the reasoning route (`api/app/main.py:186-189`); orchestrator `acquire` cancels the idle timer and evicts-before-load (E-16; `api/orchestrator/manager.py`). | Direct source inspection | High | "Auto-switch backend models on demand" is largely built; the phase reuses it, it does not reinvent it. |
@@ -42,6 +42,12 @@ Rules:
 
 These are the load-bearing *unknowns*. Each is resolved only by running on the
 RTX 5090; none may be written as a shipped capability until its gate passes.
+
+> **AM-S1 (2026-07-24) resolved S-A, S-C, S-E and refuted E-06** — see the AM-S1
+> execution audit at the end of this file. S-B (reasoning quality) and S-D (NVFP4)
+> remain for AM-S2 / AM-S5. Directions: **S-A → reasoning `(c)`, zero-BF16 reasoning
+> unproven; S-C → action `(a)`-surface-present-but-unwired / `(c)`-broken → serving
+> work (prefer `a`); S-E → packaging GO & already applied (P6-S5).**
 
 | ID | Claim (to be tested) | Why plausible | Resolving gate |
 |---|---|---|---|
@@ -80,3 +86,45 @@ closes, following the phase-4 pattern: an "`AM-S{n}` execution audit" block with
 the standard GPU evidence fields — hardware, driver/CUDA, checkpoint repo +
 revision, request shape, peak VRAM, guardrails posture, artifact metadata, result,
 and the owner's quality verdict.)*
+
+## AM-S1 execution audit (2026-07-24)
+
+**Hardware/env:** RTX 5090 (sm_120), 32607 MiB, driver 610.43.03. FP8 probe via
+`cosmos3-nano-vllm-omni:local` (fork `fengwang/vllm-omni@6970350`, base
+`vllm/vllm-openai:v0.24.0`), command `--omni --no-guardrails --vae-use-tiling
+--enable-layerwise-offload`. Checkpoint = `COSMOS3_FP8_DIR` (deployed rev `4e181f9`;
+pinned public `9bf5d6ae` cross-checked on HF). Guardrails off (local posture, E-15).
+CPU baseline `uv run pytest -m "not gpu"` = **523 passed** (unchanged). Full
+evidence: `docs/session_1/` (P1–P7, decision_record, sharded_review,
+adversarial_verification). No production/checkpoint file modified.
+
+- **E-06 — REFUTED against the real checkpoint.** FP8 (deployed + pinned public) and
+  NVFP4 transformers ship the 5 BF16 `action_*` adapters (`action_gen:true`, real
+  values; header scan + byte sample). The gap was real at raw quantization and was
+  closed by the prior **P6-S5 `checkpoint_prep mutate`** (sidecar
+  `n_weight_quantized:216`, `appended_action_keys`, `lm_head_restored_bf16:true`).
+  Residual = a serving-code reconciliation (AM-S3), not packaging.
+- **S-A — reasoning `(c)`; zero-BF16 reasoning UNPROVEN.** `vllm serve --omni`
+  `/v1/chat/completions` returns **images**, not text (image-gen bound;
+  `response_format:text` still image; `modalities:[text]`→HTTP 500). Reasoning is not
+  served by the omni path → `(c)` side-car. Zero-BF16 reasoning has no proven path →
+  owner decision (new risk **R-15**).
+- **S-C — action `(a)` surface present-but-unwired; `(c)` broken.** Omni exposes
+  `/v1/realtime/robot/openpi` (WS, HTTP 101) — action IS an omni surface (**E-07
+  partially refuted**) — but returns "Robot policy not available". In-process `(c)`
+  graft raises a key-collision (checkpoint already has the tensors) + stale `505`
+  precision constant (D1 confirmed). Neither functional as-served → AM-S3
+  serving-path work off the checkpoint's own weights; **prefer `(a)`**; `(c)` fallback
+  retained (R-02).
+- **S-E — zero-BF16 action packaging GO, already applied (P6-S5).** No re-export
+  needed for action.
+- **S-B / S-D — untouched** (reasoning quality moot until text serves; NVFP4 = AM-S5).
+- **Residency:** omni generation resident ≈ **13.2–13.5 GiB / 32**; idle 18 MiB;
+  Studio+Action can **plane-merge** (same omni model, projected — unmeasured wired);
+  reasoning stays a **separate plane (swap)**, E-08 BF16 math holds today.
+  `/v1/omni/sleep|wakeup` = fork-native residency control (AM-S4 note).
+- **Gate:** `GATE-AM-S1-SPIKE` technical parts satisfied; sharded review (no
+  surviving Critical/High) + adversarial verifier **PASS**. Owner sign-off: ✅ **Feng, approved 2026-07-24**
+  (`docs/session_1/decision_record.md` §8) — **GATE-AM-S1-SPIKE PASSES**. Directions:
+  reasoning → investigate omni text-tower first (AM-S2); action → `(a)` omni robot
+  policy + `(c)` fallback (AM-S3).

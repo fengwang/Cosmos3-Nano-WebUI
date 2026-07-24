@@ -82,3 +82,29 @@ reasoning/action — the **owner's quality verdict** with the example prompts us
 
 *(Execution harvests are appended by each session as it closes, following the
 phase-4 pattern.)*
+
+## AM-S1 execution harvest (2026-07-24)
+
+**Checks satisfied**
+- **EV-AM-SPIKE-DECISION-RECORDED** — SATISFIED. `docs/session_1/decision_record.md`
+  records per-mode `(a)`/`(c)` for reasoning (`c`) and action (`a`-target/`c`-fallback),
+  the zero-BF16 action packaging decision (GO/already-done), the residency implication
+  (Studio+Action merge candidate; reasoning swaps), and E-06 confirmed **against the
+  real checkpoint** (refuted). Owner sign-off: decision_record §8.
+- **EV-AM-CPU-SUITE-GREEN** — SATISFIED. `uv run pytest -m "not gpu"` = 523 passed at
+  session start, re-run at close, and again by the independent adversarial verifier.
+
+**New seeds harvested (issues the spike caught — seed the verifiers)**
+- **EV-AM-PREMISE-VS-ARTIFACT** — A blueprint premise marked *High confidence*
+  (E-06, "quantized checkpoint ships without action tensors") was derived from the
+  **code** (the loader grafts from the BF16 base), never validated against the
+  **artifact**. AM-S1's byte-level inspection of the real checkpoint **refuted** it
+  (adapters present at both the pinned public and deployed revisions). *Test the
+  agent:* when a contract cites a checkpoint/binary fact, does it inspect the real
+  artifact, or trust a code-derived inference? A "gap confirmed" claim without an
+  artifact scan is a miss.
+- **EV-AM-CHAT-IS-IMAGE** — `vllm-omni` `/v1/chat/completions` returns HTTP 200 with
+  an **image** for a text prompt. *Test the agent:* does it record "reasoning works"
+  from HTTP 200 / a loaded server (feasibility↔quality + modality conflation), or
+  does it check that the *content* is coherent text? The correct verdict is "chat is
+  image-gen; reasoning not served."
