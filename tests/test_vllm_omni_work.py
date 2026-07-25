@@ -243,9 +243,153 @@ def test_unsupported_mode_raises_no_submit(tmp_path, monkeypatch):
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     t = _FakeTransport()
     with pytest.raises(VideoJobError) as ei:
-        vw.vllm_omni_work(_rec("inverse_dynamics"), lambda _f: None, transport=t)
+        vw.vllm_omni_work(_rec("reasoning"), lambda _f: None, transport=t)  # genuinely not an omni job mode
     assert ei.value.code == "unsupported_mode"
     assert "post" not in t.calls
+
+
+# --- action prediction modes served by the resident omni model via the video-API action_mode (AM-S3) ---
+
+
+def _id_rec(**params) -> JobRecord:
+    """An inverse_dynamics record shaped like the action route's params (no raw_actions — ID infers them)."""
+    params.setdefault("prompt", "recover the action trajectory")
+    params.setdefault("domain_name", "av")
+    params.setdefault("chunk_size", 16)
+    params.setdefault("resolution_tier", 480)
+    return JobRecord(id="job-id", mode="inverse_dynamics", plane=Plane.GENERATION,
+                     status=JobStatus.running, created_at="2026-07-02T00:00:00Z", params=params)
+
+
+def test_inverse_dynamics_async_writes_trajectory_json(tmp_path, monkeypatch):
+    # AM-S3 (evidence/P1): ID is served by the resident omni model via async POST /v1/videos with
+    # action_mode=inverse_dynamics; the recovered trajectory rides the completion body's top-level
+    # `action`. The artifact IS the trajectory JSON (mirrors gen_worker._encode_action_reply for ID —
+    # the shape the WebUI action tab targets), with NO rollout video and NO trajectory sidecar.
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    vid = tmp_path / "clip.mp4"
+    vid.write_bytes(b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00")  # minimal mp4-ish bytes
+    traj = [[0.1] * 9, [0.2] * 9]
+    action = {"data": traj, "shape": [2, 9], "dtype": "torch.bfloat16",
+              "action_mode": "inverse_dynamics", "raw_action_dim": 9}
+    t = _FakeTransport(polls=[{"status": "completed", "progress": 100, "action": action}])
+    result = vw.vllm_omni_work(_id_rec(video_path=str(vid)), lambda _f: None, transport=t)
+    # async submit to the video API (NOT the sync FD endpoint); the video rides input_reference
+    assert "post" in t.calls and t.last_path == "/v1/videos"
+    ep = json.loads(t.last_form["extra_params"])
+    assert ep["action_mode"] == "inverse_dynamics" and ep["domain_name"] == "av"
+    assert ep["raw_action_dim"] == 9  # derived from the embodiment (av), not from an input tensor
+    assert isinstance(t.last_form["input_reference"], FilePart)  # the conditioning video
+    # the artifact IS the recovered trajectory JSON; no rollout video, no sidecar (ID contract)
+    assert result.artifact_path.endswith(".json")
+    with open(result.artifact_path) as fh:
+        assert json.load(fh) == traj
+    assert result.meta["engine"] == "vllm_omni" and result.meta["action_mode"] == "inverse_dynamics"
+    assert "trajectory_path" not in result.meta
+    assert "content" not in t.calls  # action-only: no rollout video downloaded for inverse_dynamics
+
+
+def _policy_rec(**params) -> JobRecord:
+    """A policy record shaped like the action route's params (image observation; no raw_actions)."""
+    params.setdefault("prompt", "Pickup items in the supermarket")
+    params.setdefault("domain_name", "agibotworld")
+    params.setdefault("chunk_size", 16)
+    params.setdefault("resolution_tier", 480)
+    return JobRecord(id="job-pol", mode="policy", plane=Plane.GENERATION,
+                     status=JobStatus.running, created_at="2026-07-02T00:00:00Z", params=params)
+
+
+def test_policy_async_writes_video_and_trajectory_sidecar(tmp_path, monkeypatch):
+    # policy predicts a trajectory AND rolls out a video → artifact = rollout MP4, meta.trajectory_path =
+    # the predicted trajectory JSON sidecar (the gen_worker FD/policy contract the WebUI targets).
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    frame = tmp_path / "frame.png"
+    frame.write_bytes(b"\x89PNG\r\n\x1a\n")
+    traj = [[0.3] * 29 for _ in range(16)]
+    action = {"data": traj, "shape": [16, 29], "action_mode": "policy", "raw_action_dim": 29}
+    t = _FakeTransport(polls=[{"status": "completed", "progress": 100, "action": action}], content=b"ROLLOUT")
+    result = vw.vllm_omni_work(_policy_rec(image_path=str(frame)), lambda _f: None, transport=t)
+    assert "post" in t.calls and "content" in t.calls and t.last_path == "/v1/videos"
+    ep = json.loads(t.last_form["extra_params"])
+    assert ep["action_mode"] == "policy" and ep["raw_action_dim"] == 29  # agibotworld → 29
+    assert isinstance(t.last_form["input_reference"], FilePart)  # the observation image
+    assert result.artifact_path.endswith(".mp4")  # the rollout video is the primary artifact
+    with open(result.artifact_path, "rb") as fh:
+        assert fh.read() == b"ROLLOUT"
+    traj_path = result.meta["trajectory_path"]
+    assert traj_path.endswith(".json")
+    with open(traj_path) as fh:
+        assert json.load(fh) == traj
+    assert result.meta["action_mode"] == "policy"
+
+
+def test_inverse_dynamics_without_video_fails_typed_no_submit(tmp_path, monkeypatch):
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    t = _FakeTransport()
+    with pytest.raises(VideoJobError) as ei:
+        vw.vllm_omni_work(_id_rec(), lambda _f: None, transport=t)  # no video_path
+    assert ei.value.code == "invalid_input"
+    assert "post" not in t.calls
+
+
+def test_policy_without_image_fails_typed_no_submit(tmp_path, monkeypatch):
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    t = _FakeTransport()
+    with pytest.raises(VideoJobError) as ei:
+        vw.vllm_omni_work(_policy_rec(), lambda _f: None, transport=t)  # no image_path
+    assert ei.value.code == "invalid_input"
+    assert "post" not in t.calls
+
+
+def test_policy_empty_rollout_fails_typed_no_artifact(tmp_path, monkeypatch):
+    # policy must yield a rollout video; an empty /content download fails typed and writes no artifact.
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    frame = tmp_path / "frame.png"
+    frame.write_bytes(b"\x89PNG\r\n\x1a\n")
+    action = {"data": [[0.0] * 29], "shape": [1, 29], "action_mode": "policy", "raw_action_dim": 29}
+    t = _FakeTransport(polls=[{"status": "completed", "progress": 100, "action": action}], content=b"")
+    with pytest.raises(VideoJobError) as ei:
+        vw.vllm_omni_work(_policy_rec(image_path=str(frame)), lambda _f: None, transport=t)
+    assert ei.value.code == "generation_failed"
+    assert os.listdir(str(tmp_path)) == ["frame.png"]  # no partial artifact written
+
+
+def test_action_predict_missing_action_payload_fails_typed(tmp_path, monkeypatch):
+    # a completion with no `action` payload must fail typed (never a silent empty trajectory).
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    vid = tmp_path / "clip.mp4"
+    vid.write_bytes(b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00")
+    t = _FakeTransport(polls=[{"status": "completed", "progress": 100}])  # no action field
+    with pytest.raises(VideoJobError) as ei:
+        vw.vllm_omni_work(_id_rec(video_path=str(vid)), lambda _f: None, transport=t)
+    assert ei.value.code == "generation_failed"
+    assert os.listdir(str(tmp_path)) == ["clip.mp4"]  # no partial artifact
+
+
+def test_action_predict_empty_trajectory_fails_typed_no_artifact(tmp_path, monkeypatch):
+    # sharded-review Finding 1: a degenerate action payload (empty/non-list `data`, from a malformed or
+    # untrusted server reply) must fail typed — never a silently-successful empty-trajectory artifact.
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    vid = tmp_path / "clip.mp4"
+    vid.write_bytes(b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00")
+    for bad in ({"data": [], "shape": [0, 9]}, {"data": None}, {"data": 5}):
+        t = _FakeTransport(polls=[{"status": "completed", "progress": 100, "action": bad}])
+        with pytest.raises(VideoJobError) as ei:
+            vw.vllm_omni_work(_id_rec(video_path=str(vid)), lambda _f: None, transport=t)
+        assert ei.value.code == "generation_failed"
+    assert os.listdir(str(tmp_path)) == ["clip.mp4"]  # no partial artifact for any degenerate payload
+
+
+def test_action_predict_failed_poll_fails_typed_no_artifact(tmp_path, monkeypatch):
+    # a failed poll on the async action path fails the job typed, writing no artifact.
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
+    vid = tmp_path / "clip.mp4"
+    vid.write_bytes(b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00")
+    t = _FakeTransport(polls=[{"status": "failed", "error": "boom"}])
+    with pytest.raises(VideoJobError) as ei:
+        vw.vllm_omni_work(_id_rec(video_path=str(vid)), lambda _f: None, transport=t)
+    assert ei.value.code == "generation_failed"
+    assert os.listdir(str(tmp_path)) == ["clip.mp4"]
 
 
 # --- wire encoding: the real multipart file-part + the production transport methods (review Finding 1) ---

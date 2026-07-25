@@ -137,3 +137,45 @@ phase-4 pattern.)*
   (`ContainerPlaneWorker`), not an in-api `SubprocessPlaneWorker` at `:8765`. A test asserting the
   subprocess/`reasoning_spec`/port-8765 wiring is **stale** and must be updated to the container
   path (per EV-AM-CPU-SUITE-GREEN's "update, never revert" rule), not reverted to keep it green.
+
+## AM-S3 execution harvest (2026-07-25)
+
+**Checks satisfied**
+- **GPU-AM-ACTION-FP8** — SATISFIED (`docs/session_3/evidence/P1`,`P2`): all three v1-scope modes off the
+  **quantized-only** FP8 checkpoint via the resident omni model's video-API `action_mode` —
+  `inverse_dynamics`(av) `[60,9]` (mean|Δ|=0.015 vs the shipped expected output), `forward_dynamics`
+  (agibotworld) 621 KB rollout MP4, `policy`(agibotworld) `[16,29]`; then re-verified through the real api
+  wiring (`vllm_omni_work`) end to end. Peak 14.3 GiB, one resident model (Studio+Action merge; INV-5).
+- **GPU-AM-T2I-NOREGRESS** — SATISFIED (`P2`): valid 480×480 PNG off the same omni image (INV-2; t2i path
+  byte-unchanged, the change is additive action modes).
+- **EV-AM-CPU-SUITE-GREEN**, **EV-AM-SCHEMA-STABLE** — SATISFIED (CPU green exit 0; `openapi.json` clean).
+- **EV-AM-CHECKPOINT-INTEGRITY** — **N/A**: no re-export (E-06 refuted; adapters already bundled). No new
+  revision pinned; the pinned public revision is unchanged.
+- **OWNER-AM-ACTION-QUALITY** — **PASS** (Feng, 2026-07-25): all three v1-scope modes judged good in the
+  Action tab → INV-6 satisfied, action **GPU-verified on FP8**. Default-on remains the AM-S4 gate (INV-7).
+
+**New seeds harvested (issues AM-S3 caught — seed the verifiers)**
+- **EV-AM-ACTION-SURFACE-IS-VIDEO-API** — the base Cosmos3-Nano checkpoint serves action via the diffusion
+  **video-API `action_mode`** (`/v1/videos[/sync]`, trajectory in the top-level `action`), NOT the
+  `/v1/realtime/robot/openpi` WS. The openpi surface returns "Robot policy not available" because it
+  requires a model-specific `policy_server_config` that only the **separate**
+  `nvidia/Cosmos3-Nano-Policy-DROID` checkpoint declares. *Test the agent:* when a spike finds a surface
+  "present but not available", does it conclude "action is unwired/broken" (AM-S1's provisional read), or
+  does it find the ACTUAL serving path for THIS model (read the recipe + pipeline, not just one endpoint)?
+  Stopping at the first plausible-but-wrong surface is the miss. *Promotion:* eval seed + adversarial case.
+- **EV-AM-ACTION-PROMPT-REQUIRED** — omni's video API (`/v1/videos[/sync]`) requires a **non-empty
+  `prompt` form field for EVERY action mode** (FD/policy/ID); an empty/missing prompt → a cryptic
+  `HTTP 400 "prompt Field required"` from the omni server (not a clean api-edge 422). The api's
+  `fd_resolved_params`/`action_resolved_params` default `prompt` to `""` (the api treats it as
+  "optional"), so any client that omits it (e.g. the WebUI "Run demo" for FD/ID) hits the 400. Missed by
+  P1/P2 because every GPU probe happened to send a prompt. *Test the agent:* when a downstream server
+  requires a field the api documents as optional, does it reconcile the mismatch (default a non-empty
+  value, or require it at the edge with a clear error) rather than forwarding an empty value that 400s?
+  *Promotion:* the WebUI demo now always sends a prompt (`demoBody.test.ts` guard); consider an api-side
+  non-empty-prompt default or edge validation for action (follow-up).
+- **EV-AM-UNTRUSTED-SERVER-PAYLOAD** — the omni server's returned `action.data` is **untrusted** external
+  data; a missing/empty/non-list payload must fail **typed** (`generation_failed`, no artifact), never a
+  silently-successful empty-trajectory artifact or an untyped `TypeError` on a later `list()` coercion.
+  Caught by the sharded review (Finding 1), fixed + regression-tested. *Test the agent:* does it validate
+  the *shape/non-emptiness* of an engine/server response before persisting it as a result? *Promotion:*
+  add/keep the `test_action_predict_empty_trajectory_fails_typed_no_artifact` regression test.

@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from engines.base import default_dimensions  # torch-free shared mode-aware resolution default
+from preprocessing.action_schema import raw_action_dim_of  # torch-free embodiment→width (policy/ID)
 
 # Terminal statuses (fork `VideoGenerationStatus`); `queued`/`in_progress` are pending.
 _COMPLETED = "completed"
@@ -330,6 +331,130 @@ def run_image_job(record: Any, *, transport: VideoTransport, overall_timeout: fl
         return base64.b64decode(b64, validate=True)
     except (binascii.Error, ValueError) as exc:
         raise VideoJobError("generation_failed", f"images response b64 undecodable: {exc}") from exc
+
+
+# --- policy / inverse_dynamics: predict a trajectory off the resident omni model (AM-S3, evidence/P1) ---
+# Unlike forward_dynamics (GIVEN an action array → rolls out video, sync), these modes PREDICT the
+# trajectory via async `POST /v1/videos` with an `action_mode`; the recovered/predicted action rides the
+# completion body's top-level `action`. `policy` also returns a rollout video; `inverse_dynamics` is
+# action-only. raw_action_dim comes from the embodiment (no input tensor to measure).
+
+
+def action_extra_params_predict(params: dict, mode: str) -> dict:
+    """Pure: the policy/inverse_dynamics ``extra_params`` — action_mode + the embodiment-derived
+    ``raw_action_dim`` (the model needs it to size the predicted trajectory) + the chunk length. No input
+    ``action`` array (these modes infer it). Reads only ``params`` (no I/O)."""
+    domain = params.get("domain_name")
+    return {
+        "action_mode": mode,
+        "domain_name": domain,
+        "raw_action_dim": raw_action_dim_of(domain) if domain else None,
+        "action_chunk_size": params.get("chunk_size"),
+        "view_point": params.get("view_point", "ego_view"),
+    }
+
+
+def action_resolved_params(record: Any) -> dict:
+    """Pure: resolved params for a policy/inverse_dynamics job — the SINGLE source for the request form
+    and the recorded metadata (as ``fd_resolved_params`` is for forward_dynamics), so the two never desync.
+
+    Landscape 4:3 from the resolution tier (tier 480 → 640x480, the FD-proven size); FD recipe knobs
+    (fps 10, steps 30, guidance 1.0, flow_shift 5.0; num_frames = chunk+1). Reads only ``record.params``.
+    """
+    p = dict(getattr(record, "params", {}) or {})
+    tier = int(p.get("resolution_tier", 480))
+    width = round(tier * 4 / 3)
+    width -= width % 2  # even dimension
+    chunk = int(p.get("chunk_size", 0))
+    return {
+        "prompt": str(p.get("prompt", "") or ""),
+        "width": width,
+        "height": tier,
+        "num_frames": int(p.get("num_frames", chunk + 1)),
+        "fps": int(p.get("fps", 10)),
+        "num_inference_steps": int(p.get("num_inference_steps", 30)),
+        "guidance_scale": float(p.get("guidance_scale", 1.0)),
+        "flow_shift": float(p.get("flow_shift", 5.0)),
+        "seed": int(p.get("seed", 123)),
+        "extra_params": action_extra_params_predict(p, record.mode),
+    }
+
+
+def build_action_form(record: Any, *, input_reference: FilePart) -> dict:
+    """Pure: a policy/inverse_dynamics job → the async `POST /v1/videos` multipart form.
+
+    The conditioning image (policy) or video (inverse_dynamics) rides as the ``input_reference`` file part;
+    the action ``extra_params`` carry the mode/embodiment. Derived from ``action_resolved_params`` (shared source).
+    """
+    ap = action_resolved_params(record)
+    return {
+        "prompt": ap["prompt"],
+        "size": f'{ap["width"]}x{ap["height"]}',
+        "num_frames": str(ap["num_frames"]),
+        "fps": str(ap["fps"]),
+        "num_inference_steps": str(ap["num_inference_steps"]),
+        "guidance_scale": str(ap["guidance_scale"]),
+        "flow_shift": str(ap["flow_shift"]),
+        "seed": str(ap["seed"]),
+        "extra_params": json.dumps(ap["extra_params"]),
+        "input_reference": input_reference,
+    }
+
+
+def run_action_job(
+    record: Any,
+    report: Callable[[float], None],
+    *,
+    transport: VideoTransport,
+    input_reference: FilePart,
+    want_video: bool,
+    base_path: str = "/v1/videos",
+    poll_interval: float = 5.0,
+    overall_timeout: float = 7200.0,
+    expected_seconds: float | None = None,
+    now: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> tuple[dict, bytes | None]:
+    """Action: submit an async predict-action job → poll to completion → ``(action_payload, video|None)``.
+
+    The recovered/predicted trajectory rides the completion body's top-level ``action``; the rollout video
+    is downloaded from ``/content`` only when ``want_video`` (policy). ``now``/``sleep`` are injected so the
+    timeout path is deterministic in tests. Any failed/non-200 poll (or a completion with no ``action``)
+    raises a typed ``VideoJobError``; the caller writes no partial artifact on a raise.
+    """
+    submitted = transport.post_form(base_path, build_action_form(record, input_reference=input_reference))
+    video_id = submitted.get("id")
+    if not video_id:
+        raise VideoJobError("internal_error", f"submit response carried no job id: {submitted!r}")
+    _safe_report(report, 0.0)
+
+    expected = expected_seconds if expected_seconds is not None else _DEFAULT_EXPECTED_SECONDS
+    start = now()
+    reported = 0.0
+    action: dict | None = None
+    while True:
+        if now() - start > overall_timeout:
+            with contextlib.suppress(Exception):
+                transport.delete(f"{base_path}/{video_id}")  # orphan prevention (R-14)
+            raise VideoJobError("timeout", f"action job {video_id} exceeded {overall_timeout:.0f}s")
+        code, body = transport.get_json(f"{base_path}/{video_id}")
+        if code != 200:
+            raise VideoJobError("generation_failed", f"job {video_id} poll returned HTTP {code}: {body!r}")
+        state, server_fraction = parse_status(body)
+        if state == "failed":
+            raise VideoJobError("generation_failed", str(body.get("error") or f"job {video_id} failed"))
+        if state == "completed":
+            action = body.get("action")
+            break
+        reported = max(reported, _progress_fraction(server_fraction, now() - start, expected))
+        _safe_report(report, reported)
+        sleep(poll_interval)
+    # The server reply is untrusted: require a non-empty LIST trajectory (a missing/degenerate/non-list
+    # `data` must fail typed here, never write a silently-empty or crash on a later list() coercion).
+    if not isinstance(action, dict) or not isinstance(action.get("data"), list) or not action["data"]:
+        raise VideoJobError("generation_failed", f"action job {video_id} returned no usable action payload: {action!r}")
+    video = transport.get_bytes(f"{base_path}/{video_id}/content") if want_video else None
+    return action, video
 
 
 class UrllibVideoTransport:

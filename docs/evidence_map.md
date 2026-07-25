@@ -26,7 +26,7 @@ Rules:
 | E-04 Reasoning today is a **separate `vllm serve` subprocess** (port 8765, `/health` probe, `--enforce-eager`) at `COSMOS3_REASONER_MODEL_DIR` (the BF16 base), gated by the `WITH_REASONING=1` build (torch + vLLM 0.23.0). | `reasoning_spec(ReasonerConfig, vllm_bin, port, ...)` → `PlaneSpec(plane=REASONING, probe=/health, strip_parent_env=True)` (`api/orchestrator/planes.py:49-64`); constructed at `api/app/main.py:128-134`; build split `ARG WITH_REASONING=0` / `FROM base-${WITH_REASONING}` / `uv pip install vllm==0.23.0` (`deploy/api.Dockerfile:10,22,37-39`); overlay wires it (`deploy/docker-compose.reasoning.yml`). | Direct source inspection | High | Reasoning is a build-time + overlay-time opt-in, not a default. |
 | E-05 A plain `make up-fp8` ships **no reasoner**; only `make up-fp8-reasoning` (overlay) does — and the owner reports reasoning is not actually working even then. | `up-fp8: $(COMPOSE) $(FP8) up -d` vs `up-fp8-reasoning: $(COMPOSE) $(FP8) $(REASON) up -d` (`Makefile`); reasoner dir defaults to the BF16 base (`.env.example:52`). | Direct source inspection + owner report | High (unreachable-by-default) / Medium (the "even the overlay is broken" report is not independently reproduced here) | `AM-S1` reproduces the current reasoning state before rebuilding it. |
 | E-06 **Action requires bf16 `action_*` adapter tensors read from the BF16 base transformer; the quantized checkpoint ships without them**, and the load raises `FileNotFoundError` if they are absent. | "Enables `action_gen=True` on a quantized … checkpoint that ships **without** action tensors, by grafting the base-model bf16 action adapters"; `read_action_adapter_tensors(base_action_dir)` reads only `action_*` keys and `raise FileNotFoundError` if none (`api/engines/diffusers_action/loader.py:1-3,74-92`); default `COSMOS3_BASE_ACTION_DIR=/data/models/Cosmos3-Nano/transformer` (`:36`). | Direct source inspection | High (code) / **REFUTED at checkpoint (AM-S1)** | **Zero-BF16 action is a checkpoint-packaging problem**, not a serving-config one (R-01). **⚠ AM-S1 (2026-07-24): E-06 REFUTED against the real checkpoint — the quantized FP8 (deployed `4e181f9` + pinned public `9bf5d6ae`) and NVFP4 already ship the 5 BF16 `action_*` tensors (`action_gen:true`, real values); the gap was closed by the prior P6-S5 `checkpoint_prep mutate`. Not a live blocker — see the AM-S1 execution audit below + R-01.** |
-| E-07 Action is implemented only under the **dormant `diffusers` engine**; the default `vllm_omni` container's action-serving path is unverified/absent. | Generation runs `vllm_omni` by default, `diffusers` is "(dormant)" (`api/app/main.py:94-110`); action route enqueues jobs onto the shared runner (`api/app/routes/action.py:43-64`), whose `work` is `vllm_omni_work` by default (`api/app/main.py:108-110`); the matrix lists action's serving path as the "in-process `diffusers_action` graft" (`docs/model_setup.md:81`). | Direct source inspection | High | Serving action via `vllm-omni` (option a) is unproven; the `(c)` side-car fallback exists (spike-gated, S-C). |
+| E-07 Action is implemented only under the **dormant `diffusers` engine**; the default `vllm_omni` container's action-serving path is unverified/absent. | Generation runs `vllm_omni` by default, `diffusers` is "(dormant)" (`api/app/main.py:94-110`); action route enqueues jobs onto the shared runner (`api/app/routes/action.py:43-64`), whose `work` is `vllm_omni_work` by default (`api/app/main.py:108-110`); the matrix lists action's serving path as the "in-process `diffusers_action` graft" (`docs/model_setup.md:81`). | Direct source inspection | High / **REFUTED (AM-S3)** | **AM-S3 (2026-07-25):** the `vllm_omni` container **does** serve action — all three modes via the video-API `action_mode` `(a2)`, GPU-proven off the quantized-only FP8 checkpoint (see the AM-S3 audit). "action-serving path unverified/absent" is refuted. The `(c)` diffusers graft stays **dormant** (R-11). |
 | E-08 A **single-slot residency FSM** swaps `Plane.GENERATION` ↔ `Plane.REASONING` by process-kill (evict-before-load); the two heavy residents **never co-reside** in the 32 GiB budget. | `class Plane(GENERATION, REASONING)` (`api/orchestrator/planes.py:20-24`); `CoResidencyContract(mechanism="stop_start", eviction="process_kill")`, `VRAM_BUDGET_BYTES = 32*1024**3`, reasoner ~16 GiB bf16 → ~26 GiB @ `gpu_memory_utilization=0.85`, generation ~9 GiB; "planes never CO-reside … room freed by the process KILL" (`api/engines/vllm/coresidency.py:19-42`). | Direct source inspection | High | Under zero-BF16 the VRAM math changes (reasoner becomes ~quantized); the swap discipline is the safety net (INV-5, R-08). |
 | E-09 On-demand switching already works: one shared GPU lease serializes the job runner and the reasoning stream, and `acquire` evicts-before-loads so a different-residency request preempts immediately. | `gpu_lease = asyncio.Lock()` shared by the runner and the reasoning route (`api/app/main.py:186-189`); orchestrator `acquire` cancels the idle timer and evicts-before-load (E-16; `api/orchestrator/manager.py`). | Direct source inspection | High | "Auto-switch backend models on demand" is largely built; the phase reuses it, it does not reinvent it. |
 | E-10 There are **three deploy postures**, none "all modes": `fp8` and `nvfp4` stacks each `include:` the base; a reasoning overlay adds the BF16 reasoner. | `include: docker-compose.base.yml` (`deploy/docker-compose.fp8.yml:4`, `…nvfp4.yml:4`); overlay `deploy/docker-compose.reasoning.yml`; `up-fp8` / `up-nvfp4` / `up-fp8-reasoning` (`Makefile`). | Direct source inspection | High | `AM-S4` collapses these to two all-modes stacks. |
@@ -43,11 +43,12 @@ Rules:
 These are the load-bearing *unknowns*. Each is resolved only by running on the
 RTX 5090; none may be written as a shipped capability until its gate passes.
 
-> **AM-S1 (2026-07-24) resolved S-A, S-C, S-E and refuted E-06** — see the AM-S1
-> execution audit at the end of this file. S-B (reasoning quality) and S-D (NVFP4)
-> remain for AM-S2 / AM-S5. Directions: **S-A → reasoning `(c)`, zero-BF16 reasoning
-> unproven; S-C → action `(a)`-surface-present-but-unwired / `(c)`-broken → serving
-> work (prefer `a`); S-E → packaging GO & already applied (P6-S5).**
+> **Status (through AM-S3, 2026-07-25):** S-A **RESOLVED** (AM-S2: zero-BF16 FP8 reasoning proven via a
+> vLLM fork, owner PASS). S-C/E-07 **RESOLVED** (AM-S3: action served by the resident omni model via the
+> video-API `action_mode` `(a2)`, all three modes GPU-proven; the openpi `(a1)` WS is for the separate
+> Policy-DROID checkpoint; `(c)` graft dormant). S-E dissolved / E-06 refuted (adapters bundled;
+> no re-export). **Open:** S-B/S-D NVFP4 quality (AM-S5). `OWNER-AM-ACTION-QUALITY` = **PASS** (Feng,
+> 2026-07-25). See the AM-S1/S2/S3 execution audits at the end of this file.
 
 | ID | Claim (to be tested) | Why plausible | Resolving gate |
 |---|---|---|---|
@@ -169,3 +170,45 @@ FP8 checkpoint). Full evidence: `docs/session_2/` (`brainstorming`, `evidence/P1
 - **Gate:** `GATE-AM-S2-REASONING` — reasoning e2e on FP8 (zero-BF16) ✓, `t2i` non-regressed ✓,
   CPU green ✓, owner quality PASS ✓, no BF16 on the reasoning path ✓, residency safety net ✓, API
   shape unchanged ✓. Sharded review + adversarial verifier: see `docs/session_2/`.
+
+## AM-S3 execution audit (2026-07-25)
+
+**Hardware/env:** RTX 5090 (sm_120), 32607 MiB, driver 610.43.03. Omni image
+`cosmos3-nano-vllm-omni:local` (fork `fengwang/vllm-omni@6970350`), deployed FP8 command
+(`--omni --no-guardrails --vae-use-tiling --enable-layerwise-offload`). Checkpoint =
+`COSMOS3_FP8_DIR` (deployed rev `4e181f9`, quantized-only). Guardrails off (local, E-15). CPU baseline
+green (exit 0); `git diff --exit-code schemas/openapi.json` clean; `docker compose -f
+deploy/docker-compose.fp8.yml config` = **no BF16 mount** (only the FP8 checkpoint). Full evidence:
+`docs/session_3/` (`evidence/P1`–`P2`, `design.md`, `execution_contract.md`, `sharded_review.md`,
+`adversarial_verification.md`). No production checkpoint modified; **no re-export**.
+
+- **Action mechanism — RESOLVED to `(a2)`: the resident omni model serves all three modes via the
+  video-API `action_mode`.** `forward_dynamics` = sync `POST /v1/videos/sync` (given actions → rollout);
+  `policy`/`inverse_dynamics` = async `POST /v1/videos` → the predicted/recovered trajectory rides the
+  completion body's top-level `action`. GPU-proven off the **quantized-only** FP8 checkpoint
+  (`GPU-AM-ACTION-FP8` = PASS): ID(av,9-D) `[60,9]` (mean|Δ|=0.015 vs the shipped expected output),
+  FD(agibotworld,29-D) 621 KB rollout MP4, policy(agibotworld,29-D) `[16,29]`; then re-verified through
+  the **real api wiring** (`vllm_omni_work`) end to end (P2). Zero BF16 on the path (INV-4).
+- **E-06 / R-01 (action-tensor gap): remains refuted; NO re-export.** The FP8 checkpoint already ships
+  the 5 bf16 `action_*` adapters; the omni pipeline consumes them via `action_gen`. Packaging was never
+  needed (S-E dissolved). `COSMOS3_BASE_ACTION_DIR` retired (no BF16 base default; INV-4).
+- **E-07 / S-C: corrected.** The action `(a1)` **openpi WS** surface is for the *separate*
+  `nvidia/Cosmos3-Nano-Policy-DROID` checkpoint (needs a model `policy_server_config`), NOT the base
+  checkpoint — so it returned "Robot policy not available" (AM-S1). The base checkpoint's action path is
+  the **video-API `action_mode`** `(a2)`, which IS served by `vllm-omni` (E-07's "action-serving path
+  unverified/absent" is **refuted**). The in-process `(c)` `diffusers_action` graft is left **dormant**
+  (R-11); its collision/`505` bugs are moot (unused).
+- **Residency (INV-5):** action rides the **same resident omni model** (Studio+Action plane-merge, on
+  `Plane.GENERATION`) — peak **14.3 GiB / 32**, no extra plane, no swap, clean 18 MiB idle after stop.
+  The Studio+Action merge AM-S1 projected is now **measured** (P2).
+- **`GPU-AM-T2I-NOREGRESS` = PASS** (P2): a valid 480×480 PNG off the same omni image; the AM-S3 change
+  is additive to the two new action-predict modes, so the t2i path is byte-unchanged (INV-2 held).
+- **Owner quality (`OWNER-AM-ACTION-QUALITY`): PASS (Feng, 2026-07-25)** — the owner ran all three
+  v1-scope modes in the WebUI Action tab (agibotworld policy/FD → 3D URDF viewer + rollout; av ID → 2D
+  trajectory plots) with the shipped example inputs and judged quality good across all options. INV-6
+  satisfied (recorded GPU run **and** owner quality PASS) → **action is GPU-verified on FP8**. Default-on
+  stays AM-S4 (INV-7).
+- **Gate:** `GATE-AM-S3-ACTION` — action e2e on FP8 off the quantized-only checkpoint ✓, `t2i`
+  non-regressed ✓, CPU green ✓, API shape unchanged ✓, no BF16 ✓, residency safety net ✓, owner quality
+  **PASS** ✓ → **GATE-AM-S3-ACTION PASSES**. Sharded review (1 Medium correctness **fixed** + tested;
+  2 maintainability deferred) + adversarial verifier **PASS**: see `docs/session_3/`.

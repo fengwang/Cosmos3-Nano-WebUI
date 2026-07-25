@@ -122,15 +122,14 @@ export function ActionWorkspace() {
   const onRunDemo = (e: React.FormEvent) => {
     e.preventDefault();
     const w = canonicalWidthOf(domainSel) ?? 0;
-    const body: ActionBody = demoActionBody(domainSel);
+    const body: ActionBody = demoActionBody(domainSel, modeSel); // carries the shipped conditioning per mode
     if (modeSel === "forward_dynamics") {
       const quatDims = EMBODIMENT_JOINT_MAPS[domainSel]?.orientation?.[0]?.dims; // derive from the map (single source of truth)
       const raw = demoTrajectory(w, DEMO_CHUNK, quatDims);
       body.raw_actions = raw;
       void job.submit(modeSel, body, raw); // FD: the actions ARE the input → animate them
     } else {
-      if (modeSel === "policy") body.prompt = "demo: manipulate the object";
-      void job.submit(modeSel, body);
+      void job.submit(modeSel, body); // policy/ID: conditioning (image/video) + prompt come from demoActionBody
     }
   };
 

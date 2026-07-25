@@ -1,7 +1,11 @@
 """Action enablement by graft (ACD: Actions at the edge + pure merge Calculation; torch-free import).
 
-Enables ``action_gen=True`` on a quantized Cosmos3-Nano checkpoint that ships **without** action tensors,
-by grafting the base-model bf16 action adapters. The proven sequence (verified by the S4 smoke probe):
+DORMANT as of AM-S3 (docs/session_3, evidence/P1): action is served by the resident vllm-omni model via
+the video-API ``action_mode`` (``engines.vllm_omni.work``), not this in-process graft. The graft is kept
+as the pre-authorized ``(c)`` fallback (R-11); it is NOT wired into the default deployment. Its original
+premise — that the quantized checkpoint ships **without** action tensors — was **refuted** (E-06): the
+``*-Blockwise`` checkpoints now self-contain the bf16 ``action_*`` adapters, so the graft reads them from
+the quantized checkpoint itself (no BF16 base; INV-4). The historical sequence it implements:
 
 1. build the ``Cosmos3OmniTransformer`` skeleton with ``action_gen=True`` (adds the bf16
    ``action_proj_in/out`` + ``action_modality_embed`` — the 32-domain ``DomainAwareLinear`` heads),
@@ -32,29 +36,36 @@ from engines.diffusers_oracle.loader import (
     verify_precision,
 )
 
-# The base (unquantized) model that retains the bf16 action adapters stripped from the quantized exports.
-DEFAULT_BASE_ACTION_DIR = "/data/models/Cosmos3-Nano/transformer"
-GEN_TOWER_QUANTIZED = 505  # weight_quantizer._amax buffers on the GEN tower (action adapters add none)
+# AM-S3 (INV-4, E-06 refuted): the quantized *-Blockwise checkpoints now SELF-CONTAIN the bf16 action_*
+# adapters, and action is served by the resident vllm-omni model (docs/session_3, evidence/P1). This
+# in-process graft is DORMANT (kept for the (c) fallback, R-11) and no longer defaults to any BF16 base.
+GEN_TOWER_QUANTIZED = 505  # (dormant) weight_quantizer._amax buffers on the GEN tower
 
 
 @dataclass(frozen=True)
 class ActionEngineConfig:
     """Where/how to load the action-enabled engine (inert Data). Precision is detected at load.
 
-    ``quant_dir`` is the quantized checkpoint root (e.g. ``…-NVFP4-Blockwise``); ``base_action_dir`` is the
-    trusted base-model transformer dir holding the bf16 action adapters.
+    ``quant_dir`` is the quantized checkpoint root (e.g. ``…-NVFP4-Blockwise``). ``base_action_dir`` is an
+    OPTIONAL override for where the bf16 ``action_*`` adapters are read from; ``None`` (the default) means
+    "read them from ``quant_dir``'s own transformer dir" — the quantized checkpoint self-contains them, so
+    **no BF16 base is required** (INV-4).
     """
 
     quant_dir: str
-    base_action_dir: str = DEFAULT_BASE_ACTION_DIR
+    base_action_dir: str | None = None
     device: str = "cuda"
 
     @staticmethod
     def from_env() -> "ActionEngineConfig":
-        """Action: read the (operator-controlled, trusted) mounts + device from the environment."""
+        """Action: read the (operator-controlled, trusted) mounts + device from the environment.
+
+        ``COSMOS3_BASE_ACTION_DIR`` is honored as an explicit override but has **no BF16 default** (INV-4):
+        unset → ``None`` → the adapters are read from the quantized checkpoint itself.
+        """
         return ActionEngineConfig(
             quant_dir=os.environ.get("COSMOS3_MODEL_DIR", "/data/models/Cosmos3-Nano-FP8-Blockwise"),
-            base_action_dir=os.environ.get("COSMOS3_BASE_ACTION_DIR", DEFAULT_BASE_ACTION_DIR),
+            base_action_dir=os.environ.get("COSMOS3_BASE_ACTION_DIR"),
             device=os.environ.get("COSMOS3_DEVICE", "cuda"),
         )
 
@@ -116,7 +127,11 @@ def load_action_transformer(config: ActionEngineConfig):
     gen_tensors: dict = {}
     for shard in sorted(glob.glob(f"{transformer_dir}/*.safetensors")):
         gen_tensors.update(load_file(shard))
-    merged = merge_state_dicts(gen_tensors, read_action_adapter_tensors(config.base_action_dir))
+    # Dormant graft (R-11): read the bf16 action_* adapters from the explicit override, or — by default —
+    # from the quantized transformer dir itself (self-contained; zero-BF16, INV-4). Action is served by
+    # the resident omni model (AM-S3), so this path does not run in the default deployment.
+    action_dir = config.base_action_dir or transformer_dir
+    merged = merge_state_dicts(gen_tensors, read_action_adapter_tensors(action_dir))
     transformer.load_state_dict(merged, strict=True)
 
     info = verify_precision(

@@ -43,7 +43,7 @@ operator-configurable (INV-4). Citations are `file:line` in the imported source.
 | `COSMOS3_MODEL_DIR` | Quantized generation checkpoint root | `/data/models/Cosmos3-Nano-NVFP4-Blockwise` (oracle); `/data/models/Cosmos3-Nano-FP8-Blockwise` (action, orchestrator)¹ | `diffusers_oracle/config.py:15`; `diffusers_action/loader.py:56`; `app/main.py:152` |
 | `COSMOS3_CHECKPOINT_LABEL` | Deployment's checkpoint label, `fp8` \| `nvfp4` | `fp8` | `engines/vllm_omni/endpoints.py:21,27` |
 | `COSMOS3_REASONER_MODEL_DIR` | BF16 base — reasoner understanding tower | `/data/models/Cosmos3-Nano` (→ `nvidia/Cosmos3-Nano`) | `engines/vllm/loader.py:30` |
-| `COSMOS3_BASE_ACTION_DIR` | BF16 base transformer — action-adapter graft | `/data/models/Cosmos3-Nano/transformer` | `diffusers_action/loader.py:36` |
+| `COSMOS3_BASE_ACTION_DIR` | **Retired (AM-S3, INV-4).** Action is served by the resident `vllm_omni` model off the quantized checkpoint (adapters self-contained; no BF16 base). No default; an optional explicit override only for the dormant `diffusers_action` graft. | *(unset)* | `diffusers_action/loader.py` |
 | `COSMOS3_GEN_ENGINE` | Generation engine selector | `vllm_omni` | `app/main.py:103` |
 | `COSMOS3_VLLM_OMNI_URL` / `COSMOS3_GEN_CONTAINER` | vLLM-Omni generation endpoint | container-internal defaults | `engines/vllm_omni/endpoints.py:48-49` |
 | `COSMOS3_DEVICE` | Compute device | `cuda` | `diffusers_oracle/config.py:30` and others |
@@ -63,7 +63,10 @@ radius; noted for `MIG-S6`.)
 ```
 
 A single-checkpoint generation deployment serves exactly one of FP8 **xor** NVFP4
-(`COSMOS3_CHECKPOINT_LABEL`); reasoning/action additionally need the BF16 base.
+(`COSMOS3_CHECKPOINT_LABEL`). **Action** is served off that same quantized checkpoint (the bf16
+`action_*` adapters are bundled in it — no BF16 base; AM-S3). **Reasoning** is served by the FP8
+reasoner container off the same checkpoint's understanding tower (AM-S2 — also no BF16 base). The
+legacy BF16 base (`nvidia/Cosmos3-Nano`) is used only by the superseded reasoning overlay.
 
 ## 6. Per-mode compatibility matrix (verified)
 
@@ -78,7 +81,7 @@ loader), whose real compatibility is a `MIG-S6`/`MIG-S8` gate.
 | `t2i` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) | not loadable as-is (D1) | **T2I-verified (`GPU-S3`, 2026-07-09):** fresh `hf download` at the `GPU-S2` revisions, through the unmodified `GPU-S1` image, direct **and** full-stack, no manual workaround; D1 remains for the in-process path only |
 | `t2v`, `t2v_audio`, `i2v` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) — verify `S6`/`S8` | not loadable as-is (D1) | GPU-unverified (`S8`); D1 for in-process path. (A best-effort NVFP4 `t2v` smoke passed under `GPU-S3` — see `docs/evidence_map.md` — but `t2v_audio`/`i2v` and any full validation of `t2v` remain unrun; this residual limit is otherwise unchanged.) |
 | reasoning | base `nvidia/Cosmos3-Nano` (BF16) | separate vLLM reasoner instance | n/a | GPU-unverified (`S8`) |
-| action / `forward_dynamics` | FP8 checkpoint **+** base `nvidia/Cosmos3-Nano` (BF16 action tensors) | in-process `diffusers_action` graft | FP8 verify blocked (D1) | GPU-unverified (`S8`); D1 |
+| action (`forward_dynamics`/`policy`/`inverse_dynamics`) | FP8 quantized checkpoint (self-contains the bf16 `action_*` adapters — **no BF16 base**) | `vllm_omni` container via the video-API `action_mode` (FD=sync `/v1/videos/sync`; policy/ID=async `/v1/videos`) | in-process `diffusers_action` graft is **dormant** (not used; D1) | **FP8 GPU-verified end-to-end (AM-S3, 2026-07-25):** all three v1-scope embodiments (agibotworld 29-D FD/policy; av 9-D ID) off the quantized-only checkpoint, one resident model (Studio+Action merge). Owner action-quality verdict **PASS** (Feng, 2026-07-25); NVFP4 = AM-S5. See `docs/evidence_map.md` AM-S3 audit. |
 
 No mode is beta-limited for missing weights (the base `nvidia/Cosmos3-Nano` is public — this
 corrects the pre-verification premise; see Failure Arbiter FA-1).
@@ -110,8 +113,10 @@ corrects the pre-verification premise; see Failure Arbiter FA-1).
 2. Download or mount the checkpoint(s) you serve into the mount root, e.g. FP8 generation:
    `hf download wfen/Cosmos3-Nano-FP8-Blockwise --revision 9bf5d6ae164688487bdb71947ccc6ebe70d12900 --local-dir /path/to/Cosmos3-Nano-FP8-Blockwise`.
    A plain `git clone` resolves cleanly too as of this revision (§9).
-3. For reasoning or action/`forward_dynamics`, also fetch the base
-   `nvidia/Cosmos3-Nano` and set `COSMOS3_REASONER_MODEL_DIR` / `COSMOS3_BASE_ACTION_DIR`.
+3. Reasoning and action need **no** separate BF16 base as of AM-S2/AM-S3 — both are served off the
+   quantized checkpoint (reasoning via the FP8 reasoner container; action via the `vllm_omni` container's
+   video-API `action_mode`). The base `nvidia/Cosmos3-Nano` + `COSMOS3_REASONER_MODEL_DIR` /
+   `COSMOS3_BASE_ACTION_DIR` are only for the legacy/dormant paths.
 4. Point `COSMOS3_MODEL_DIR` (and `COSMOS3_CHECKPOINT_LABEL`) at the served checkpoint.
 5. GPU inference is a manual release gate (`MIG-S8`). **T2I is now GPU-verified (2026-07-08,
    FP8 + NVFP4, RTX 5090)**, and as of **`GPU-S3` (2026-07-09)** this holds for a fresh
