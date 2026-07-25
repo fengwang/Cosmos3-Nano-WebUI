@@ -58,16 +58,15 @@ plane-merge). Owner trajectory-quality verdict: **PASS** (Feng, 2026-07-25) — 
    the **full-stack GPU smoke** incl. the api-container→orchestrator residency swaps (Studio↔Action merge
    + Reasoning swap); plus the inherited AM-S2 cleanups (commit/pin the `fengwang/vllm` fork; remove the
    legacy BF16 reasoning overlay + `WITH_REASONING` + dormant subprocess).
-   - **BLOCKER found (AM-S3 owner run, 2026-07-25):** `make up-fp8` fails building
-     `cosmos3-nano-vllm-reasoner:local` — the reasoner **build context ≠ COPY paths** mismatch:
-     `deploy/docker-compose.fp8.yml` sets `build.context: ..` (repo root) but `deploy/vllm-reasoner.Dockerfile`
-     does `COPY vllm-reasoner/patch/*.py` (resolves to `<root>/vllm-reasoner/…`, which doesn't exist — the
-     files are under `<root>/deploy/vllm-reasoner/patch/`). AM-S2 built `:verify` manually with
-     `context: deploy`; the compose rebuild (only triggered because `:local` is absent) breaks. **Fix in
-     AM-S4** (out of AM-S3 scope — the reasoner Dockerfile is not in AM-S3's blast radius): prefix the COPYs
-     with `deploy/`, or set `build.context: deploy`, or (per the AM-S2 plan) switch to a pinned public-fork
-     install and drop the COPY-patch. Also causes the heavy omni+reasoner to both be created by `up -d`
-     (VRAM contention risk) — part of the AM-S4 residency smoke.
+   - **Reasoner build-context bug — FIXED (owner-authorized, 2026-07-25).** `make up-fp8` was failing to
+     build `cosmos3-nano-vllm-reasoner:local`: the compose `build.context: ..` (repo root) didn't match
+     `deploy/vllm-reasoner.Dockerfile`'s `COPY vllm-reasoner/patch/*.py` (resolved to `<root>/vllm-reasoner/…`,
+     nonexistent). Fix: prefixed the 3 COPY sources with `deploy/` (repo-root-relative). Verified — the
+     image now builds (COPY steps resolve; `:local` produced). **Residual for AM-S4:** `up -d` still
+     *creates* both heavy containers (omni + the 26 GiB reasoner); the orchestrator must own their
+     start/stop so they never co-load (VRAM contention) — part of the AM-S4 all-modes residency smoke.
+     Longer term (AM-S4 / NFR-5): switch the COPY-patch to a pinned public-fork install once the
+     `fengwang/vllm` commit is pushed.
 3. **AM-S5 (NVFP4):** verify action on NVFP4 — the NVFP4 checkpoint also ships the `action_*` adapters, so
    the same video-API `action_mode` should extend; prove it on the 4-bit Blackwell kernels.
 

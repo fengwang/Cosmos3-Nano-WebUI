@@ -29,10 +29,14 @@ RUN if command -v uv >/dev/null 2>&1; then \
 
 # AM-S2 vLLM patch: register `--quantization fp8_blockwise_w8a16` + map the modelopt
 # blockwise-FP8 scale into vLLM's weight_scale param for the Cosmos3 understanding tower.
+# The compose build context is the REPO ROOT (`build.context: ..`), so these COPY sources are
+# repo-root-relative (`deploy/vllm-reasoner/patch/...`), like deploy/vllm-omni.Dockerfile's lineage.
+# (AM-S3 fix: they previously omitted the `deploy/` prefix, so a compose-driven rebuild — triggered
+# whenever the `:local` image is absent — failed with "…/patch/cosmos3.py: not found".)
 ARG VLLM_SITE=/usr/local/lib/python3.12/dist-packages/vllm
-COPY vllm-reasoner/patch/fp8_blockwise_w8a16_vllm.py ${VLLM_SITE}/model_executor/layers/quantization/fp8_blockwise_w8a16_vllm.py
-COPY vllm-reasoner/patch/quantization__init__.py     ${VLLM_SITE}/model_executor/layers/quantization/__init__.py
-COPY vllm-reasoner/patch/cosmos3.py                  ${VLLM_SITE}/model_executor/models/cosmos3.py
+COPY deploy/vllm-reasoner/patch/fp8_blockwise_w8a16_vllm.py ${VLLM_SITE}/model_executor/layers/quantization/fp8_blockwise_w8a16_vllm.py
+COPY deploy/vllm-reasoner/patch/quantization__init__.py     ${VLLM_SITE}/model_executor/layers/quantization/__init__.py
+COPY deploy/vllm-reasoner/patch/cosmos3.py                  ${VLLM_SITE}/model_executor/models/cosmos3.py
 
 EXPOSE 8000
 # vllm-openai's base sets ENTRYPOINT ["vllm","serve"]; clear it so CMD is the whole command.
