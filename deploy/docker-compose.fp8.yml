@@ -35,3 +35,44 @@ services:
       # Operator-supplied FP8 checkpoint (download first — see .env.example), read-only.
       # Default is <repo>/models/... (../ is relative to the deploy/ project dir).
       - ${COSMOS3_FP8_DIR:-../models/Cosmos3-Nano-FP8-Blockwise}:/models/checkpoint:ro
+
+  # AM-S2: zero-BF16 reasoning. Serves TEXT off the SAME quantized FP8 checkpoint's understanding
+  # tower (no separate BF16 base) via `vllm serve --quantization fp8_blockwise_w8a16` (no --omni).
+  # GPU-verified on the 5090 (docs/session_2/evidence/P2). The orchestrator starts/stops it and never
+  # co-resides it with vllm-omni (evict-before-load, INV-5). No BF16 mount anywhere on this path.
+  vllm-reasoner:
+    build:
+      context: ..
+      dockerfile: deploy/vllm-reasoner.Dockerfile
+    image: cosmos3-nano-vllm-reasoner:local
+    container_name: cosmos3-nano-webui-vllm-reasoner   # fixed name the api controls by
+    shm_size: "16gb"
+    environment:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    restart: "no"                                      # orchestrator owns start/stop (evict-before-load)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command:
+      - vllm
+      - serve
+      - /models/checkpoint
+      - --served-model-name
+      - cosmos3-reasoner
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --max-model-len
+      - "8192"
+      - --gpu-memory-utilization
+      - "0.85"
+      - --quantization
+      - fp8_blockwise_w8a16
+    volumes:
+      # SAME quantized FP8 checkpoint as generation — one download, zero BF16.
+      - ${COSMOS3_FP8_DIR:-../models/Cosmos3-Nano-FP8-Blockwise}:/models/checkpoint:ro

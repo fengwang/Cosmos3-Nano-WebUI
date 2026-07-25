@@ -168,9 +168,13 @@ def build_reasoning_router(
 class VllmReasonerStream:
     """Production upstream (gated-live): stream the vLLM OpenAI server via stdlib ``urllib`` (no httpx)."""
 
-    def __init__(self, *, host: str = "127.0.0.1", port: int | None = None, model: str = "cosmos3-reasoner") -> None:
-        self._host = host
-        self._port = port or int(os.environ.get("COSMOS3_VLLM_PORT", "8765"))
+    def __init__(self, *, base_url: str | None = None, model: str = "cosmos3-reasoner") -> None:
+        # AM-S2: the reasoner is now a separate container (vllm serve --quantization
+        # fp8_blockwise_w8a16, no --omni). Point at its OpenAI endpoint via env; default is the
+        # in-network compose service. (Was the in-api subprocess at 127.0.0.1:COSMOS3_VLLM_PORT.)
+        self._base_url = (
+            base_url or os.environ.get("COSMOS3_VLLM_REASONER_URL", "http://vllm-reasoner:8000")
+        ).rstrip("/")
         self._model = model
 
     def _messages(self, payload: dict) -> list:
@@ -188,8 +192,8 @@ class VllmReasonerStream:
             "model": self._model, "messages": self._messages(payload), "stream": True,
             "max_tokens": payload["max_tokens"], "temperature": 0,
         }).encode("utf-8")
-        req = urllib.request.Request(  # noqa: S310 — fixed localhost vLLM endpoint
-            f"http://{self._host}:{self._port}/v1/chat/completions", data=body,
+        req = urllib.request.Request(  # noqa: S310 — fixed in-network reasoner endpoint (operator env)
+            f"{self._base_url}/v1/chat/completions", data=body,
             headers={"Content-Type": "application/json"},
         )
         timeout = float(os.environ.get("COSMOS3_REASONER_TIMEOUT", "300"))  # bound a stalled upstream read

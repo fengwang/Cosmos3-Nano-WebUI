@@ -111,7 +111,7 @@ def _select_gen_work() -> Work:
 
 
 def default_worker_factory(target: ResidencyId) -> PlaneWorker:
-    """Action: the production plane-worker factory — reasoning subprocess / generation plane from env.
+    """Action: the production plane-worker factory — reasoning + generation planes from env.
 
     Heavy-ish imports are deferred so ``app.main`` imports torch-free; the worker is only *constructed*
     here (it starts its subprocess/container on the orchestrator's first ``acquire``). Everything comes
@@ -119,19 +119,29 @@ def default_worker_factory(target: ResidencyId) -> PlaneWorker:
 
     S4: for GENERATION, ``COSMOS3_GEN_ENGINE=vllm_omni`` (default) returns a `ContainerPlaneWorker`
     (the vllm-omni container; ``evict``=stop → INV-P5-2); ``=diffusers`` returns the dormant
-    subprocess `gen_worker`. The REASONING branch is unchanged (R-11).
+    subprocess `gen_worker`. AM-S2: REASONING now returns a `ContainerPlaneWorker` too — the
+    vllm-reasoner container serving quantized-only FP8 text via ``--quantization fp8_blockwise_w8a16``
+    (zero BF16), evicted-before-load vs generation like the omni plane.
     """
-    from engines.vllm.loader import ReasonerConfig
-    from orchestrator.planes import generation_spec, reasoning_spec
+    from orchestrator.planes import generation_spec
     from orchestrator.worker import SubprocessPlaneWorker
 
     if target.plane is Plane.REASONING:
-        spec = reasoning_spec(
-            ReasonerConfig.from_env(),
-            vllm_bin=os.environ.get("COSMOS3_VLLM_BIN", "vllm"),
-            port=int(os.environ.get("COSMOS3_VLLM_PORT", "8765")),
+        # AM-S2: reasoning is served by a separate vllm-reasoner CONTAINER
+        # (`vllm serve --quantization fp8_blockwise_w8a16`, zero BF16, off the quantized
+        # understanding tower) — not an in-api subprocess. The api image therefore needs no
+        # torch/vLLM/WITH_REASONING build. The residency FSM still evicts-before-loads vs
+        # generation (INV-5); eviction is the container stop. Refs: docs/session_2 (AM-S2).
+        from orchestrator.container import ContainerPlaneWorker, DockerCliController
+        from orchestrator.planes import container_reasoning_spec
+
+        base_url = os.environ.get("COSMOS3_VLLM_REASONER_URL", "http://vllm-reasoner:8000")
+        container = os.environ.get(
+            "COSMOS3_REASONER_CONTAINER", "cosmos3-nano-webui-vllm-reasoner"
         )
-        return SubprocessPlaneWorker(spec)
+        return ContainerPlaneWorker(
+            container_reasoning_spec(base_url=base_url), DockerCliController(container)
+        )
 
     if _gen_engine() == "vllm_omni":  # GENERATION via the single deployed vllm-omni container (S6)
         from engines.vllm_omni.endpoints import endpoint_for
@@ -174,8 +184,8 @@ def create_app(
     # survives instead of paying a cold reload; COSMOS3_IDLE_TIMEOUT_SECONDS overrides, 0 = never evict.
     idle_timeout = float(os.environ.get("COSMOS3_IDLE_TIMEOUT_SECONDS", "1800"))
     # Generous plane-readiness ceiling for the vllm-omni container cold start (matches --init-timeout;
-    # R-07). Harmless for the fast reasoning subprocess — wait_ready returns as soon as it is ready or
-    # its process dies, never waiting out the ceiling.
+    # R-07). Harmless for the reasoner container too — wait_ready returns as soon as it is ready or
+    # the container exits, never waiting out the ceiling.
     ready_timeout = float(os.environ.get("COSMOS3_PLANE_READY_TIMEOUT", "1800"))
     orchestrator = MeteredOrchestrator(
         orchestrator

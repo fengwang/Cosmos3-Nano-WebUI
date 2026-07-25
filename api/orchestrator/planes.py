@@ -90,3 +90,19 @@ def container_generation_spec(*, base_url: str, health_path: str = "/v1/models")
     return PlaneSpec(
         plane=Plane.GENERATION, argv=(), probe_kind=ProbeKind.HTTP, probe_target=probe_target,
     )
+
+
+def container_reasoning_spec(*, base_url: str, health_path: str = "/v1/models") -> PlaneSpec:
+    """Pure: the vllm-reasoner container plane spec (AM-S2) — probed via the server HTTP endpoint.
+
+    Mirrors ``container_generation_spec`` for ``Plane.REASONING``: reasoning is served by a separate
+    ``vllm serve --quantization fp8_blockwise_w8a16`` container (zero BF16, off the quantized
+    understanding tower), launched/stopped by a ``ContainerController`` (so ``argv`` is empty).
+    Readiness is an HTTP probe on ``/v1/models`` (200 once the checkpoint is resident). The single-slot
+    FSM still evicts-before-loads vs generation (INV-5) — eviction is the container stop, so no
+    ``manager.py`` change. Pure function of operator config (INV-8). Refs: docs/session_2 (AM-S2).
+    """
+    probe_target = f"{base_url.rstrip('/')}{health_path}"
+    return PlaneSpec(
+        plane=Plane.REASONING, argv=(), probe_kind=ProbeKind.HTTP, probe_target=probe_target,
+    )

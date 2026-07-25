@@ -26,6 +26,12 @@ services:
       COSMOS3_GEN_ENGINE: ${COSMOS3_GEN_ENGINE:-vllm_omni}
       COSMOS3_VLLM_OMNI_URL: http://vllm-omni:8000            # generation container URL
       COSMOS3_GEN_CONTAINER: cosmos3-nano-webui-vllm-omni     # container it starts/stops
+      # AM-S2: reasoning is served by a separate vllm-reasoner container (zero BF16 — the quantized
+      # understanding tower via --quantization fp8_blockwise_w8a16). The api starts/stops it, and the
+      # single-slot FSM evicts-before-loads vs generation (INV-5). Wired only where a reasoner service
+      # exists (fp8 stack); harmless on stacks without one.
+      COSMOS3_VLLM_REASONER_URL: ${COSMOS3_VLLM_REASONER_URL:-http://vllm-reasoner:8000}
+      COSMOS3_REASONER_CONTAINER: cosmos3-nano-webui-vllm-reasoner
       COSMOS3_CHECKPOINT_LABEL: ${COSMOS3_CHECKPOINT_LABEL:-fp8}
       # Where the api reads the curated negative-prompt default (UX-S2). The per-stack file mounts the
       # checkpoint's assets/ read-only here; if the mount is absent the loader degrades gracefully.

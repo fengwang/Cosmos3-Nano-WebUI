@@ -108,3 +108,32 @@ phase-4 pattern.)*
   from HTTP 200 / a loaded server (feasibility↔quality + modality conflation), or
   does it check that the *content* is coherent text? The correct verdict is "chat is
   image-gen; reasoning not served."
+
+## AM-S2 execution harvest (2026-07-25)
+
+**Checks satisfied**
+- **GPU-AM-REASON-FP8** — SATISFIED (`docs/session_2/evidence/P2`): coherent text + streaming SSE
+  off the quantized-only FP8 checkpoint, no BF16, from the reproducible `deploy/vllm-reasoner`
+  image. **OWNER-AM-REASON-QUALITY (FP8)** = PASS (owner, 2026-07-25).
+- **GPU-AM-T2I-NOREGRESS** — SATISFIED (`P3`): valid 480×480 PNG off the unchanged omni image.
+- **EV-AM-CPU-SUITE-GREEN**, **EV-AM-SCHEMA-STABLE** — SATISFIED (CPU suite green; `openapi.json`
+  unchanged). Reasoning-path portion of **EV-AM-ZERO-BF16-WIRING** met (`docker compose -f
+  deploy/docker-compose.fp8.yml config` shows no BF16 mount); the full default-on gate stays AM-S4.
+
+**New seeds harvested (issues AM-S2 caught — seed the verifiers)**
+- **EV-AM-QUANT-SIDECAR-NOT-AUTODETECTED** — The FP8-blockwise quant lives in a **side**
+  `quantization_config.json` + `transformer/modelopt_state.pt` (not the HF-standard
+  `hf_quant_config.json` / a `config.json` `quantization_config` key). So stock vLLM auto-detect
+  loads it as BF16 → `KeyError: ...weight_quantizer._amax`, and `--quantization modelopt` fails with
+  "Cannot find the config file for modelopt". *Test the agent:* does it verify the quant is actually
+  **applied** (weights resident FP8 + a block-scale grid), or assume "it's a modelopt export → stock
+  modelopt serves it"? "Server returned 200" without checking the load path is a miss.
+- **EV-AM-FUSED-QUANT-TARGET** — vLLM **fuses** `gate_proj`+`up_proj`→`gate_up_proj`
+  (MergedColumnParallelLinear) on the LM path, but the diffusion-side quant target regex matches only
+  the **unfused** names. A target rule written for the diffusion names silently **misses** the fused
+  LM layer → it loads unquantized → FP8 bytes into a BF16 param. *Test the agent:* when reusing a
+  diffusion-path quant method on the LLM path, does it target the **fused** module name?
+- **EV-AM-REASONER-CONTAINER-WIRING** — Reasoning is now a **container** residency plane
+  (`ContainerPlaneWorker`), not an in-api `SubprocessPlaneWorker` at `:8765`. A test asserting the
+  subprocess/`reasoning_spec`/port-8765 wiring is **stale** and must be updated to the container
+  path (per EV-AM-CPU-SUITE-GREEN's "update, never revert" rule), not reverted to keep it green.

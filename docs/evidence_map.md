@@ -128,3 +128,44 @@ adversarial_verification). No production/checkpoint file modified.
   (`docs/session_1/decision_record.md` §8) — **GATE-AM-S1-SPIKE PASSES**. Directions:
   reasoning → investigate omni text-tower first (AM-S2); action → `(a)` omni robot
   policy + `(c)` fallback (AM-S3).
+
+## AM-S2 execution audit (2026-07-25)
+
+**Hardware/env:** RTX 5090 (sm_120), 32607 MiB, GPU idle 18 MiB. Checkpoint =
+`Cosmos3-Nano-FP8-Blockwise` (deployed rev `4e181f9`). CPU baseline
+`uv run pytest -m "not gpu"` green; `git diff --exit-code schemas/openapi.json` clean;
+`docker compose -f deploy/docker-compose.fp8.yml config` shows **no BF16 mount** (only the
+FP8 checkpoint). Full evidence: `docs/session_2/` (`brainstorming`, `evidence/P1–P3`,
+`fork_prototype/`).
+
+- **S-A — RESOLVED: zero-BF16 FP8 reasoning is PROVEN.** `vllm serve <quantized> --quantization
+  fp8_blockwise_w8a16` (NO `--omni`, no BF16 mount) serves coherent **text** off the quantized
+  understanding tower. Mechanism (small vLLM-fork change): register a `--quantization
+  fp8_blockwise_w8a16` config that applies the existing (vllm-omni) `Fp8BlockwiseW8A16LinearMethod`
+  (resident FP8 + JIT 128×128 dequant) to the LM MLP projections, + a `cosmos3.py` mapper fix
+  (`weight_quantizer._scale`→`weight_scale`). Earlier belief "no fork change / stock modelopt works"
+  was **refuted** (P1: `KeyError weight_quantizer._amax`; `--quantization modelopt` → "config file
+  not found"); the bounded fork was required and made (P2). `GPU-AM-REASON-FP8` = **PASS** (P2:
+  "4"; "…is typically blue."; "Red, Blue, Yellow"; multi-step `80 km/h`; streaming SSE; peak
+  26.1 GiB/32 at 0.85 util, from the reproducible `deploy/vllm-reasoner.Dockerfile` image).
+- **S-B — RESOLVED (FP8): OWNER-AM-REASON-QUALITY = PASS.** Owner (Feng, 2026-07-25) ran custom
+  prompts against the live serving path and judged quality a "big PASS" (INV-6 satisfied for FP8).
+  NVFP4 quality remains AM-S5.
+- **`GPU-AM-T2I-NOREGRESS` = PASS** (P3): the unchanged `vllm-omni` image produced a valid 480×480
+  PNG off FP8 (peak 13.5 GiB); the AM-S2 change is reasoning-only (a separate reasoner image + the
+  `Plane.REASONING` code branch), so the generation path is byte-unchanged (INV-2 held).
+- **Residency (INV-5):** reasoning is served by a separate `vllm-reasoner` **container** plane
+  (`ContainerPlaneWorker`, evict-before-load vs generation; the single-slot FSM/`manager.py`
+  unchanged). Reasoner (~26 GiB) and omni (~13.5 GiB) never co-reside; no plane-merge adopted, so no
+  co-residency VRAM trace is owed. E-08's ~26 GiB reasoner figure now reflects a **quantized** FP8
+  reasoner (KV-cache-dominated at 0.85 util), not a BF16 base.
+- **Zero-BF16 (INV-4):** the FP8 reasoner serves off the **same** quantized checkpoint as generation
+  — one download, no separate `nvidia/Cosmos3-Nano` base, no reasoning overlay, no `WITH_REASONING`
+  (the reasoner is a container, so the api image stays torch-free). The BF16 subprocess overlay
+  (`docker-compose.reasoning.yml`) is marked **legacy**, not on the `make up-fp8` path.
+- **Reproducibility (NFR-5):** the fork change is applied in the local `fengwang/vllm` working tree
+  (uncommitted; owner to commit/pin) and vendored as a COPY-patch under `deploy/vllm-reasoner/patch/`
+  for the reproducible image; a pinned public fork install is a documented AM-S4 follow-up.
+- **Gate:** `GATE-AM-S2-REASONING` — reasoning e2e on FP8 (zero-BF16) ✓, `t2i` non-regressed ✓,
+  CPU green ✓, owner quality PASS ✓, no BF16 on the reasoning path ✓, residency safety net ✓, API
+  shape unchanged ✓. Sharded review + adversarial verifier: see `docs/session_2/`.

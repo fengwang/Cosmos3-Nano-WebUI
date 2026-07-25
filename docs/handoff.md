@@ -1,83 +1,85 @@
 # Session Handoff
 
 ## State Snapshot
-- Session: **AM-S1** — Feasibility Spike (FP8), Phase-5 "All-Modes". Risk high.
-- Branch: `fea/eanble-reasoning-action-phase-5-session-1`
-- Last commit: `52feab3` (phase-5 blueprint). **AM-S1 deliverables are uncommitted**
-  (docs-only; commit scoped to `docs/**` when desired).
-- Changed files: **new** `docs/session_1/**` (brainstorming, design,
-  execution_contract, decision_record, sharded_review, adversarial_verification,
-  `evidence/P1,P2,P3,P5,P7`); **updated** `docs/evidence_map.md`,
-  `docs/risk_register.md`, `docs/eval_seed_cases.md`, `docs/handoff.md`.
-  *(Not this session: ` M misc/logo.png`, `?? docs/archive/phase-4/` — pre-existing.)*
-- Checks run: `uv run pytest -m "not gpu"` → **523 passed** (start + close + adversarial
-  re-run); `rg action_ …/diffusers_action/loader.py`; live FP8 `vllm-omni` GPU probes
-  (reasoning chat, action WS surface, VRAM traces); dependency-free safetensors header
-  scans; HF range-read of the pinned public rev; the real repo `merge_state_dicts`.
-- Checks not run: full GPU action **trajectory** (AM-S3 quality gate); **NVFP4**
-  (AM-S5); reasoning **text-tower elicitation** (AM-S2); a `t2i` non-regression smoke
-  (no serving path changed — deferred to the first enablement session).
-- Current status: **GATE-AM-S1-SPIKE PASSES** (owner-signed 2026-07-24).
+- Session: **AM-S2** — Reasoning enabled + GPU-verified on FP8, **zero-BF16**. Risk high.
+- Branch: `fea/eanble-reasoning-action-phase-5-session-2`.
+- Status: **GATE-AM-S2-REASONING PASSES** — reasoning runs end to end on FP8 off the
+  quantized-only checkpoint (no BF16), `t2i` non-regressed, CPU suite green, owner
+  reasoning-quality verdict recorded **PASS** (2026-07-25).
+- Changed files (this session):
+  - **repo `api/`**: `app/main.py` (reasoning branch → `ContainerPlaneWorker`),
+    `orchestrator/planes.py` (`container_reasoning_spec`), `app/routes/reasoning.py`
+    (`VllmReasonerStream` → reasoner container URL).
+  - **repo `deploy/`**: `vllm-reasoner.Dockerfile` + `vllm-reasoner/patch/` (vendored fork
+    patch), `docker-compose.base.yml` (reasoner api env), `docker-compose.fp8.yml`
+    (`vllm-reasoner` service), `.env.example` (reasoner vars; BF16 overlay marked legacy).
+  - **repo `tests/`**: `test_gen_engine_selection.py` (updated), `api/test_reasoner_container_wiring.py` (new).
+  - **repo `docs/session_2/`**: `brainstorming.md`, `evidence/P1–P3`, `evidence/fork_prototype/`,
+    `design.md`, `execution_contract.md`, `decision_record.md`, `sharded_review.md`,
+    `adversarial_verification.md`; plus `docs/{evidence_map,risk_register,eval_seed_cases,handoff}.md`.
+  - **vLLM fork** (`fengwang/vllm`, local working tree, **uncommitted**): new
+    `model_executor/layers/quantization/fp8_blockwise_w8a16_vllm.py` + registration in
+    `quantization/__init__.py` + `models/cosmos3.py` mapper fix. `fengwang/vllm-omni` **unchanged**.
+- Checks run: `uv run pytest -m "not gpu"` green; `docker compose -f deploy/docker-compose.fp8.yml
+  config` (no BF16 mount, `vllm-reasoner` present); `git diff --exit-code schemas/openapi.json`
+  clean; **GPU-AM-REASON-FP8** (P2, from the reproducible reasoner image); **GPU-AM-T2I-NOREGRESS**
+  (P3); **OWNER-AM-REASON-QUALITY** = PASS; sharded review + adversarial verifier (docs/session_2/).
+- Checks NOT run: full-stack api→orchestrator→reasoner e2e (docker-socket start/stop + the
+  generation↔reasoning swap) as a single GPU run — the pieces are proven (reasoner image serves text;
+  CPU swap/residency tests green; factory builds the container worker) but the integrated swap is a
+  candidate for the **AM-S4** all-modes smoke. NVFP4 reasoning (AM-S5). A build of the reasoner image
+  from the *local fork* (I proved via the deployed-image + COPY-patch, equivalent runtime).
 
 ## Narrative Context
-AM-S1 probed whether `vllm-omni` can serve reasoning + action off the quantized-only
-FP8 checkpoint. It found the blueprint's **action premise (E-06) stale**: the
-quantized checkpoints (deployed + pinned public + NVFP4) **already bundle** the BF16
-`action_*` adapters via the prior **P6-S5 `checkpoint_prep mutate`**, so zero-BF16
-action *packaging* is done. The **real blocker is reasoning**: the omni
-`/v1/chat/completions` serves **images, not text**, so zero-BF16 reasoning is
-**unproven**. Action's omni **robot surface exists** (`/v1/realtime/robot/openpi`)
-but is **unwired**, and the in-process `(c)` graft is **broken** (collides on the
-now-present tensors). Owner signed off; **AM-S2 investigates the omni text-tower**
-for reasoning, **AM-S3 wires action via the omni robot policy** (`(a)`) with the
-fixed `(c)` graft as fallback.
+AM-S1 left zero-BF16 reasoning **unproven** (omni chat = image-gen; R-15). AM-S2 resolved it:
+plain `vllm serve <quantized> --quantization fp8_blockwise_w8a16` (NO `--omni`, no BF16) decodes
+coherent **text** off the quantized understanding tower. The enabling change is a **small
+`fengwang/vllm` fork**: register a `--quantization fp8_blockwise_w8a16` config that applies the
+existing vllm-omni `Fp8BlockwiseW8A16LinearMethod` (resident FP8 + JIT 128×128 dequant) to the LM
+MLP projections, plus a `cosmos3.py` mapper fix (`weight_quantizer._scale`→`weight_scale`). The
+earlier hope of "no fork / stock modelopt" was **refuted** (P1). Reasoning is wired as a separate
+**`vllm-reasoner` container** residency plane (evict-before-load vs generation; the single-slot FSM
+is unchanged), so the api image needs no torch/vLLM/`WITH_REASONING`. Owner quality: **PASS**.
 
 ## Decision Log
-| Decision | Chosen | Rejected | Reason | Contract Ref |
-|---|---|---|---|---|
-| Reasoning mechanism | `(c)` side-car; zero-BF16 **unproven** | `(a)` omni chat | omni chat = image-gen, not text (P3) | S-A, R-15 |
-| Action mechanism | `(a)` omni robot policy + `(c)` fallback | `(c)`-primary / `(a)`-only | `(a)` enables Studio+Action merge; `(c)` needs a code fix (P5) | S-C, R-02 |
-| Zero-BF16 action packaging | **GO, already done** (P6-S5 mutate) | new re-export | adapters already bundled; E-06 refuted (P1/P2) | S-E, R-01 |
-| Reasoning zero-BF16 approach | investigate omni text-tower first (AM-S2) | accept BF16 side-car now | keep the hard goal alive; side-car is the documented fallback | R-15, INV-4 |
-| Does AM-S1 fold into AM-S2? | **No** | Yes | the spike produced **no** reasoning wiring (omni doesn't serve text) | handoff §8 |
+| Decision | Chosen | Rejected | Reason |
+|---|---|---|---|
+| Reasoning zero-BF16 | **Serve quantized FP8 understanding tower via a vLLM fork** (`--quantization fp8_blockwise_w8a16`) | BF16 base side-car; bundled `-dist` BF16 `reasoner/` | owner hardened INV-4 to absolute — no BF16 at all |
+| Reasoner runtime | **Own container** (`vllm-reasoner`, non-omni serve) | api subprocess | drops torch/vLLM/`WITH_REASONING` from the api image; reuses the container-plane pattern |
+| Fork scope | **minimal** (register quant + mapper fix; reuse the omni W8A16 method) | new kernel / big fork | the blockwise-FP8 method already existed in vllm-omni |
+| Image strategy | **COPY-patch the omni-image lineage** (`deploy/vllm-reasoner.Dockerfile`) | build vLLM from the fork | fast + reproducible; pin the public fork later (AM-S4) |
+| FP8 vs NVFP4 | **FP8 e2e this session** | both now | FP8-first sequencing; NVFP4 = AM-S5 |
 
 ## Next Priority Queue
-1. **AM-S2 (reasoning, FP8):** investigate eliciting **text** from the quantized
-   understanding/text tower (a `vllm-omni` fork modality flag, or serving the text
-   tower on a separate engine). If unproven, record an explicit **BF16-reasoner
-   side-car** owner decision (INV-4 exception, documented at the gate). Re-verify
-   `t2i` non-regression; owner reasoning-quality gate.
-2. **AM-S3 (action, FP8):** wire the omni `/v1/realtime/robot/openpi` policy to the
-   checkpoint's **own** action weights (option `(a)`; Studio+Action plane-merge —
-   **VRAM-verify** it stays in budget). Keep a **fixed** `(c)` graft as fallback:
-   reconcile `api/engines/diffusers_action/loader.py` (stop grafting `action_*` from
-   the BF16 base — the checkpoint has them; drop/adjust the stale
-   `GEN_TOWER_QUANTIZED=505`). Bridge the API shape (WebUI REST `/v1/action/*` ↔ omni
-   WS openpi). Re-verify `t2i`; owner action-quality gate.
-3. **Serving-code reconciliation** (residual of R-01): the loader's docstring +
-   base-graft + `505` constant all predate the P6-S5 mutation and are now wrong;
-   folded into AM-S3.
+1. **AM-S3 (action, FP8):** unchanged by AM-S2 — wire the omni robot policy `(a)` / fixed `(c)`.
+   Note: Studio+Action can plane-merge (same omni model); reasoning is a *third* plane that swaps.
+2. **AM-S4 (default-on, FP8):** finalize the reasoner wiring into the clean default —
+   (a) **commit + pin** the `fengwang/vllm` fork commit and switch `deploy/vllm-reasoner.Dockerfile`
+   from the vendored COPY-patch to a pinned public fork install (NFR-5); (b) remove/repoint the
+   legacy BF16 `docker-compose.reasoning.yml` overlay + `WITH_REASONING` build split + the dormant
+   subprocess `reasoning_spec`/`ReasonerConfig`/`reasoner_preflight` (R-11 dead code); (c) run the
+   **full-stack all-modes GPU smoke** including the api-driven generation↔reasoning residency swap.
+3. **AM-S5 (NVFP4):** prove reasoning on NVFP4 — the NVFP4-dist checkpoint uses `nvfp4_blockwise`;
+   the same fork pattern should extend (register/select the NVFP4 W4A16 method for the text path).
 
 ## Warnings And Gotchas
-- **Environment:** the deployed FP8 checkpoint is at on-disk rev `4e181f9`; the
-  blueprint's pinned public `9bf5d6ae` is **not** in the local clone's git history
-  (the repo was rebuilt) but **is** on HF and **also** carries the action adapters.
-- **Known failing behavior (not a test):** the in-process `diffusers_action` loader
-  is **broken** against the current checkpoint (key collision) — invisible to the CPU
-  suite (torch-free imports). AM-S3 must fix before `(c)` can serve.
-- **Deferred risks:** **R-15** (zero-BF16 reasoning unproven — the phase's main open
-  risk); Studio+Action plane-merge VRAM is **projected, unmeasured**; **D1** (in-process
-  loader `505 ≠ 216`, revision-independent).
-- **Files future sessions must not casually edit:** AM-S1 touched only `docs/**`. Do
-  **not** sweep `misc/logo.png` (pre-existing, unrelated working-tree change) into any
-  commit — scope an AM-S1 commit to `docs/**`.
+- **The fork change is uncommitted** in the local `fengwang/vllm` working tree (owner to review /
+  commit / push / pin). Until then, the reproducible reasoner image relies on the **vendored
+  COPY-patch** under `deploy/vllm-reasoner/patch/` (kept byte-identical to the fork edit).
+- **Reasoner VRAM ≈ 26 GiB** at `--gpu-memory-utilization 0.85` (KV-cache-dominated; the FP8 weights
+  are far smaller). It and the ~13.5 GiB omni generation model **must never co-reside** (32 GiB
+  budget) — the orchestrator's evict-before-load enforces this (INV-5); do not add a Studio+Reasoning
+  plane-merge without a measured OOM-free trace.
+- **W8A16 dequantizes the full weight per forward** (no fused kernel) — correct on sm_120, not
+  perf-optimal; fine for reasoning, a candidate for a fused-kernel follow-up.
+- The old BF16 reasoning path (`docker-compose.reasoning.yml`, `WITH_REASONING`, the subprocess
+  `reasoning_spec`) is **legacy/dormant**, not on `make up-fp8`; AM-S4 removes it.
 
 ## Eval Seeds
-- Missed check: E-06 (marked *High confidence*) was **code-derived**, never validated
-  against the artifact → **EV-AM-PREMISE-VS-ARTIFACT** (inspect real bytes for any
-  checkpoint/binary claim).
-- New regression test candidate: **EV-AM-CHAT-IS-IMAGE** (omni `/v1/chat/completions`
-  returns images; never record "reasoning works" from HTTP 200 / a loaded server).
-- Instruction update candidate: a feasibility spike MUST inspect the real
-  artifact/bytes for a checkpoint claim, not trust a code-derived premise; and MUST
-  hold the feasibility↔quality line (endpoint-exists / loads ≠ works).
+- **EV-AM-QUANT-SIDECAR-NOT-AUTODETECTED** — the FP8 quant is in a side `quantization_config.json`
+  (not `hf_quant_config.json`), so stock vLLM auto-detect + `--quantization modelopt` both fail;
+  verify the quant is *applied*, not just that the server returned 200.
+- **EV-AM-FUSED-QUANT-TARGET** — vLLM fuses `gate_proj`+`up_proj`→`gate_up_proj`; a quant target
+  regex written for the unfused diffusion names silently misses the fused LM layer.
+- **EV-AM-REASONER-CONTAINER-WIRING** — reasoning is a container plane now; subprocess/`:8765` tests
+  are stale (update, never revert).
