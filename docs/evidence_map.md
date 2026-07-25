@@ -212,3 +212,44 @@ deploy/docker-compose.fp8.yml config` = **no BF16 mount** (only the FP8 checkpoi
   non-regressed ✓, CPU green ✓, API shape unchanged ✓, no BF16 ✓, residency safety net ✓, owner quality
   **PASS** ✓ → **GATE-AM-S3-ACTION PASSES**. Sharded review (1 Medium correctness **fixed** + tested;
   2 maintainability deferred) + adversarial verifier **PASS**: see `docs/session_3/`.
+
+## AM-S4 execution audit (2026-07-25)
+
+**Hardware/env:** RTX 5090 (sm_120), 32607 MiB, driver 610.43.03. One `make up-fp8` (cold-start),
+`--env-file .env` → checkpoint `/data/models/Cosmos3-Nano-FP8-Blockwise` (deployed rev `4e181f9`,
+quantized-only). Images: lean `cosmos3-nano-api:local` (AM-S4 Dockerfile — no torch/CUDA), `vllm-omni`,
+`vllm-reasoner`, `webui`. CPU suite `uv run pytest -m "not gpu"` = exit 0 (green, incl. new
+`tests/deploy/`); `git diff --exit-code schemas/openapi.json` clean (INV-8); `docker compose … config`
+(raw AND `--env-file .env`) shows **no BF16 mount** — only the FP8 checkpoint. Full evidence:
+`docs/session_4/` (brainstorming→execution_contract, specs/, sharded_review, adversarial_verification,
+evidence/P1). No production checkpoint modified; no re-export.
+
+- **Deploy simplification — DONE.** Deleted `docker-compose.reasoning.yml`; stripped `WITH_REASONING`
+  from `api.Dockerfile` (lean torch-free image); retired `up-fp8-reasoning` + the BF16 env from
+  `Makefile`/`.env.example`. `rg "up-fp8-reasoning|WITH_REASONING|COSMOS3_BASE_DIR"` over
+  Makefile/deploy/.env.example = clean. `EV-AM-ZERO-BF16-WIRING` + `EV-AM-NO-OVERLAY-DEFAULT` are now
+  deterministic `tests/deploy/` checks (mutation-tested "with teeth" by the adversarial pass).
+- **Cold-start boot lifecycle — DONE.** `make up-fp8` = `up -d --no-start` → `stop` heavy → `start api
+  webui`, so boot leaves only api+webui running (GPU 18 MiB); the two heavy planes are created-but-stopped
+  and the orchestrator owns their start/stop. The pre-AM-S4 `up -d`-starts-both co-load OOM hazard is
+  closed. Orchestrator code unchanged (the cold-slot FSM already fit).
+- **`GPU-AM-ALLMODES-FP8` — PASS** (`evidence/P1`). One `make up-fp8`, all three modes via the full
+  api→orchestrator→container path: Studio t2i (PNG 691,968 B) → Reasoning (`/v1/reason` coherent SSE; swap
+  evict GENERATION → load REASONING) → Studio t2i (swap back; PNG **byte-identical** 691,968 B) → Action
+  policy (agibotworld; MP4 629,416 B + `[16,29]` trajectory). Orchestrator logs show evict-before-load in
+  both swap directions; `co_load_ever=0` every step; peaks **13.5 / 26.1 / 13.9 GiB ≤ 32** (never
+  co-resident, INV-5). Clean teardown → 18 MiB (no leak).
+- **`GPU-AM-T2I-NOREGRESS` — PASS.** t2i produced the byte-identical 691,968-B PNG (== the P3/AM-S2
+  baseline) before AND after the reasoning swap (INV-2).
+- **R-08 reconciled.** `coresidency.py` footprint (FP8/KV-cache-dominated ≈26 GiB, not ~16 GB BF16) + the
+  `eviction` field (`container_stop`, was `process_kill`) updated to the live all-modes reality.
+- **Sub-finding (pre-existing; surfaced by the full-stack smoke):** t2i acquires
+  `ResidencyId(GENERATION, label=None)` while action acquires `…label='fp8'`, so alternating t2i↔action
+  reloads omni (same GENERATION plane, but not warm). Not an AM-S4 change (label derivation untouched);
+  the INV-5 safety net holds. Recorded as `EV-AM-RESIDENCY-LABEL-CONSISTENCY` + an R-08 follow-up.
+- **Gate:** `GATE-AM-S4-ORCHESTRATION` technical done condition **PASS** (deterministic gates green;
+  all-modes smoke PASS; INV-2/4/5/7/8 hold; blast radius clean — sharded review + fresh-context
+  adversarial verifier both **PASS**, see `docs/session_4/`). **Owner confirmation of the default
+  `make up-fp8` all-modes run: PASS** (Feng, 2026-07-26) — the owner tested all tabs/options on a fresh
+  `make up-fp8` and everything worked (incl. the reasoning-400 fix, evidence/P2). **→
+  GATE-AM-S4-ORCHESTRATION PASSES.**

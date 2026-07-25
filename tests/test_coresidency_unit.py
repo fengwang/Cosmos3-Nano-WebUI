@@ -21,12 +21,14 @@ def test_module_imports_torch_free():
         assert hasattr(coresidency, name), name
 
 
-def test_contract_declares_stop_start_process_kill():
+def test_contract_declares_stop_start_container_stop():
     from engines.vllm.coresidency import CoResidencyContract
 
     c = CoResidencyContract()
     assert c.mechanism == "stop_start"
-    assert c.eviction == "process_kill"
+    # AM-S4/R-08: the live all-modes path evicts by container stop (vllm-omni/vllm-reasoner); the dormant
+    # in-process path is a process kill. The contract Data now names the live-path mechanism.
+    assert c.eviction == "container_stop"
     assert c.vram_budget_bytes == 32 * GiB
     assert 0.0 < c.gpu_memory_utilization < 1.0
 

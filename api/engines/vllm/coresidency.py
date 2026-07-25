@@ -2,9 +2,12 @@
 
 This is the contract the **S6 orchestrator** must honor (S5 documents + measures it; S6 implements it).
 Chosen mechanism (D-ORCH / Q2): vLLM runs as an **out-of-process** server with a hard
-``gpu_memory_utilization`` cap, and the OOM-free swap is achieved by **killing the process** (full VRAM
-release) before the generation plane loads — never concurrent co-residency. The reasoner (~16 GB bf16)
-and the generation stack (~9 GB NVFP4 DiT + VAE + encoders) cannot both stay hot in 32 GB (D3), and the
+``gpu_memory_utilization`` cap, and the OOM-free swap is achieved by **evicting** the resident plane for
+full VRAM release before the next plane loads — never concurrent co-residency. Eviction is a container
+STOP for the vllm-omni/vllm-reasoner containers (AM-S2/S4) or a process kill for the dormant subprocess
+path; the manager's post-evict VRAM gate is the real guarantee. The reasoner (an **FP8-quantized**
+understanding tower served off the SAME checkpoint as of AM-S2 — KV-cache-dominated at 0.85 util, ≈26 GiB,
+not ~16 GB BF16 base weights) and the generation stack cannot both stay hot in 32 GB (D3), and the
 untiled VAE-decode peak (D4/RK-08) makes mem-cap co-residency infeasible.
 
 ``within_budget`` / ``handoff_ok`` are pure Calculations over a recorded VRAM trace, so the OOM-free
@@ -16,12 +19,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Hard memory cap on the resident reasoner (CALIBRATED live, S5): vLLM pre-allocates its KV cache by this
-# fraction. The reasoner's ~16 GB bf16 weights alone exceed 0.45·32 GiB, so the cap must be high enough to
-# load weights + a useful KV cache — measured resident ≈ 26 GiB at 0.85 (≤ 32 GiB, ~6 GiB headroom). The
-# planes never CO-reside (D-ORCH stop/start); the room for the generation plane is freed by the process
-# KILL (eviction → ~0), not by this cap. The loader's serve spec carries this exact value (one shared
-# constant — see test_contract_memcap_equals_loader_serve_cap).
+# Hard memory cap on the resident reasoner (CALIBRATED live, S5; footprint reconciled AM-S4/R-08): vLLM
+# pre-allocates its KV cache by this fraction. As of AM-S2 the reasoner is the **FP8-quantized**
+# understanding tower served off the SAME quantized checkpoint (no ~16 GB BF16 base), so at 0.85 the
+# resident ≈ 26 GiB is **KV-cache-dominated**, not BF16 weights (still ≤ 32 GiB, ~6 GiB headroom). The
+# planes never CO-reside (D-ORCH stop/start); VRAM for the next plane is freed by **eviction** — a
+# container STOP for the vllm-omni/vllm-reasoner containers (AM-S2/S4), or a process kill for the dormant
+# subprocess path — with the manager's post-evict VRAM gate as the real guarantee, not this cap. Both the
+# reasoner's serve spec (test_contract_memcap_equals_loader_serve_cap) and the live vllm-reasoner compose
+# command (AM-S4 test_reasoner_util_matches_contract) carry this exact value — one shared constant.
 DEFAULT_GPU_MEMORY_UTILIZATION = 0.85
 VRAM_BUDGET_BYTES = 32 * 1024**3
 
@@ -37,7 +43,11 @@ class CoResidencyContract:
     """The documented contract the S6 orchestrator MUST honor (inert Data)."""
 
     mechanism: str = "stop_start"
-    eviction: str = "process_kill"
+    # Live all-modes path: eviction is a container STOP (ContainerPlaneWorker.evict → docker stop) for the
+    # vllm-omni/vllm-reasoner containers (AM-S2/S4). The dormant in-process subprocess path uses a
+    # process kill; both free VRAM before the next plane loads (the manager's post-evict gate is the real
+    # guarantee). Reconciled AM-S4/R-08 (was "process_kill" — accurate only for the subprocess path).
+    eviction: str = "container_stop"
     vram_budget_bytes: int = VRAM_BUDGET_BYTES
     gpu_memory_utilization: float = DEFAULT_GPU_MEMORY_UTILIZATION
 

@@ -8,6 +8,14 @@ services:
   api:
     environment:
       COSMOS3_CHECKPOINT_LABEL: fp8
+      # Align the api's reasoning context window to the vllm-reasoner's `--max-model-len 8192` (below),
+      # MINUS headroom for the chat-template tokens the api's char-heuristic prompt count can't see (it
+      # counts the raw prompt, not the template-wrapped form). Without this the api defaulted to 32768 and
+      # an unbounded /v1/reason forwarded max_tokens ≈ 32760 to the 8192-window reasoner → HTTP 400 (AM-S4
+      # fix). Now an over-cap request gets a clean 422 at the api edge, not a reasoner 400. These MUST stay
+      # ≤ the reasoner's --max-model-len − headroom (guarded by tests/deploy/test_reasoner_context_cap_*).
+      COSMOS3_REASONER_MAX_CONTEXT: "7680"   # 8192 − 512 chat-template headroom
+      COSMOS3_REASONER_MAX_OUTPUT: "7680"    # output may use the window; the reasoner stops at EOS well before
     volumes:
       # The api reads only the curated negative-prompt default from the checkpoint's assets/ (UX-S2),
       # so it mounts assets/ read-only — not the weights (minimal surface). Matches the vllm-omni source.

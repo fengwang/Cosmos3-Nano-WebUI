@@ -179,3 +179,48 @@ phase-4 pattern.)*
   Caught by the sharded review (Finding 1), fixed + regression-tested. *Test the agent:* does it validate
   the *shape/non-emptiness* of an engine/server response before persisting it as a result? *Promotion:*
   add/keep the `test_action_predict_empty_trajectory_fails_typed_no_artifact` regression test.
+
+## AM-S4 execution harvest (2026-07-25)
+
+**Checks satisfied**
+- **GPU-AM-ALLMODES-FP8** — SATISFIED (`docs/session_4/evidence/P1`): one `make up-fp8` (cold-start) served
+  all three modes through the full api→orchestrator→container path with correct on-demand swaps
+  (GENERATION↔REASONING evict-before-load, both directions, orchestrator-logged), never co-resident (peaks
+  13.5 / 26.1 / 13.9 GiB ≤ 32; INV-5), zero BF16 (INV-4).
+- **GPU-AM-T2I-NOREGRESS** — SATISFIED: byte-identical 691,968-B PNG (== the P3/AM-S2 baseline) before AND
+  after the reasoning swap (INV-2).
+- **EV-AM-ZERO-BF16-WIRING**, **EV-AM-NO-OVERLAY-DEFAULT** — SATISFIED and now **deterministic tests**
+  (`tests/deploy/`): no BF16 mount in the rendered fp8 config; both heavy services present; no
+  overlay / `WITH_REASONING` / `up-fp8-reasoning` / BF16 env; reasoner `--gpu-memory-utilization` == the
+  coresidency contract. The adversarial pass mutation-confirmed each assertion has teeth.
+- **EV-AM-CPU-SUITE-GREEN**, **EV-AM-SCHEMA-STABLE** — SATISFIED (CPU exit 0; `openapi.json` clean).
+- **Owner confirmation** of the default `make up-fp8` all-modes run (routing §5) — **PENDING**.
+
+**New seeds harvested (issues AM-S4 caught — seed the verifiers)**
+- **EV-AM-COLD-START-NO-COLOAD** — `restart: "no"` does **not** stop `docker compose up -d` from
+  *starting* a service; with two heavy GPU containers in one stack, a naive `up -d` boots BOTH → co-load
+  OOM. `make up-fp8` must leave the heavy planes created-but-stopped (`up -d --no-start` → `stop` heavy →
+  `start` light) so the orchestrator owns their lifecycle. *Test the agent:* when adding a second heavy
+  container to a stack, does it realize `up -d` starts everything regardless of restart policy, or assume
+  `restart:"no"` means "won't start"? *Promotion:* eval seed + the `tests/deploy/` + P1 cold-start check.
+- **EV-AM-RESIDENCY-LABEL-CONSISTENCY** — the full-stack smoke revealed t2i acquires
+  `ResidencyId(GENERATION, label=None)` but action acquires `…label='fp8'`, so alternating t2i↔action
+  reloads the omni model (same plane, not warm) — "Studio+Action plane-merge" holds as "same plane", not
+  "no reload". AM-S3's `vllm_omni_work` **direct-call** could not surface it; only the api HTTP path did.
+  *Test the agent:* does it drive the REAL end-to-end surface (api → orchestrator), so residency-identity
+  mismatches surface, rather than a direct function call? *Follow-up:* align the two paths' ResidencyId
+  label so Studio+Action truly share warm (a focused, test-guarded change; R-08).
+- **EV-AM-RESTART-POLICY-IS-NOT-START-GATE** — (adversarial case) an agent might "verify" cold start from
+  `restart: "no"` alone. The real guarantee is the Makefile bring-up sequence + the single-slot FSM;
+  assert the *running set* after `make up-fp8` (`docker ps`), not the restart policy.
+- **EV-AM-REASONER-CAP-MATCHES-MODEL-LEN** — (owner-reported 400) the api's reasoning context window
+  (`COSMOS3_REASONER_MAX_CONTEXT`, default 32768) MUST be aligned to the reasoner container's
+  `--max-model-len` (8192, AM-S2) MINUS headroom for the chat-template tokens the api's char-heuristic
+  prompt count can't see. The WebUI sends `/v1/reason` with **no** `max_output_tokens`, so the api's
+  unbounded default forwarded `max_tokens ≈ 32760` → the reasoner HTTP 400'd (surfaced as "HTTP Error 400"
+  in the WebUI). *Test the agent:* when a downstream server pins a small window, does it align the
+  upstream's edge cap (with headroom) so an unbounded request either fits or 422s at the edge — never blows
+  the downstream's limit? The AM-S4 all-modes smoke missed it by sending an explicit `max_output_tokens=64`
+  — a reminder to exercise the **unbounded/default** client shape, not only a conveniently-capped one.
+  *Promotion:* eval seed + adversarial case + the deterministic guard
+  `tests/deploy/test_reasoner_context_cap_fits_model_len.py`.
