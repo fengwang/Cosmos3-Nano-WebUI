@@ -47,8 +47,12 @@ RTX 5090; none may be written as a shipped capability until its gate passes.
 > vLLM fork, owner PASS). S-C/E-07 **RESOLVED** (AM-S3: action served by the resident omni model via the
 > video-API `action_mode` `(a2)`, all three modes GPU-proven; the openpi `(a1)` WS is for the separate
 > Policy-DROID checkpoint; `(c)` graft dormant). S-E dissolved / E-06 refuted (adapters bundled;
-> no re-export). **Open:** S-B/S-D NVFP4 quality (AM-S5). `OWNER-AM-ACTION-QUALITY` = **PASS** (Feng,
-> 2026-07-25). See the AM-S1/S2/S3 execution audits at the end of this file.
+> no re-export). **AM-S5 (2026-07-26):** S-D **RESOLVED (technical)** — all three modes serve on NVFP4
+> off the quantized-only checkpoint (t2i/action via the unchanged omni image; reasoning via a bounded
+> W4A16 fork patch mirroring AM-S2). S-B **RESOLVED (NVFP4)** — `OWNER-AM-REASON-QUALITY` +
+> `OWNER-AM-ACTION-QUALITY` (NVFP4) = **PASS** (Feng, 2026-07-26: checked every WebUI tab on the nvfp4
+> container, all functions work as expected, quality very good) → **all three modes are GPU-verified +
+> default-on on BOTH the FP8 and NVFP4 stacks.** See the AM-S1/S2/S3/S5 execution audits at the end of this file.
 
 | ID | Claim (to be tested) | Why plausible | Resolving gate |
 |---|---|---|---|
@@ -253,3 +257,60 @@ evidence/P1). No production checkpoint modified; no re-export.
   `make up-fp8` all-modes run: PASS** (Feng, 2026-07-26) — the owner tested all tabs/options on a fresh
   `make up-fp8` and everything worked (incl. the reasoning-400 fix, evidence/P2). **→
   GATE-AM-S4-ORCHESTRATION PASSES.**
+
+## AM-S5 execution audit (2026-07-26)
+
+**Hardware/env:** RTX 5090 (sm_120), 32607 MiB, driver 610.43.03. GPU idle 18 MiB before/after each probe.
+Checkpoint = `Cosmos3-Nano-NVFP4-Blockwise` (public `wfen/…` rev `5514c42b…`, `openmdw-1.0`),
+quantized-only, read-only. `transformer/config.json` → `quant_algo: NVFP4`, recipe
+`nvfp4_blockwise_mixed_v1` (216 FP4 tensors, block_size 16; `target_patterns` `^layers\.\d+\.mlp(_moe_gen)?\.`).
+CPU baseline `uv run pytest -m "not gpu"` green; `git diff --exit-code schemas/openapi.json` +
+`deploy/docker-compose.fp8.yml` clean (INV-8, FP8 frozen); `docker compose -f
+deploy/docker-compose.nvfp4.yml config` (raw AND `--env-file .env`) shows a `vllm-reasoner` +
+**no BF16 mount** (only the NVFP4 checkpoint). Full evidence: `docs/session_5/` (brainstorming→execution_contract,
+specs/, evidence/P1–P2, fork_prototype_nvfp4/). No production checkpoint modified; **no re-export**.
+
+- **S-D — RESOLVED (technical): all three modes serve on NVFP4 off the quantized-only checkpoint, zero BF16.**
+  - **t2i (Studio) — `GPU-AM-T2I-NOREGRESS` (NVFP4) = PASS** (P1): the **unchanged** omni image (NVFP4
+    command, **no** `--enable-layerwise-offload` — Marlin FP4 forbids it) produced a valid 480×480 PNG
+    (691,968 B); peak ~17.1 GiB. INV-2 held (the AM-S5 change is a separate reasoner image; the omni/gen
+    path is byte-unchanged).
+  - **Action — `GPU-AM-ACTION-NVFP4` = PASS** (P1): all three v1 modes via the omni video-API `action_mode`,
+    driven through the **real** `vllm_omni_work` wiring — FD(agibotworld) 628 KB rollout MP4;
+    policy(agibotworld) 659 KB MP4 + trajectory `[16,29]`; ID(av) trajectory `[60,9]`. Peak **18.2 GiB**,
+    Studio+Action plane-merge (one resident omni model, no swap, no offload).
+  - **Reasoning — `GPU-AM-REASON-NVFP4` = PASS** (P2): a **bounded fork patch mirroring AM-S2** —
+    registerable `--quantization nvfp4_blockwise_w4a16` reusing vLLM's `ModelOptNvFp4W4A16LinearMethod`
+    (Marlin FP4, weight-only) on the FUSED text-path MLP (`language_model.model.layers.*.mlp.
+    {gate_up_proj,down_proj}`) + a `cosmos3.py` NVFP4 sidecar map (`weight_packed→weight`,
+    `weight_block_scale→weight_scale`, `weight_global_scale→weight_scale_2`). Non-omni `vllm serve`
+    decoded coherent text off the FP4 understanding tower (`4`; `A clear daytime sky is blue.`;
+    `Red, Blue, Yellow`; correct multi-step speed calc; streaming SSE) — matching the AM-S2 FP8 shape.
+    Peak **26.9 GiB / 32** (KV-dominated at 0.85 util), no offload, **no BF16 mount**. Reproduced through
+    the **built** reproducible image `cosmos3-nano-vllm-reasoner-nvfp4:local` (baked patches, no
+    bind-mount) → coherent (NFR-5 closed).
+- **S-B — RESOLVED (NVFP4): `OWNER-AM-REASON-QUALITY` + `OWNER-AM-ACTION-QUALITY` (NVFP4) = PASS**
+  (Feng, 2026-07-26). The owner ran the live `make up-nvfp4` container and checked **every WebUI tab**
+  (Studio, Reasoning, Action) — all functions work as expected and the output quality is **"very good"**
+  across the board, including 4-bit reasoning (the fused gate/up global-scale MAX-merge, `modelopt.py:1362`,
+  did not degrade quality perceptibly). INV-6 satisfied per-mode (recorded GPU run P1/P2 **and** owner
+  quality PASS) → **NVFP4 reasoning + action are GPU-verified**; INV-7 satisfied → default-on on NVFP4.
+- **Finding (RESOLVED 2026-07-26) — NVFP4 checkpoint `assets/` lacked the action demo conditioning INPUTS**
+  FP8 ships (the WebUI "Run demo" reads them at `/models/checkpoint/assets/…`), so the button 422'd on
+  NVFP4 (external-checkpoint data asymmetry, not a repo bug; `webui/**` R-12). **Owner decision executed:**
+  the 3 missing action inputs (`example_action_fd_agibotworld_first_frame.png`,
+  `example_action_id_av_0_input.mp4`, `example_action_id_av_1_input.mp4`) were copied byte-identical from
+  FP8 and published to `wfen/Cosmos3-Nano-NVFP4-Blockwise` `main` via the HF API in commit **`e59dcff…`**
+  (assets-only; `transformer/` weights + configs byte-identical to `5514c42b…`, so this AM-S5 GPU
+  verification carries over; INV-2/NFR-5 unaffected). The NVFP4 pin is bumped `5514c42b…` → `e59dcff…` in
+  `.env.example` + `docs/model_setup.md` (README pin = AM-S6). No binary committed to this repo (INV-1). See P1.
+- **Blast radius / INV holds:** FP8 stack byte-unchanged (`docker-compose.fp8.yml`, `vllm-reasoner.Dockerfile`,
+  `patch/` untouched); `schemas/openapi.json` unchanged; no `webui/**`/README/walkthrough/archive edit; no
+  weight/media binary. Residency safety net preserved (INV-5: omni ≤18.2 GiB, reasoner ≈26.9 GiB, never
+  co-resident — the single-slot FSM evict-before-loads, same as FP8).
+- **Gate:** `GATE-AM-S5-NVFP4` **PASSES** — AM-S4 design applied to NVFP4; each mode GPU-probed on NVFP4
+  (P1–P2); `t2i` non-regressed (INV-2); no BF16 on the NVFP4 default path (INV-4); CPU green; schema stable
+  (INV-8); FP8 unchanged; sharded review + adversarial verifier PASS (`docs/session_5/`). **Owner per-mode
+  NVFP4 quality gate PASS** (Feng, 2026-07-26 — every WebUI tab verified, quality very good) → the human
+  decision that promotes to default-on is satisfied (INV-6/INV-7). **All three modes (Studio, Reasoning,
+  Action) are now GPU-verified + default-on on both FP8 and NVFP4 — the phase-5 finish line.**

@@ -43,7 +43,7 @@ up-fp8:
 > $(COMPOSE) $(FP8) start api webui
 up-nvfp4:
 > $(COMPOSE) $(NVFP4) up -d --no-start
-> $(COMPOSE) $(NVFP4) stop vllm-omni
+> $(COMPOSE) $(NVFP4) stop vllm-omni vllm-reasoner
 > $(COMPOSE) $(NVFP4) start api webui
 # Tears down BOTH stacks: fp8/nvfp4 share one compose project (deploy/) + fixed container names.
 down:

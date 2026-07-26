@@ -11,7 +11,7 @@ wiring is `MIG-S6`. Evidence: `docs/archive/phase-1/session_4/hf_verification.md
 | Purpose | Repo id | Pinned revision | Model license |
 |---|---|---|---|
 | Quantized generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `9bf5d6ae164688487bdb71947ccc6ebe70d12900` | `openmdw-1.0` |
-| Quantized generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `5514c42b9759739f545e0d0dee453db8d8525fbc` | `openmdw-1.0` |
+| Quantized generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `e59dcff2067d8eed16f65ffcc76d35c60abc9314` | `openmdw-1.0` |
 | BF16 base — legacy/dormant only | `nvidia/Cosmos3-Nano` | `fea6e03ac3d7884b4105ed8ee79fc480fca70965` | `other` |
 
 Consumers SHOULD pin the revision (not the mutable `main`). Do **not** use
@@ -85,11 +85,22 @@ loader), whose real compatibility is a `MIG-S6`/`MIG-S8` gate.
 |---|---|---|---|---|
 | `t2i` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) | not loadable as-is (D1) | **T2I-verified (`GPU-S3`, 2026-07-09):** fresh `hf download` at the `GPU-S2` revisions, through the unmodified `GPU-S1` image, direct **and** full-stack, no manual workaround; D1 remains for the in-process path only |
 | `t2v`, `t2v_audio`, `i2v` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) — verify `S6`/`S8` | not loadable as-is (D1) | GPU-unverified (`S8`); D1 for in-process path. (A best-effort NVFP4 `t2v` smoke passed under `GPU-S3` — see `docs/evidence_map.md` — but `t2v_audio`/`i2v` and any full validation of `t2v` remain unrun; this residual limit is otherwise unchanged.) |
-| reasoning | FP8/NVFP4 quantized checkpoint (understanding tower) | separate `vllm-reasoner` container (`--quantization fp8_blockwise_w8a16`, no `--omni`, zero BF16; AM-S2) | n/a | **FP8 GPU-verified (AM-S2, 2026-07-25):** coherent text off the quantized understanding tower via a bounded `fengwang/vllm` quant; owner reasoning-quality **PASS** (Feng). NVFP4 = AM-S5 (S-D). See `docs/evidence_map.md` AM-S2 audit. |
-| action (`forward_dynamics`/`policy`/`inverse_dynamics`) | FP8 quantized checkpoint (self-contains the bf16 `action_*` adapters — **no BF16 base**) | `vllm_omni` container via the video-API `action_mode` (FD=sync `/v1/videos/sync`; policy/ID=async `/v1/videos`) | in-process `diffusers_action` graft is **dormant** (not used; D1) | **FP8 GPU-verified end-to-end (AM-S3, 2026-07-25):** all three v1-scope embodiments (agibotworld 29-D FD/policy; av 9-D ID) off the quantized-only checkpoint, one resident model (Studio+Action merge). Owner action-quality verdict **PASS** (Feng, 2026-07-25); NVFP4 = AM-S5. See `docs/evidence_map.md` AM-S3 audit. |
+| reasoning | FP8/NVFP4 quantized checkpoint (understanding tower) | separate `vllm-reasoner` container (no `--omni`, zero BF16): fp8 via `--quantization fp8_blockwise_w8a16` (AM-S2), nvfp4 via `--quantization nvfp4_blockwise_w4a16` (W4A16 Marlin FP4, no offload; AM-S5) | n/a | **FP8 GPU-verified (AM-S2):** coherent text via a bounded `fengwang/vllm` quant; owner PASS (Feng, 2026-07-25). **NVFP4 GPU-verified (AM-S5, 2026-07-26):** coherent text off the 4-bit understanding tower via the analogous W4A16 fork patch (evidence/P2); owner NVFP4 reasoning-quality **PASS** (Feng, 2026-07-26). See `docs/evidence_map.md` AM-S2/S5 audits. |
+| action (`forward_dynamics`/`policy`/`inverse_dynamics`) | FP8/NVFP4 quantized checkpoint (self-contains the bf16 `action_*` adapters — **no BF16 base**) | `vllm_omni` container via the video-API `action_mode` (FD=sync `/v1/videos/sync`; policy/ID=async `/v1/videos`) | in-process `diffusers_action` graft is **dormant** (not used; D1) | **FP8 GPU-verified end-to-end (AM-S3, 2026-07-25):** all three v1-scope embodiments (agibotworld 29-D FD/policy; av 9-D ID) off the quantized-only checkpoint, one resident model (Studio+Action merge); owner action-quality **PASS** (Feng, 2026-07-25). **NVFP4 GPU-verified (AM-S5, 2026-07-26):** all three modes via the same omni video-API on the Marlin FP4 kernel, no offload (evidence/P1); owner NVFP4 action-quality **PASS** (Feng, 2026-07-26). See `docs/evidence_map.md` AM-S3/S5 audits. |
 
 No mode is beta-limited for missing weights (the base `nvidia/Cosmos3-Nano` is public — this
 corrects the pre-verification premise; see Failure Arbiter FA-1).
+
+**NVFP4 demo-input asymmetry (AM-S5 follow-up — RESOLVED 2026-07-26).** The public NVFP4 checkpoint's
+`assets/` originally shipped action *outputs* but not the action *conditioning inputs* the WebUI Action
+"Run demo" reads from `/models/checkpoint/assets/`, so that button 422'd on the NVFP4 stack. The owner
+added the three missing action inputs — `example_action_fd_agibotworld_first_frame.png` (policy/FD),
+`example_action_id_av_0_input.mp4` + `example_action_id_av_1_input.mp4` (inverse_dynamics) — copied
+byte-identical from the FP8 checkpoint, to `wfen/Cosmos3-Nano-NVFP4-Blockwise` in commit `e59dcff…`. This
+is an **assets-only** add: `transformer/` weights + all configs are byte-identical to the prior pin
+`5514c42b…`, so the AM-S5 GPU verification carries over unchanged (INV-2 unaffected; no re-verify owed
+under NFR-5 since no weight/config byte changed). The pin above is bumped to `e59dcff…`. The NVFP4 Action
+"Run demo" is now at parity with FP8. Not a WebUI/code change (`webui/**` is R-12 out of scope).
 
 ## 7. Drift caveats (see `docs/archive/phase-1/session_4/drift_report.md`)
 

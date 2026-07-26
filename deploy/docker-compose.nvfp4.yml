@@ -8,6 +8,13 @@ services:
   api:
     environment:
       COSMOS3_CHECKPOINT_LABEL: nvfp4
+      # AM-S5: align the api's reasoning context window to the nvfp4 vllm-reasoner's `--max-model-len
+      # 8192` (below), MINUS headroom for the chat-template tokens the api's char-heuristic prompt count
+      # can't see. Mirrors the FP8 stack (the AM-S4 reasoning-400 fix). An over-cap /v1/reason then gets a
+      # clean 422 at the api edge, not a reasoner 400. MUST stay ≤ the reasoner's --max-model-len − headroom
+      # (guarded by tests/deploy/test_reasoner_context_cap_fits_model_len.py, parametrized over both stacks).
+      COSMOS3_REASONER_MAX_CONTEXT: "7680"   # 8192 − 512 chat-template headroom
+      COSMOS3_REASONER_MAX_OUTPUT: "7680"    # output may use the window; the reasoner stops at EOS well before
     volumes:
       # The api reads only the curated negative-prompt default from the checkpoint's assets/ (UX-S2),
       # so it mounts assets/ read-only — not the weights (minimal surface). Matches the vllm-omni source.
@@ -17,7 +24,8 @@ services:
     # 32 GB on NVFP4: tiled VAE decode. NVFP4 deliberately does NOT use --enable-layerwise-offload — its
     # Marlin FP4 kernel repacks weights on CUDA after load (gptq_marlin_repack is CUDA-only), which
     # offloading (weights on CPU) breaks. NVFP4 4-bit weights are resident at ~16.3 GiB, so it fits
-    # without offload. --no-guardrails as in the FP8 stack. Peak ~18.5 GiB.
+    # without offload. --no-guardrails as in the FP8 stack. Peak ~18.5 GiB (720p video, UX-S2).
+    # AM-S5 (docs/session_5/evidence/P1) measured on this same image: t2i peak ~17.1 GiB, action peak ~18.2 GiB.
     command:
       - vllm
       - serve
@@ -34,4 +42,47 @@ services:
     volumes:
       # Operator-supplied NVFP4 checkpoint (download first — see .env.example), read-only.
       # Default is <repo>/models/... (../ is relative to the deploy/ project dir).
+      - ${COSMOS3_NVFP4_DIR:-../models/Cosmos3-Nano-NVFP4-Blockwise}:/models/checkpoint:ro
+
+  # AM-S5: zero-BF16 NVFP4 reasoning. Serves TEXT off the SAME quantized NVFP4 checkpoint's understanding
+  # tower via `vllm serve --quantization nvfp4_blockwise_w4a16` (no --omni; and NO --enable-layerwise-offload
+  # — the Marlin FP4 kernel repacks weights on CUDA after load and forbids offload). W4A16 reuses vLLM's
+  # ModelOptNvFp4W4A16LinearMethod. GPU-verified on the 5090 (docs/session_5/evidence/P2). A SEPARATE image
+  # from the FP8 reasoner (design D1) so the frozen-verified FP8 path is untouched. The orchestrator
+  # starts/stops it and never co-resides it with vllm-omni (evict-before-load, INV-5). No BF16 mount anywhere.
+  vllm-reasoner:
+    build:
+      context: ..
+      dockerfile: deploy/vllm-reasoner-nvfp4.Dockerfile
+    image: cosmos3-nano-vllm-reasoner-nvfp4:local
+    container_name: cosmos3-nano-webui-vllm-reasoner   # fixed name the api controls by (shared across the fp8/nvfp4 stacks)
+    shm_size: "16gb"
+    environment:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    restart: "no"                                      # orchestrator owns start/stop (evict-before-load)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command:
+      - vllm
+      - serve
+      - /models/checkpoint
+      - --served-model-name
+      - cosmos3-reasoner
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --max-model-len
+      - "8192"
+      - --gpu-memory-utilization
+      - "0.85"
+      - --quantization
+      - nvfp4_blockwise_w4a16
+    volumes:
+      # SAME quantized NVFP4 checkpoint as generation — one download, zero BF16.
       - ${COSMOS3_NVFP4_DIR:-../models/Cosmos3-Nano-NVFP4-Blockwise}:/models/checkpoint:ro

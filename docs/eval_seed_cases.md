@@ -224,3 +224,44 @@ phase-4 pattern.)*
   — a reminder to exercise the **unbounded/default** client shape, not only a conveniently-capped one.
   *Promotion:* eval seed + adversarial case + the deterministic guard
   `tests/deploy/test_reasoner_context_cap_fits_model_len.py`.
+
+## AM-S5 harvest (NVFP4, 2026-07-26)
+
+**Gates satisfied (technical)**
+- **GPU-AM-ALLMODES-NVFP4** — SATISFIED (probes): t2i (valid PNG, ~17.1 GiB), action (all 3 modes via the
+  omni video-API, ~18.2 GiB), reasoning (coherent W4A16 text, ~26.9 GiB) — all off the quantized-only
+  NVFP4 checkpoint, zero BF16, no offload (`docs/session_5/evidence/P1–P2`).
+- **GPU-AM-T2I-NOREGRESS (NVFP4)** — SATISFIED (valid 480×480 PNG off the unchanged omni image, INV-2).
+- **EV-AM-ZERO-BF16-WIRING / EV-AM-NO-OVERLAY-DEFAULT (nvfp4)** — SATISFIED and now **deterministic tests**
+  (`tests/deploy/test_nvfp4_allmodes_wiring.py`): nvfp4 config renders a `vllm-reasoner` with
+  `nvfp4_blockwise_w4a16`, only the NVFP4 checkpoint mount, no BF16; omni has NO `--enable-layerwise-offload`.
+- **EV-AM-CPU-SUITE-GREEN / EV-AM-SCHEMA-STABLE** — SATISFIED (CPU exit 0; `openapi.json` + `docker-compose.fp8.yml` unchanged).
+- **OWNER-AM-REASON-QUALITY (NVFP4) / OWNER-AM-ACTION-QUALITY (NVFP4)** — **PASS** (Feng, 2026-07-26: every
+  WebUI tab checked on the nvfp4 container, all functions work, quality very good) → INV-6 satisfied,
+  all three NVFP4 modes GPU-verified + default-on; `GATE-AM-S5-NVFP4` PASSES fully.
+
+**New seeds harvested (issues AM-S5 caught — seed the verifiers)**
+- **EV-AM-QUANT-PLUGIN-IMPORT-TIMING** — the first NVFP4 reasoner patch imported `modelopt` at module top,
+  so registering it in `quantization/__init__` triggered a `vllm.config` circular import (`cannot import
+  name 'ParallelConfig'`) → the method silently failed to register → "Unknown quantization method". Fix:
+  import only `base_config` at module top and defer heavy imports into `get_quant_method` (mirror AM-S2's
+  FP8 patch discipline). *Test the agent:* when registering a plugin at package-init time, does it keep the
+  module's import-time surface minimal and defer heavy/framework imports to call time?
+- **EV-AM-FUSED-VS-UNFUSED-QUANT-TARGET** — the fork's `vllm_omni.quantization.nvfp4_blockwise` targets the
+  UNFUSED `.mlp.{gate,up,down}_proj` (omni construction path); the plain-text LM path FUSES gate+up →
+  `gate_up_proj`, so a copied target regex would miss the fused module. The reasoner patch must target the
+  fused name (as AM-S2's FP8 patch did). *Test the agent:* before reusing a layer-selection regex across
+  serving paths, does it check whether the target path fuses projections (MergedColumnParallelLinear)?
+- **EV-AM-NVFP4-DEMO-ASSET-ASYMMETRY** — the NVFP4 checkpoint's `assets/` ships action *outputs* but not
+  the action *conditioning inputs* FP8 ships, which the WebUI "Run demo" reads from
+  `/models/checkpoint/assets/` → the NVFP4 Action demo 422s. *Test the agent:* does it verify that assets a
+  UI references exist in the *target* checkpoint, not assume parity across checkpoints of the same family?
+  *Promotion:* recorded owner decision + `docs/model_setup.md` note (AM-S6 documents it).
+- **EV-AM-BOTH-STACK-RENDER-NONREGRESS** — an nvfp4 (or shared-base/Makefile) edit could silently regress
+  the frozen FP8 stack. Guard: render BOTH stacks + `git diff --exit-code deploy/docker-compose.fp8.yml`.
+  *Test the agent:* when extending one stack, does it assert the sibling (frozen) stack is byte-unchanged,
+  not just that the edited stack renders?
+- **EV-AM-NVFP4-FUSED-GLOBAL-SCALE (quality watch)** — vLLM MAX-merges the fused gate/up NVFP4 **global
+  scales** (`modelopt.py:1362` warning); a possible 4-bit accuracy factor. *Test the agent:* does it surface
+  a load-time accuracy warning to the owner's quality gate rather than treat "loads + coherent" as
+  "verified"? (Coherence proven; quality is the owner's INV-6 verdict.)
