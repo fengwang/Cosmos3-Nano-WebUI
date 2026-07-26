@@ -19,8 +19,7 @@
 
 ## Quickstart
 
-**TL;DR:** clone, grab a checkpoint, build, run. About five minutes plus the
-checkpoint download. Public inputs only, so no accounts and no API keys.
+**TL;DR:** clone, grab a checkpoint, build, run. About five minutes plus the checkpoint download.
 
 ```bash
 # 1. Clone
@@ -91,8 +90,13 @@ screenshots is in **[`docs/walkthrough.md`](docs/walkthrough.md)**.
   demo** &rarr; a rolled-out video with a live **3D robot view** (agibotworld) or **2D
   trajectory plots** (av).
 
-Every example runs on the quantized checkpoint you already downloaded — no extra models,
-no keys.
+Every example runs on the quantized checkpoint you already downloaded.
+
+NVFP4 checkpoint is recommended as it gives more VRAM headroom for longer videos, and with negligible quality differences, see:
+- [FP8 video Examples](https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise/tree/main/assets/FP8-Examples), and
+- [NVFP4 video Examples](https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise/tree/main/assets)
+
+
 
 ## Requirements
 
