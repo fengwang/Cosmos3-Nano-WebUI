@@ -100,7 +100,10 @@ Below are two NVFP4 example videos, 720P and 7s.
 
 https://github.com/user-attachments/assets/8ddc1fb4-b6d9-4aeb-8361-6519b812074d
 
-https://github.com/user-attachments/assets/32ac84c0-f453-485e-b5a4-3470f40263cc
+
+https://github.com/user-attachments/assets/251244eb-0991-4157-9166-d606e1889761
+
+
 
 ## Requirements
 
