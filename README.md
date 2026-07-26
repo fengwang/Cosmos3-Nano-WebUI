@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="misc/logo.png" alt="Cosmos3-Nano-WebUI" width="360">
+  <img src="misc/logo.png" alt="Cosmos3-Nano-WebUI" width="160">
 </p>
 
 <p align="center">
