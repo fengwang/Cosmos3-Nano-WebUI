@@ -40,6 +40,7 @@ and the video modes **text→video**, **image→video**, and **video+audio**.
 **Expected:** one 480×480 PNG, coherent and on-prompt (this is the end-to-end `t2i` path GPU-verified
 under `GPU-S3` on both FP8 and NVFP4).
 
+![Studio text→image setting](./images/studio-t2i-setting.png)
 ![Studio text→image: a red apple on a wooden table](./images/studio-t2i.png)
 
 ### Text → video, image → video, video + audio
