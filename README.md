@@ -20,9 +20,10 @@
 
 > [!NOTE]
 > Built for a **trusted LAN or lab box**: no application login, and ports bind to
-> `localhost` by default. Today only **text&rarr;image** is GPU-verified end to end;
-> the other modes are implemented and CPU-tested, with GPU validation a manual gate.
-> Full posture and per-mode status live in [Status & security](#status--security).
+> `localhost` by default. All modes — Studio (text/image&rarr;video, text&rarr;image),
+> reasoning, and robot action — are **GPU-verified end to end on both FP8 and NVFP4**,
+> each with the owner's manual quality PASS. Full posture and per-mode status live in
+> [Status & security](#status--security).
 
 ## Quickstart
 
@@ -52,30 +53,32 @@ make health               # GET /v1/health/ready
 # → open http://localhost:3000  (you land directly in the Generation Studio)
 ```
 
-No keys to set. Building the GPU image and running inference is the manual gate
-(`MIG-S8`): text&rarr;image is verified end to end, the other modes are not yet.
-See [Status & security](#status--security) and
+No keys to set. A plain `make up-fp8` (or `make up-nvfp4`) brings up **all three modes**
+off the quantized-only checkpoint — no BF16 base, no extra overlay. See them running in
+[See it in action](#see-it-in-action), with the full per-mode status in
+[Status & security](#status--security) and
 [`docs/model_setup.md`](docs/model_setup.md).
 
 <details>
-<summary>Run NVFP4 or add the reasoning stack instead</summary>
+<summary>Run the NVFP4 stack instead</summary>
 
 - **NVFP4** (more VRAM headroom): download `wfen/Cosmos3-Nano-NVFP4-Blockwise` at
   its pinned revision (see [`docs/model_setup.md`](docs/model_setup.md)), then
   `make up-nvfp4`. Run one stack at a time.
-- **Reasoning + action** (adds the BF16 base): `make up-fp8-reasoning`.
+- Both stacks serve **all three modes** (Studio, Reasoning, Action) by default off the
+  quantized checkpoint — there is no separate reasoning overlay or BF16 base to add.
 </details>
 
 **Jump to:** [What it does](#what-it-does) · [How it works](#how-it-works) ·
-[Features](#features) · [Requirements](#requirements) ·
-[Checkpoint setup](#checkpoint-setup) · [Troubleshooting](#troubleshooting) ·
-[Status & security](#status--security)
+[Features](#features) · [See it in action](#see-it-in-action) ·
+[Requirements](#requirements) · [Checkpoint setup](#checkpoint-setup) ·
+[Troubleshooting](#troubleshooting) · [Status & security](#status--security)
 
 ## What it does
 
 Cosmos3-Nano-WebUI wraps the Cosmos3-Nano world model behind a clean HTTP API and
-a Next.js web app. You run generation and reasoning on your own machine, from
-public quantized checkpoints.
+a Next.js web app. You run generation, reasoning, and robot action on your own machine,
+from public quantized checkpoints.
 
 It targets a single RTX 5090-class GPU. Weights download from Hugging Face and are
 never committed to Git or baked into images. The generation engine runs in its own
@@ -103,27 +106,44 @@ container on demand and evicts it after an idle window to free VRAM (see
 
 ## Features
 
-Every generation, reasoning, and action mode is **implemented and covered by CPU
-tests**. Text&rarr;image (FP8 and NVFP4) is GPU-verified end to end. The other GPU
-inference paths are a documented manual gate.
+Every generation, reasoning, and action mode is **implemented, CPU-tested, and
+GPU-verified end to end on both FP8 and NVFP4**, each with the owner's manual quality
+PASS (see [Status & security](#status--security)).
 
 | Capability | Endpoint(s) | Status |
 |---|---|---|
 | Text&rarr;image (FP8, NVFP4) | `POST /v1/generation/t2i` | Implemented · **GPU-verified¹** |
-| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · CPU-tested · GPU gate¹ |
-| Reasoning | `POST /v1/reason` | Implemented · CPU-tested · GPU gate¹ |
-| Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · CPU-tested · GPU gate¹ |
+| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · **GPU-verified¹** |
+| Reasoning | `POST /v1/reason` | Implemented · **GPU-verified¹** |
+| Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · **GPU-verified¹** |
 | Async jobs + live progress over SSE | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `.../events`, `.../artifact`, `.../trajectory`, `.../cancel` | Implemented · CPU-tested |
 | Health & Prometheus metrics | `GET /v1/health/{live,ready}`, `GET /v1/metrics` | Implemented · CPU-tested |
 | Web UI (generation, history, 3D / robot views) | Next.js 15 + React 19 app | Implemented · CPU-tested |
 
-¹ GPU inference is a manual release gate (`MIG-S8`). Only text&rarr;image is verified
-end to end (`GPU-S3`): fresh checkpoint download, from-source image, no manual
-workaround. A recommended 720p text&rarr;video smoke has passed on both FP8 and NVFP4,
-but that does not by itself promote the video, reasoning, or action modes to
-"verified", and no performance numbers are promised. See
-[Status & security](#status--security) and
+¹ **GPU-verified** = a recorded end-to-end run on an RTX 5090 **and** the owner's manual
+quality PASS, per mode and per format (INV-6). All modes passed on **both FP8 and NVFP4**:
+text&rarr;image (`GPU-S3`), the video modes (owner PASS, 2026-07-26), reasoning
+(`AM-S2`/`AM-S5`), and robot action (`AM-S3`/`AM-S5`). No performance numbers are promised.
+See [Status & security](#status--security) and
 [`docs/evidence_map.md`](docs/evidence_map.md).
+
+## See it in action
+
+Three modes, one stack. Bring it up (`make up-fp8` or `make up-nvfp4`), open
+`http://localhost:3000`, and try each — the full step-by-step with expected output and
+screenshots is in **[`docs/walkthrough.md`](docs/walkthrough.md)**.
+
+- **Studio — text&rarr;image.** Prompt *"a red apple on a wooden table, studio photo"*
+  &rarr; a clean 480×480 studio-style image in the gallery. (Text&rarr;video,
+  image&rarr;video, and video+audio work the same way, defaulting to 720p.)
+- **Reasoning.** Ask a question in the **Reasoning** tab &rarr; a coherent answer streams
+  back token by token.
+- **Action (robots).** In the **Action** tab, pick an embodiment + mode and hit **Run
+  demo** &rarr; a rolled-out video with a live **3D robot view** (agibotworld) or **2D
+  trajectory plots** (av).
+
+Every example runs on the quantized checkpoint you already downloaded — no extra models,
+no keys.
 
 ## Requirements
 
@@ -141,19 +161,19 @@ the mutable `main`.
 
 | Purpose | Repo id | Pinned revision | Model license |
 |---|---|---|---|
-| Generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `9bf5d6ae1646…` | `openmdw-1.0` |
-| Generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `e59dcff2067d…` | `openmdw-1.0` |
-| BF16 base (reasoning + action) | `nvidia/Cosmos3-Nano` | `fea6e03a…` | `other` |
+| Generation — all modes (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `9bf5d6ae1646…` | `openmdw-1.0` (OpenMDW 1.0) |
+| Generation — all modes (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `e59dcff2067d…` | `openmdw-1.0` (OpenMDW 1.0) |
 
-A generation deployment serves exactly **one** of FP8 or NVFP4; reasoning and
-action also use the BF16 base. The compose stacks wire the checkpoint mounts for
-you. [`docs/model_setup.md`](docs/model_setup.md) is the source of truth for the
-pinned revisions and licenses (shown above as a snapshot), the exact environment
-variables, the per-mode compatibility matrix, the mount layout, and drift caveats.
+A deployment serves exactly **one** of FP8 or NVFP4, and that single quantized checkpoint
+serves **all three modes** — Studio, Reasoning, and Action — with no BF16 base. The compose
+stacks wire the checkpoint mounts for you. [`docs/model_setup.md`](docs/model_setup.md) is the
+source of truth for the pinned revisions and licenses (shown above as a snapshot), the exact
+environment variables, the per-mode compatibility matrix, the mount layout, and drift caveats.
 
 > **Licensing.** The repository **code is MIT** (see [`LICENSE`](LICENSE)). The
-> **model weights are not MIT**: the FP8/NVFP4 checkpoints are `openmdw-1.0` and the
-> base is `other`. These are the model owners' licenses; review them before use.
+> **model weights are not MIT**: the FP8/NVFP4 checkpoints are **OpenMDW 1.0**
+> (`openmdw-1.0`), and the legacy `nvidia/Cosmos3-Nano` base is **OpenMDW 1.1**. These
+> are the model owners' licenses; review them before use.
 
 ## Troubleshooting
 
@@ -179,14 +199,19 @@ lab machine**, not for untrusted or internet-facing use. Every claim below is
 tracked in [`docs/evidence_map.md`](docs/evidence_map.md) and
 [`docs/risk_register.md`](docs/risk_register.md).
 
-**Verification status.**
+**Verification status.** Every mode is GPU-verified end to end on **both FP8 and NVFP4**,
+each with the owner's manual quality PASS. "GPU-verified" here means a recorded end-to-end
+run on an RTX 5090 **and** an owner quality PASS — never one without the other (INV-6).
 
-- Text&rarr;image (FP8/NVFP4) is **GPU-verified end to end** (`GPU-S3`): fresh
-  checkpoint download, from-source image, no manual workaround.
-- Text&rarr;video, image&rarr;video, video+audio, reasoning, and robot action are
-  **implemented and CPU-tested**; full GPU validation is a manual release gate
-  (`MIG-S8`). A recommended 720p text&rarr;video smoke passed on both FP8 and NVFP4,
-  but does not by itself promote those modes to "verified".
+| Mode | FP8 | NVFP4 |
+|---|---|---|
+| **Studio** — text&rarr;image / text&rarr;video / image&rarr;video / video+audio | GPU-verified · owner PASS | GPU-verified · owner PASS |
+| **Reasoning** | GPU-verified · owner PASS | GPU-verified · owner PASS |
+| **Robot action** — forward/inverse dynamics, policy | GPU-verified · owner PASS | GPU-verified · owner PASS |
+
+Each stack serves all three modes off the single quantized checkpoint (zero BF16); run one
+stack (FP8 xor NVFP4) at a time. Per-mode/format evidence is in
+[`docs/evidence_map.md`](docs/evidence_map.md); no performance numbers are promised.
 
 **Security posture (no auth by design).**
 

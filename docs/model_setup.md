@@ -12,7 +12,14 @@ wiring is `MIG-S6`. Evidence: `docs/archive/phase-1/session_4/hf_verification.md
 |---|---|---|---|
 | Quantized generation (FP8) | `wfen/Cosmos3-Nano-FP8-Blockwise` | `9bf5d6ae164688487bdb71947ccc6ebe70d12900` | `openmdw-1.0` |
 | Quantized generation (NVFP4) | `wfen/Cosmos3-Nano-NVFP4-Blockwise` | `e59dcff2067d8eed16f65ffcc76d35c60abc9314` | `openmdw-1.0` |
-| BF16 base — legacy/dormant only | `nvidia/Cosmos3-Nano` | `fea6e03ac3d7884b4105ed8ee79fc480fca70965` | `other` |
+| BF16 base — legacy/dormant only | `nvidia/Cosmos3-Nano` | `fea6e03ac3d7884b4105ed8ee79fc480fca70965` | **OpenMDW 1.1**¹ |
+
+¹ The `nvidia/Cosmos3-Nano` HF `license:` tag is `other` only because OpenMDW is not in Hugging
+Face's SPDX picklist; the model card names it precisely — `license_name: openmdw1.1-license`,
+`license_link: https://openmdw.ai/license/1-1/` — i.e. **OpenMDW 1.1** (reconciled in AM-S6 against
+the HF model card, 2026-07-26; this supersedes the earlier bare-`other` claim **and** the owner's
+provisional `openmdw-1.0` recollection, E-14). The quantized `wfen/*` checkpoints are **OpenMDW 1.0**
+(HF tag `openmdw-1.0`).
 
 Consumers SHOULD pin the revision (not the mutable `main`). Do **not** use
 `wfen/Cosmos3-Nano` for the base — that id does not exist (404); the base is
@@ -25,10 +32,11 @@ overlay entirely).
 ## 2. Licensing (keep separate — INV-7)
 
 - **Repository code:** MIT (this WebUI/API repo).
-- **Model weights:** `openmdw-1.0` for the FP8/NVFP4 checkpoints; `other` for the
-  `nvidia/Cosmos3-Nano` base. These are the model owners' licenses, **distinct** from the
-  repo's MIT license. README (`MIG-S7`) MUST present them separately and MUST NOT describe
-  the weights as MIT.
+- **Model weights:** **OpenMDW 1.0** for the FP8/NVFP4 quantized checkpoints (`wfen/*`, HF tag
+  `openmdw-1.0`); **OpenMDW 1.1** for the `nvidia/Cosmos3-Nano` base (HF tag `other` +
+  `license_name: openmdw1.1-license`, `https://openmdw.ai/license/1-1/` — reconciled in AM-S6 against
+  the HF model card; E-14, see §1 note ¹). These are the model owners' licenses, **distinct** from the
+  repo's MIT license. The README MUST present them separately and MUST NOT describe the weights as MIT.
 
 ## 3. Weights are external (INV-2)
 
@@ -84,7 +92,7 @@ loader), whose real compatibility is a `MIG-S6`/`MIG-S8` gate.
 | Mode | Public weights | Default serving path | In-process oracle path | Residual limit |
 |---|---|---|---|---|
 | `t2i` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) | not loadable as-is (D1) | **T2I-verified (`GPU-S3`, 2026-07-09):** fresh `hf download` at the `GPU-S2` revisions, through the unmodified `GPU-S1` image, direct **and** full-stack, no manual workaround; D1 remains for the in-process path only |
-| `t2v`, `t2v_audio`, `i2v` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) — verify `S6`/`S8` | not loadable as-is (D1) | GPU-unverified (`S8`); D1 for in-process path. (A best-effort NVFP4 `t2v` smoke passed under `GPU-S3` — see `docs/evidence_map.md` — but `t2v_audio`/`i2v` and any full validation of `t2v` remain unrun; this residual limit is otherwise unchanged.) |
+| `t2v`, `t2v_audio`, `i2v` | FP8 **or** NVFP4 quantized checkpoint | `vllm_omni` container (`load_quantized.py`) | not loadable as-is (D1) | **GPU-verified — owner PASS (AM-S6, 2026-07-26):** the owner ran text→video, image→video, and video+audio on **both FP8 and NVFP4** (valid ~720p clips; audio present for `t2v_audio`) and judged output high quality. Recorded run + PASS: `docs/session_6/evidence/P1-owner-video-runs.md` (owner-authorized amendment to the AM-S5 smoke-only status; `docs/evidence_map.md` AM-S6). D1 remains for the in-process path only. |
 | reasoning | FP8/NVFP4 quantized checkpoint (understanding tower) | separate `vllm-reasoner` container (no `--omni`, zero BF16): fp8 via `--quantization fp8_blockwise_w8a16` (AM-S2), nvfp4 via `--quantization nvfp4_blockwise_w4a16` (W4A16 Marlin FP4, no offload; AM-S5) | n/a | **FP8 GPU-verified (AM-S2):** coherent text via a bounded `fengwang/vllm` quant; owner PASS (Feng, 2026-07-25). **NVFP4 GPU-verified (AM-S5, 2026-07-26):** coherent text off the 4-bit understanding tower via the analogous W4A16 fork patch (evidence/P2); owner NVFP4 reasoning-quality **PASS** (Feng, 2026-07-26). See `docs/evidence_map.md` AM-S2/S5 audits. |
 | action (`forward_dynamics`/`policy`/`inverse_dynamics`) | FP8/NVFP4 quantized checkpoint (self-contains the bf16 `action_*` adapters — **no BF16 base**) | `vllm_omni` container via the video-API `action_mode` (FD=sync `/v1/videos/sync`; policy/ID=async `/v1/videos`) | in-process `diffusers_action` graft is **dormant** (not used; D1) | **FP8 GPU-verified end-to-end (AM-S3, 2026-07-25):** all three v1-scope embodiments (agibotworld 29-D FD/policy; av 9-D ID) off the quantized-only checkpoint, one resident model (Studio+Action merge); owner action-quality **PASS** (Feng, 2026-07-25). **NVFP4 GPU-verified (AM-S5, 2026-07-26):** all three modes via the same omni video-API on the Marlin FP4 kernel, no offload (evidence/P1); owner NVFP4 action-quality **PASS** (Feng, 2026-07-26). See `docs/evidence_map.md` AM-S3/S5 audits. |
 
@@ -134,10 +142,11 @@ under NFR-5 since no weight/config byte changed). The pin above is bumped to `e5
    video-API `action_mode`). The base `nvidia/Cosmos3-Nano` + `COSMOS3_REASONER_MODEL_DIR` /
    `COSMOS3_BASE_ACTION_DIR` are only for the legacy/dormant paths.
 4. Point `COSMOS3_MODEL_DIR` (and `COSMOS3_CHECKPOINT_LABEL`) at the served checkpoint.
-5. GPU inference is a manual release gate (`MIG-S8`). **T2I is now GPU-verified (2026-07-08,
-   FP8 + NVFP4, RTX 5090)**, and as of **`GPU-S3` (2026-07-09)** this holds for a fresh
-   checkpoint download through the unmodified, from-source `GPU-S1` image with no manual
-   workaround, direct and full-stack; other modes and 720p video remain manual gates.
+5. **All modes are now GPU-verified on the RTX 5090 (FP8 + NVFP4) with the owner's quality PASS:**
+   `t2i` (`GPU-S3`, 2026-07-09), the video modes `t2v`/`i2v`/`t2v_audio` (owner PASS, AM-S6 2026-07-26),
+   reasoning (AM-S2 FP8 / AM-S5 NVFP4), and action (AM-S3 FP8 / AM-S5 NVFP4). `GPU-S3` further confirmed
+   `t2i` from a fresh checkpoint download through the unmodified, from-source `GPU-S1` image with no
+   manual workaround, direct and full-stack. Output **quality** is the owner's manual gate (Decision 6).
 
 ## 9. Known packaging workarounds — fixed at the source (`GPU-S2`, 2026-07-09)
 

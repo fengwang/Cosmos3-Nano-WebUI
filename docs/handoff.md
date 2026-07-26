@@ -1,112 +1,112 @@
 # Session Handoff
 
 ## State Snapshot
-- **Session: AM-S5** — Extend + GPU-Verify on NVFP4. Risk high.
-- **Branch:** `fea/eanble-reasoning-action-phase-5-session-5`.
-- **Last commit at start:** `7288e00` (AM-S4). This session's work is **uncommitted** (owner reviews/commits, per the prior-session pattern).
-- **Current status: `GATE-AM-S5-NVFP4` PASSES (fully).** All three modes are GPU-verified on NVFP4 off the
-  quantized-only checkpoint (zero BF16, no offload): t2i (non-regressed, INV-2), action (all 3 modes via the
-  omni video-API), reasoning (coherent W4A16 text via a bounded fork patch mirroring AM-S2). The NVFP4
-  all-modes wiring is landed + CPU-green; the FP8 stack is byte-unchanged; `openapi.json` unchanged; sharded
-  review + adversarial verifier PASS (`docs/session_5/`). **Owner NVFP4 quality gate = PASS** (Feng,
-  2026-07-26: checked every WebUI tab on the nvfp4 container, all functions work as expected, quality very
-  good) — INV-6 satisfied per-mode → all three modes GPU-verified + default-on on NVFP4 (INV-7).
-  **Phase-5 finish line reached: Studio + Reasoning + Action GPU-verified + default-on on BOTH FP8 and NVFP4.**
-- **Changed files (this session):**
-  - **deploy:** `docker-compose.nvfp4.yml` (add the `vllm-reasoner` service + api reasoner caps), new
-    `vllm-reasoner-nvfp4.Dockerfile`, new `vllm-reasoner/patch-nvfp4/{nvfp4_blockwise_w4a16_vllm,cosmos3,quantization__init__}.py`;
-    `Makefile` (`up-nvfp4` stops both heavy planes); `.env.example` (nvfp4 all-modes note).
-  - **tests:** new `tests/deploy/test_nvfp4_allmodes_wiring.py`; `tests/deploy/test_reasoner_context_cap_fits_model_len.py` (parametrized over both stacks).
-  - **docs:** `docs/session_5/**` (brainstorming→execution_contract, specs/, evidence/P1–P2, fork_prototype_nvfp4/);
-    `docs/{model_setup,evidence_map,risk_register,eval_seed_cases,handoff}.md`.
-- **Checks run:** full `uv run pytest -m "not gpu"` = exit 0 (green, incl. new nvfp4 deploy tests);
-  `docker compose -f deploy/docker-compose.nvfp4.yml config` (raw + `--env-file .env`) = a `vllm-reasoner`
-  + no BF16 mount; `-f deploy/docker-compose.fp8.yml config` still renders; `git diff --exit-code
-  schemas/openapi.json deploy/docker-compose.fp8.yml` clean; NVFP4 reasoner image **built + run** (baked
-  patches) → coherent (NFR-5). GPU probes: `docs/session_5/evidence/P1–P2`; GPU idle 18 MiB after each.
-- **Owner smoke + quality gate — DONE (Feng, 2026-07-26):** the owner ran `make up-nvfp4` and checked
-  every WebUI tab (Studio/Reasoning/Action) — all functions work as expected, quality very good.
-- **Checks NOT run:** a perf pass on the Marlin FP4 weight-only path (perf-suboptimal but usable, not a gate).
+- **Session: AM-S6** — README "See it in action" + `docs/walkthrough.md`; honest per-mode status; BF16-base
+  license reconciliation. Risk low (docs) + **mandatory adversarial honesty pass**.
+- **Branch:** `fea/eanble-reasoning-action-phase-5-session-6`.
+- **Last commit at start:** `5a626e7` (AM-S5). This session's work is **uncommitted** (owner reviews/commits,
+  per the prior-session pattern).
+- **Current status: `GATE-AM-S6-DOCS` PASSES.** README carries a "See it in action" section linking
+  `docs/walkthrough.md`; the walkthrough teaches every mode by example with 8 owner-fillable
+  `docs/images/…` placeholders and **no committed binary**; the README "GPU-verified" set is a subset of
+  the owner-passed set (INV-6); the BF16-base license (E-14) is reconciled to **OpenMDW 1.1** and stated
+  once; every internal link resolves; sharded review + adversarial honesty pass both **PASS**
+  (`docs/session_6/`). **Phase-5 (`AM`) documentation complete.**
+- **Changed files (this session, all within the AM-S6 blast radius):**
+  - `README.md` — honest all-modes status (Features table + Status & security 2×3 matrix), new
+    "See it in action" section + Jump-to anchor, license note (OpenMDW 1.1 base / 1.0 quantized), removed
+    the stale BF16/overlay/CPU-gate claims, dropped the legacy base row from the checkpoint table.
+  - `docs/walkthrough.md` (**new**) — UI-first per-mode example → expected output + `docs/images/…` placeholders.
+  - `docs/model_setup.md` — base license → OpenMDW 1.1 (§1 note ¹ + §2); §6 video row + §8 updated to all-modes.
+  - `docs/evidence_map.md` — E-14 resolved; AM-S6 execution audit + the owner video amendment.
+  - `docs/risk_register.md` — R-06 / R-09 / R-13 closed (AM-S6).
+  - `docs/eval_seed_cases.md` — 3 EV-AM-* seeds recorded satisfied + AM-S6 harvest.
+  - `docs/handoff.md` (this file); `docs/session_6/**` (refining pack, `check_links.py`, `.gitignore`,
+    `sharded_review.md`, `adversarial_verification.md`, `failure_arbiter.md`, `evidence/P1-owner-video-runs.md`).
+- **Checks run:** the 4 contract deterministic checks — `rg "GPU-verified" README.md`,
+  `rg "docs/images/" docs/walkthrough.md`, `git status --porcelain docs/images` (empty),
+  `docs/session_6/check_links.py` (exit 0) + its `--selftest` negative control (catches a broken anchor);
+  blast-radius sweep (no forbidden file changed); sharded review (0 Critical/High); adversarial honesty pass
+  (**PASS** after one re-verification).
+- **Checks NOT run:** no CPU/GPU test suite (docs-only, out of scope); **no agent-captured (instrumented)
+  video GPU probe** — the video-mode evidence is an owner-operated recorded run (`P1-owner-video-runs.md`),
+  a weaker-but-disclosed tier (see residual risks).
 
-## Per-mode × per-format verification matrix (the handoff deliverable)
+## Per-mode × per-format verification matrix (final)
 
 | Mode | FP8 | NVFP4 |
 |---|---|---|
-| **Studio (t2i)** | GPU-verified (`GPU-S3`); non-regressed every serving session | GPU-verified (`GPU-S3`); AM-S5 non-regress re-passed (INV-2) |
-| **Reasoning** | GPU-verified + **owner PASS** (AM-S2, Feng 2026-07-25) | GPU-verified + **owner PASS** (AM-S5, Feng 2026-07-26) |
-| **Action** (FD/policy/ID) | GPU-verified + **owner PASS** (AM-S3, Feng 2026-07-25) | GPU-verified + **owner PASS** (AM-S5, Feng 2026-07-26) |
+| **Studio — t2i** | GPU-verified (`GPU-S3`) | GPU-verified (`GPU-S3`) |
+| **Studio — t2v / i2v / t2v_audio** | GPU-verified · owner PASS (AM-S6, 2026-07-26) | GPU-verified · owner PASS (AM-S6, 2026-07-26) |
+| **Reasoning** | GPU-verified · owner PASS (AM-S2) | GPU-verified · owner PASS (AM-S5) |
+| **Action** (FD / ID / policy) | GPU-verified · owner PASS (AM-S3) | GPU-verified · owner PASS (AM-S5) |
 
-**Default-on:** FP8 — all three, owner-confirmed (AM-S4). **NVFP4 — all three, owner-confirmed (AM-S5,
-Feng 2026-07-26).** No mode required an INV-7 *limitation* (all three serve on 4-bit off the quantized-only
-checkpoint, zero BF16). **Every cell in the matrix is GPU-verified + owner-PASS — the phase-5 goal.**
+**Handoff confirmation (contract requirement):** the README verified set **matches** this owner-passed
+matrix (subset check + adversarial pass), and **no caveat was dropped** — guardrails-off, no-auth,
+loopback-only, and one-stack-at-a-time are all preserved; the only removed caveat ("720p smoke ≠ verified")
+is correctly obsolete now that the owner has verified the video modes.
 
 ## Narrative Context
-AM-S4 proved + defaulted-on the FP8 all-modes stack. AM-S5 extended it to NVFP4 — the phase's last unknown
-(4-bit Blackwell kernels, S-D/R-04). Spike-led per the owner's choice: I GPU-probed each mode first. t2i +
-action ran unchanged on the NVFP4 omni image (Marlin FP4, no offload); reasoning needed the AM-S2 pattern
-re-applied for 4-bit — a bounded fork patch registering `--quantization nvfp4_blockwise_w4a16` that reuses
-vLLM's `ModelOptNvFp4W4A16LinearMethod` on the **fused** text-path MLP (the fork's own nvfp4_blockwise
-targets the unfused omni names). All three serve coherent output off the quantized-only checkpoint, zero
-BF16. The wiring mirrors the FP8 shape: a separate `vllm-reasoner` service/image (not a parametrized FP8
-Dockerfile — blast-radius isolation), `up-nvfp4` cold-starts + stops both heavy planes, api caps 7680.
+AM-S6 is the phase's last session: it makes the user-facing docs teach each mode honestly now that
+AM-S2..S5 GPU-verified all of them. The README got a lean "See it in action" section (per-mode example →
+what to expect, no inlined screenshots, FR-9) linking a new UI-first `docs/walkthrough.md`; the per-mode
+status was flipped to the all-green matrix; the BF16-base license was reconciled against the HF model card
+to **OpenMDW 1.1** (both the docs' bare `other` and the owner's `openmdw-1.0` recollection were wrong).
+Mid-session the owner attested the **video sub-modes** work on both formats — an over-claim hazard the
+mandatory honesty pass caught (no recorded run), which was resolved by the owner's decision to record the
+actual runs (`P1-owner-video-runs.md`, owner-operated tier disclosed) so both INV-6 limbs are on record.
 
 ## Decision Log
 | Decision | Chosen | Rejected | Reason | Contract Ref |
 |---|---|---|---|---|
-| Session shape | **Spike-led probes first** | implement-then-verify | owner choice; front-load the one real unknown (4-bit kernels) | interview; routing branch-and-compare |
-| Reasoner effort ceiling | **Bounded / mirror AM-S2** | new-kernel-from-scratch | reuse the fork's `ModelOptNvFp4W4A16LinearMethod`; INV-7 if it failed (it didn't) | interview; design D2 |
-| Reasoner image | **Separate nvfp4 image + patch** | parametrize the FP8 Dockerfile | the FP8 reasoner path is frozen-verified; a build-arg risks regressing it | design D1 |
-| Quant target regex | **Fused** `language_model.model.layers.*.mlp.{gate_up_proj,down_proj}` | reuse the fork's unfused omni regex | the plain-text LM path fuses gate+up; the fork targets the omni construction names | evidence P2; EV-AM-FUSED-VS-UNFUSED-QUANT-TARGET |
-| NVFP4 demo-input gap | **Documented owner decision** | edit `webui/**` / commit binaries | R-12 out of scope; INV-1 (no binaries); external-checkpoint asymmetry | evidence P1; model_setup note |
+| BF16-base license (E-14) | **OpenMDW 1.1** (HF `license_name`) | bare `other`; owner's `openmdw-1.0` | authoritative HF model card is the tie-breaker; 3 fetches agree | R-09; evidence_map E-14 |
+| Video modes → verified | **Record owner run + keep "GPU-verified"** | silently keep (dishonest); downgrade (defies owner); INV-6 exception | owner is the quality-gate authority (Decision 6) + a recorded run satisfies INV-6 (i) | failure_arbiter.md; INV-6 |
+| Base row in README table | **Dropped** (kept in model_setup) | keep it relabeled | base is legacy/dormant, not a default dependency; leaner + honest | design.md D4 |
+| Status matrix location | **Status & security only** | matrix in both places | avoid a second copy that a future edit can desync (R-09) | design.md D3 |
+| Walkthrough video expected-output | **Owner-attested level, drafted prompts** | fabricate specific outputs | R-13: draft inputs OK, never draft outputs | design.md D1; R-13 |
 
 ## Next Priority Queue
-1. **Owner NVFP4 quality gate — DONE ✅ (Feng, 2026-07-26).** The owner checked every WebUI tab on the
-   `make up-nvfp4` container — all functions work as expected, quality very good (incl. the 4-bit
-   reasoning; the fused global-scale MAX-merge did not degrade it perceptibly). `OWNER-AM-REASON-QUALITY`
-   + `OWNER-AM-ACTION-QUALITY` (NVFP4) = **PASS** → **`GATE-AM-S5-NVFP4` PASSES fully**; all three modes
-   GPU-verified + default-on on NVFP4 (INV-6/INV-7). AM-S5 is complete.
-2. **NVFP4 demo-input asymmetry — RESOLVED (2026-07-26).** The owner added the 3 missing action
-   conditioning inputs (`example_action_fd_agibotworld_first_frame.png`, `example_action_id_av_0_input.mp4`,
-   `example_action_id_av_1_input.mp4`, byte-identical from FP8) to `wfen/Cosmos3-Nano-NVFP4-Blockwise` in
-   commit **`e59dcff…`** (assets-only; weights/config unchanged vs `5514c42b…`). The NVFP4 pin is bumped to
-   `e59dcff…` in `.env.example`, `docs/model_setup.md`, AND `README.md` (line 145). The README bump is an
-   **owner-authorized blast-radius amendment** (README is normally AM-S6's; the owner OK'd the SHA-only bump
-   this session, Feng 2026-07-26), scoped to the pin only. The local
-   `/data/models/Cosmos3-Nano-NVFP4-Blockwise/assets/` also has the files, so `make up-nvfp4`'s Action
-   "Run demo" now works.
-3. **AM-S6 (docs):** README "See it in action" + `docs/walkthrough.md` reflecting the real per-mode/per-format
-   matrix above (now **complete** — every FP8 + NVFP4 mode is owner-PASSed as of 2026-07-26); fix the stale README
-   `make up-fp8-reasoning` ref; **fix the stale README "BF16 base (reasoning + action)" checkpoint row +
-   the "reasoning and action also use the BF16 base" prose (both now zero-BF16 — AM-S2/S3);** reconcile the
-   BF16 license (E-14). (AM-S5 bumped only the NVFP4 pin SHA in README, nothing else.)
+1. **Owner fills the 8 screenshots** into `docs/images/` (paths below), then optionally reviews the rendered
+   README + walkthrough.
+2. **(Optional hardening)** capture an instrumented video GPU probe (bytes/dimensions) to upgrade the video
+   evidence from the owner-operated tier to the instrumented tier of the t2i/reasoning/action P-files.
+3. **Archive the phase-5 (`AM`) pack** per the project's archival convention (this session is the finish
+   line); the `AM-S1..S6` docs move under `docs/archive/phase-5/` like the prior phases.
+
+### `docs/images/…` placeholder paths the owner will populate (in walkthrough order)
+1. `docs/images/studio-t2i.png`
+2. `docs/images/studio-t2v.png`
+3. `docs/images/studio-i2v.png`
+4. `docs/images/studio-t2v_audio.png`
+5. `docs/images/reasoning-chat.png`
+6. `docs/images/action-forward_dynamics.png`
+7. `docs/images/action-policy.png`
+8. `docs/images/action-inverse_dynamics.png`
 
 ## Warnings And Gotchas
-- **Owner `.env`:** repo-root `.env` pins `COSMOS3_NVFP4_DIR=/data/models/Cosmos3-Nano-NVFP4-Blockwise`
-  (public `wfen/…` rev now `e59dcff…`). Confirm the resolved mount with `docker compose --env-file .env -f
-  deploy/docker-compose.nvfp4.yml config` before trusting a run (R-11).
-- **⚠ The local NVFP4 checkpoint clone git state is broken/dirty** (discovered 2026-07-26): its `.git`
-  HEAD is `b5c9332` (a diverged, non-ancestor commit) with ~614k lines of uncommitted working-tree changes
-  — NOT what is on HF (`main` = `e59dcff`). The on-disk *files* are the correct checkpoint content (+ the 3
-  action assets), so the mounted stack is fine, but **do NOT `git commit/push` from that local clone** — the
-  Action-asset publish was done via the HF API directly to `main` (bypassing the clone). For a clean tree,
-  re-`hf download` at `e59dcff…` into a fresh dir. Not blocking; a hygiene note.
-- **NVFP4 reasoner image must be built:** `make up-nvfp4` builds `cosmos3-nano-vllm-reasoner-nvfp4:local`
-  on first up (or `docker build -f deploy/vllm-reasoner-nvfp4.Dockerfile -t cosmos3-nano-vllm-reasoner-nvfp4:local .`).
-  Its heavy fork layers cache-hit from the FP8 reasoner image.
-- **NVFP4 forbids layerwise offload** (Marlin FP4 repacks on CUDA after load). Do NOT add
-  `--enable-layerwise-offload` to any NVFP4 service (guarded by `test_nvfp4_allmodes_wiring.py`).
-- **Reasoner perf:** the W4A16 Marlin path is weight-only FP4 (no native sm_120 FP4 GEMM — vLLM warns);
-  acceptable for reasoning, a perf follow-up (as W8A16 was for FP8).
-- **Known failing tests:** none.
-- **Files future sessions must not casually edit:** `deploy/docker-compose.fp8.yml` + the FP8
-  `vllm-reasoner.Dockerfile`/`patch/` (frozen-verified); `schemas/openapi.json` (INV-8); the proven
-  `vllm-omni` image + `t2i` path (INV-2); `README.md`/`docs/walkthrough.md` (AM-S6); `docs/archive/**`.
+- **Residual owner-decided limitation (recorded, not gate-failing):** the video-mode "GPU-verified" claim
+  rests on an **owner-operated recorded run** (`docs/session_6/evidence/P1-owner-video-runs.md`) + owner
+  quality PASS — a weaker evidence tier than the instrumented t2i/reasoning/action probes. It is disclosed
+  three times (P1, evidence_map, model_setup), authorized by the owner (the quality-gate authority), and
+  scoped strictly to t2v/i2v/t2v_audio × FP8+NVFP4. An agent-captured probe would upgrade the tier later.
+- **GitHub blob-view relative links:** the repo convention writes root-relative links inside `docs/*.md`
+  (e.g. `docs/images/…`, matching `docs/model_setup.md`'s existing `docs/archive/…`); `check_links.py`
+  resolves them repo-root-relative (as the contract phrases them). Note that GitHub's *blob* view resolves
+  a relative link against the file's own directory, so from `docs/walkthrough.md` a `docs/images/…` link
+  renders as `docs/docs/images/…`. This is a **pre-existing repo-wide convention**, not introduced here; a
+  future cleanup could switch `docs/*.md` internal links to file-relative. Out of scope for AM-S6.
+- **Known failing tests:** none (no test suite touched; docs-only).
+- **Files future sessions must not casually edit:** the frozen-verified serving stacks
+  (`deploy/docker-compose.{fp8,nvfp4}.yml`, the `vllm-reasoner*` images/patches); `schemas/openapi.json`
+  (INV-8); the proven `vllm-omni` image + `t2i` path (INV-2); `docs/archive/**`.
 
 ## Eval Seeds
-- **Missed check (now caught):** EV-AM-QUANT-PLUGIN-IMPORT-TIMING (import-time circular import when
-  registering a quant plugin); EV-AM-FUSED-VS-UNFUSED-QUANT-TARGET (fused-MLP targeting in the text path).
-- **New regression tests added:** `tests/deploy/test_nvfp4_allmodes_wiring.py` (nvfp4 all-modes + no-BF16 +
-  no-offload + up-nvfp4 stops both planes + FP8 offload contrast) — RED-then-GREEN this session; the
-  reasoner-context-cap test now covers both stacks.
-- **Instruction-update candidates:** EV-AM-NVFP4-DEMO-ASSET-ASYMMETRY, EV-AM-BOTH-STACK-RENDER-NONREGRESS,
-  EV-AM-NVFP4-FUSED-GLOBAL-SCALE. All recorded in `docs/eval_seed_cases.md` (AM-S5 harvest).
+- **Missed-then-caught check:** `EV-AM-DOCS-VERIFIED-NEEDS-RECORDED-RUN` — the adversarial honesty pass
+  caught a video "GPU-verified" over-claim (verbal owner PASS, no recorded run) that the sharded review
+  waved through; INV-6 needs both limbs. Recorded in `docs/eval_seed_cases.md` (AM-S6 harvest).
+- **Process seed:** `EV-AM-ADVERSARIAL-EARNS-KEEP-ON-DOCS` — run the adversarial pass even on a low-risk
+  docs session when the deliverable is to *promote* claims.
+- **Honesty seed:** `EV-AM-DISCLOSE-EVIDENCE-TIER` — disclose a weaker evidence tier in the doc; don't let
+  the reader assume uniform rigor.
+- **New check added:** `docs/session_6/check_links.py` (relative-link + GitHub-anchor resolver with a real
+  negative control) — reusable for future docs sessions.

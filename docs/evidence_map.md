@@ -33,7 +33,7 @@ Rules:
 | E-11 Only **text→image** is GPU-verified end to end (FP8 + NVFP4, `GPU-S3`); every other mode is "implemented · CPU-tested · GPU gate (`MIG-S8`)". | `README.md` Features/Status; per-mode matrix (`docs/model_setup.md:76-84`): `t2i` "T2I-verified (`GPU-S3`)", reasoning/action/`t2v*` "GPU-unverified (`S8`)". | Direct source inspection | High | The `t2i` non-regression baseline (INV-2) and the honesty invariant (INV-6) anchor here. |
 | E-12 The WebUI already ships **all three tabs**, fully wired and unconditional (Studio `/studio`, Reasoning `/chat` → `/v1/reason`, Action `/action` → `/v1/action/*` with a 3D URDF viewer). No feature flag gates them. | `PrimaryNav` items `Studio`/`Reasoning`/`Action`/`History` (`webui/app/_components/PrimaryNav.tsx:9-14`); chat stream → `/api/v1/reason`; action workspace → `/v1/action/{forward_dynamics,inverse_dynamics,policy}` (WebUI investigation, 2026-07-24). | Sub-agent investigation (not all lines re-opened here) | Medium-High | Frontend is out of scope; a session touches WebUI only on a verification-surfaced bug (R-12). Re-confirm at `AM-S6`. |
 | E-13 The repo ships a **checkpoint-prep toolkit** (safetensors mutation/rewrite/copy + integrity probe) with its own tests. | `tools/checkpoint_prep/{mutation,rewrite,copy_shared,safetensors_io,integrity_probe,__main__}.py`; `tests/checkpoint_prep/test_*` (rewrite/mutation/copy/integrity/writer-format). | Direct listing | High (exists) / Medium (that it can add action tensors specifically) | Plausible home for bundling action adapters into the quantized checkpoint (FR-3); the exact capability is an `AM-S1`/`AM-S3` finding. |
-| E-14 **License discrepancy (owner vs repo).** The repo's authoritative setup doc and README state the BF16 base (`nvidia/Cosmos3-Nano`) is license `other`; the owner states it is `openmdw-1.0`. | `docs/model_setup.md:15,24` ("`other`"; "MUST NOT describe the weights as MIT"); `README.md` checkpoint table ("`other`"); owner statement (2026-07-24). | Repo docs vs owner statement | **Low (unresolved conflict)** | Moot if zero-BF16 succeeds; load-bearing only if BF16 is ever reintroduced. The HF repo's own license page is the tie-breaker; do not encode either claim as fact until `AM-S6` reconciles it. |
+| E-14 **License discrepancy (owner vs repo) — RESOLVED (AM-S6, 2026-07-26).** The repo docs + README stated the BF16 base (`nvidia/Cosmos3-Nano`) license as `other`; the owner recalled `openmdw-1.0`. **Both were off.** | Reconciled against the authoritative HF source — 3 independent fetches agree: the rendered model page, `GET /api/models/nvidia/Cosmos3-Nano` (`cardData`), and the raw model-card frontmatter — `license: other` + `license_name: openmdw1.1-license` + `license_link: https://openmdw.ai/license/1-1/`. | HF model card (the blueprint's designated tie-breaker) | **Resolved → OpenMDW 1.1** | The base is **OpenMDW 1.1** (the HF `license:` tag is `other` only because OpenMDW is not in HF's SPDX picklist); the quantized `wfen/*` checkpoints are **OpenMDW 1.0**. Stated once and consistently in `docs/model_setup.md` §1 note ¹ / §2 and `README.md` (R-09 closed). |
 | E-15 Guardrails are **off by design** on the local appliance (`--no-guardrails`); the guardrail model is not bundled. | `--no-guardrails` in both stack commands (`deploy/docker-compose.fp8.yml:31`, `…nvfp4.yml:32`); "Guardrails stay ON by default here; `--no-guardrails` is an explicit runtime override" (`deploy/vllm-omni.Dockerfile:37-39`); README Status & security. | Direct source inspection | High | Out of scope this phase; unchanged. Enabling more modes does not change the guardrails posture. |
 | E-16 Idle keep-warm holds the resident plane 30 min (`LX-S1`); a different-residency request preempts immediately. | `idle_timeout = float(os.environ.get("COSMOS3_IDLE_TIMEOUT_SECONDS","1800"))` (`api/app/main.py:175`); `acquire` cancels the idle timer + evicts-before-load (`api/orchestrator/manager.py`; archived `docs/archive/phase-4/evidence_map.md` E-02/E-05). | Direct source inspection + phase-4 archive | High | Under zero-BF16, a mode swap reloads a ~quantized (not ~26 GiB BF16) model, so swaps get cheaper — a side benefit, not a requirement. |
 | E-17 The action adapters are **small, selectively read, bf16** — feasible to bundle into a checkpoint. | `read_action_adapter_tensors` opens shards with `safe_open` and takes only `action_modality_embed`/`action_proj_in.*`/`action_proj_out.*` via selective `get_tensor` ("only the action tensors' byte ranges are read, not the full multi-GB shards") (`api/engines/diffusers_action/loader.py:74-92`); `GEN_TOWER_QUANTIZED = 505`, action adapters add none (`:37`). | Direct source inspection | High | Bundling them into the quantized export is a small, targeted mutation — supports FR-3 feasibility (still spike-gated, S-E). |
@@ -314,3 +314,44 @@ specs/, evidence/P1–P2, fork_prototype_nvfp4/). No production checkpoint modif
   NVFP4 quality gate PASS** (Feng, 2026-07-26 — every WebUI tab verified, quality very good) → the human
   decision that promotes to default-on is satisfied (INV-6/INV-7). **All three modes (Studio, Reasoning,
   Action) are now GPU-verified + default-on on both FP8 and NVFP4 — the phase-5 finish line.**
+
+## AM-S6 execution audit (2026-07-26)
+
+Docs-only session (README "See it in action" + `docs/walkthrough.md`; honest per-mode status; E-14
+license reconciliation). No code/config/deploy/webui change. Blast radius = the AM-S6 allowed docs only.
+
+- **E-14 license — RESOLVED → OpenMDW 1.1.** Reconciled the BF16 base (`nvidia/Cosmos3-Nano`) license
+  against the authoritative HF source (3 independent fetches agree — rendered model page,
+  `GET /api/models/nvidia/Cosmos3-Nano` `cardData`, and the raw model-card frontmatter):
+  `license: other` + `license_name: openmdw1.1-license` + `license_link: https://openmdw.ai/license/1-1/`
+  → **OpenMDW 1.1**. Both prior claims were wrong (docs' bare `other`; the owner's `openmdw-1.0`
+  recollection). Encoded once + consistently in `docs/model_setup.md` §1 note ¹ / §2 and `README.md`
+  (checkpoint table, Licensing note). Quantized `wfen/*` = **OpenMDW 1.0** (unchanged). **R-09 closed.**
+- **Owner video-mode amendment (INV-6/INV-7) — owner-authorized, both limbs recorded.** The owner (Feng,
+  2026-07-26) **ran** text→video, image→video, and video+audio on **both FP8 and NVFP4** via the WebUI
+  Studio (valid ~1280×720 / ~49-frame clips produced and played back; audio present for `t2v_audio`) and
+  judged them **high quality**. Both INV-6 limbs are on record: **(i) the recorded end-to-end run** in
+  `docs/session_6/evidence/P1-owner-video-runs.md`, and **(ii) the owner quality PASS** (same attestation
+  form as the AM-S2/S3/S5 owner PASSes; the owner is the quality-gate authority, PRD Decision 6). Because
+  the AM-S5 recorded matrix represented Studio by `t2i` only and listed the video modes as smoke-only, this
+  is logged as an **owner-authorized amendment** to that matrix. Net: **all four Studio generation modes
+  (t2i/t2v/i2v/t2v_audio) are GPU-verified on both FP8 and NVFP4.** The obsolete "720p smoke does not
+  promote video to verified" caveats were removed from `README.md` and `docs/model_setup.md` §6/§8 so no
+  doc contradicts the new status. Scope is strictly the 3 video modes × 2 formats; nothing else re-touched.
+  (Honesty note: this run was owner-operated and recorded from the owner's direct report — not an
+  agent-captured probe with byte-level artifacts like the t2i/reasoning/action P-files; the specifics are
+  exactly what the owner confirmed, no synthetic detail added.)
+- **Final per-mode × per-format matrix (owner-PASS everywhere):** Studio (t2i + t2v/i2v/t2v_audio),
+  Reasoning, and Action — each **GPU-verified on both FP8 and NVFP4**. No mode carries an INV-7 limitation.
+- **README honesty pass:** every "GPU-verified" claim in `README.md` is a subset of this owner-passed set
+  (INV-6); the guardrails-off / no-auth / loopback / one-stack-at-a-time caveats are preserved; no
+  screenshot is inlined (FR-9); no image binary is committed (INV-1 — `git status --porcelain docs/images`
+  empty). `docs/walkthrough.md` teaches each mode with example input → expected output copied from the
+  recorded AM-S2..S5 runs (video expected-output stays at the owner-attested level; R-13).
+- **Links:** `docs/session_6/check_links.py` (relative-link + GitHub-anchor resolver, negative-control
+  proven) exits 0 over `README.md`, `docs/walkthrough.md`, `docs/model_setup.md` (`EV-AM-DOCS-LINKS-RESOLVE`).
+- **E-12 re-confirmed (per its note):** the WebUI still ships Studio `/studio`, Reasoning `/chat`,
+  Action `/action` (+ History) via `PrimaryNav`; the Action tab's **Run demo** carries the shipped
+  conditioning inputs — used verbatim in the walkthrough's UI-first steps.
+- **Gate:** `GATE-AM-S6-DOCS` **PASSES** (deterministic checks green; sharded review + adversarial honesty
+  pass in `docs/session_6/`). **Phase-5 (`AM`) documentation complete.**

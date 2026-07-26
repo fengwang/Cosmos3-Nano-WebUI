@@ -1,0 +1,3 @@
+# Transient artifacts from running check_links.py — never commit (F-1, AM-S6 sharded review).
+__pycache__/
+*.pyc
