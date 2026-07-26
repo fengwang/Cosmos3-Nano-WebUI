@@ -34,7 +34,7 @@ and the video modes **text→video**, **image→video**, and **video+audio**.
 
 1. Open **Studio** (the home page, `/studio`).
 2. In the prompt box, type: **`a red apple on a wooden table, studio photo`**.
-3. Set the image size to **480×480** and click **Generate**.
+3. Set the image size to **480×480**, ommit other options and click **Generate**.
 4. In a few seconds a clean, studio-lit image of a red apple on a wooden table appears in the gallery.
 
 **Expected:** one 480×480 PNG, coherent and on-prompt (this is the end-to-end `t2i` path GPU-verified
