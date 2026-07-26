@@ -13,17 +13,9 @@
 
 <p align="center">
   <b>Run a world model on your own GPU.</b><br>
-  A self-hostable <b>API + Web UI</b> for Cosmos3-Nano: text/image&rarr;video (with
-  audio), text&rarr;image, reasoning, and robot action, served locally from quantized
-  <b>FP8 / NVFP4</b> checkpoints. No accounts, no API keys, nothing leaves your machine.
+  A self-hostable <b>API + Web UI</b> for Cosmos3-Nano quantized fp8 and nvfp4 checopoints:
+  text/image&rarr;video (with audio), text&rarr;image, reasoning, and robot action, served locally.
 </p>
-
-> [!NOTE]
-> Built for a **trusted LAN or lab box**: no application login, and ports bind to
-> `localhost` by default. All modes — Studio (text/image&rarr;video, text&rarr;image),
-> reasoning, and robot action — are **GPU-verified end to end on both FP8 and NVFP4**,
-> each with the owner's manual quality PASS. Full posture and per-mode status live in
-> [Status & security](#status--security).
 
 ## Quickstart
 
@@ -64,7 +56,7 @@ off the quantized-only checkpoint — no BF16 base, no extra overlay. See them r
 
 - **NVFP4** (more VRAM headroom): download `wfen/Cosmos3-Nano-NVFP4-Blockwise` at
   its pinned revision (see [`docs/model_setup.md`](docs/model_setup.md)), then
-  `make up-nvfp4`. Run one stack at a time.
+  `make up-nvfp4`. Run one stack at a time. Note that NVFP4 needs a Blackwell-class GPU (RTX 5090 tested).
 - Both stacks serve **all three modes** (Studio, Reasoning, Action) by default off the
   quantized checkpoint — there is no separate reasoning overlay or BF16 base to add.
 </details>
@@ -83,49 +75,6 @@ from public quantized checkpoints.
 It targets a single RTX 5090-class GPU. Weights download from Hugging Face and are
 never committed to Git or baked into images. The generation engine runs in its own
 container. Open the web app and you land straight in the Generation Studio.
-
-## How it works
-
-A request flows from the browser to a GPU container and back. The API keeps the
-model warm between jobs, so a normal watch-think-tweak loop does not pay a cold
-reload each time.
-
-```mermaid
-flowchart LR
-    B["Browser<br/>Generation Studio"] -->|HTTP + SSE| BFF["Next.js BFF<br/>/api proxy"]
-    BFF -->|server-side| API["FastAPI<br/>jobs · health · metrics"]
-    API -->|manage residency| ORCH["Orchestrator<br/>residency + 30-min keep-warm"]
-    ORCH -->|docker start/stop| GEN["vLLM-Omni container<br/>GPU · FP8/NVFP4"]
-    API -->|generate over HTTP| GEN
-```
-
-The API sends generation requests to the vLLM-Omni container over HTTP. The
-orchestrator owns that container's lifecycle over the Docker socket: it starts the
-container on demand and evicts it after an idle window to free VRAM (see
-[Status & security](#status--security)).
-
-## Features
-
-Every generation, reasoning, and action mode is **implemented, CPU-tested, and
-GPU-verified end to end on both FP8 and NVFP4**, each with the owner's manual quality
-PASS (see [Status & security](#status--security)).
-
-| Capability | Endpoint(s) | Status |
-|---|---|---|
-| Text&rarr;image (FP8, NVFP4) | `POST /v1/generation/t2i` | Implemented · **GPU-verified¹** |
-| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · **GPU-verified¹** |
-| Reasoning | `POST /v1/reason` | Implemented · **GPU-verified¹** |
-| Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · **GPU-verified¹** |
-| Async jobs + live progress over SSE | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `.../events`, `.../artifact`, `.../trajectory`, `.../cancel` | Implemented · CPU-tested |
-| Health & Prometheus metrics | `GET /v1/health/{live,ready}`, `GET /v1/metrics` | Implemented · CPU-tested |
-| Web UI (generation, history, 3D / robot views) | Next.js 15 + React 19 app | Implemented · CPU-tested |
-
-¹ **GPU-verified** = a recorded end-to-end run on an RTX 5090 **and** the owner's manual
-quality PASS, per mode and per format (INV-6). All modes passed on **both FP8 and NVFP4**:
-text&rarr;image (`GPU-S3`), the video modes (owner PASS, 2026-07-26), reasoning
-(`AM-S2`/`AM-S5`), and robot action (`AM-S3`/`AM-S5`). No performance numbers are promised.
-See [Status & security](#status--security) and
-[`docs/evidence_map.md`](docs/evidence_map.md).
 
 ## See it in action
 
@@ -172,8 +121,7 @@ environment variables, the per-mode compatibility matrix, the mount layout, and 
 
 > **Licensing.** The repository **code is MIT** (see [`LICENSE`](LICENSE)). The
 > **model weights are not MIT**: the FP8/NVFP4 checkpoints are **OpenMDW 1.0**
-> (`openmdw-1.0`), and the legacy `nvidia/Cosmos3-Nano` base is **OpenMDW 1.1**. These
-> are the model owners' licenses; review them before use.
+> (`openmdw-1.0`), and the legacy `nvidia/Cosmos3-Nano` base is **OpenMDW 1.1**.
 
 ## Troubleshooting
 
@@ -192,39 +140,7 @@ environment variables, the per-mode compatibility matrix, the mount layout, and 
   wait on `COSMOS3_PLANE_READY_TIMEOUT` (default 30 min).
 </details>
 
-## Status & security
-
-This is an honest local self-hosted preview. It is shaped for a **trusted LAN or
-lab machine**, not for untrusted or internet-facing use. Every claim below is
-tracked in [`docs/evidence_map.md`](docs/evidence_map.md) and
-[`docs/risk_register.md`](docs/risk_register.md).
-
-**Verification status.** Every mode is GPU-verified end to end on **both FP8 and NVFP4**,
-each with the owner's manual quality PASS. "GPU-verified" here means a recorded end-to-end
-run on an RTX 5090 **and** an owner quality PASS — never one without the other (INV-6).
-
-| Mode | FP8 | NVFP4 |
-|---|---|---|
-| **Studio** — text&rarr;image / text&rarr;video / image&rarr;video / video+audio | GPU-verified · owner PASS | GPU-verified · owner PASS |
-| **Reasoning** | GPU-verified · owner PASS | GPU-verified · owner PASS |
-| **Robot action** — forward/inverse dynamics, policy | GPU-verified · owner PASS | GPU-verified · owner PASS |
-
-Each stack serves all three modes off the single quantized checkpoint (zero BF16); run one
-stack (FP8 xor NVFP4) at a time. Per-mode/format evidence is in
-[`docs/evidence_map.md`](docs/evidence_map.md); no performance numbers are promised.
-
-**Security posture (no auth by design).**
-
-- **No application-layer auth.** All routes (generation, jobs, action, reasoning,
-  health, metrics) are open. Access control is network placement, not a credential.
-- **Loopback by default.** Ports bind `127.0.0.1` (`BIND_ADDR`); LAN exposure is an
-  explicit opt-in. Set `BIND_ADDR=0.0.0.0` only on a trusted network.
-- **Root-equivalent Docker socket.** The API mounts the host Docker socket to drive
-  the generation container. Do not expose this container to untrusted callers. See
-  [`SECURITY.md`](SECURITY.md).
-- **Guardrails off by default.** The generation stack ships with content guardrails
-  disabled. The `cosmos_guardrail` model is not bundled, and the trusted-LAN
-  appliance runs guardrails-off by design, so generated output is unfiltered.
+## Status
 
 **Generation defaults & VRAM.**
 
@@ -232,7 +148,7 @@ stack (FP8 xor NVFP4) at a time. Per-mode/format evidence is in
   overridable per request and in the UI.
 - **720p video default.** `1280×720` is the default for the video modes, served by
   the quantized **FP8/NVFP4** path (never the BF16 base). The shipped 49-frame default
-  fits comfortably on 32 GB (measured peak ≈ 14.7 GB on FP8, ≈ 18.5 GB on NVFP4).
+  fits comfortably on 32 GB (measured peak ≈ 14.7 GB on FP8 with CPU offload, ≈ 18.5 GB on NVFP4).
   FP8's fit relies on layer-wise offload and tightens at higher frame counts, so
   prefer **NVFP4** for more headroom.
 - **Stays warm for 30 minutes.** After a job finishes, the model stays resident so
@@ -241,6 +157,48 @@ stack (FP8 xor NVFP4) at a time. Per-mode/format evidence is in
   `COSMOS3_IDLE_TIMEOUT_SECONDS` (default `1800` seconds; `0` never evicts). Holding
   VRAM for 30 minutes is intended on a single-user 5090, and a request for a
   different model still preempts immediately.
+
+## How it works
+
+A request flows from the browser to a GPU container and back. The API keeps the
+model warm between jobs, so a normal watch-think-tweak loop does not pay a cold
+reload each time.
+
+```mermaid
+flowchart LR
+    B["Browser<br/>Generation Studio"] -->|HTTP + SSE| BFF["Next.js BFF<br/>/api proxy"]
+    BFF -->|server-side| API["FastAPI<br/>jobs · health · metrics"]
+    API -->|manage residency| ORCH["Orchestrator<br/>residency + 30-min keep-warm"]
+    ORCH -->|docker start/stop| GEN["vLLM-Omni container<br/>GPU · FP8/NVFP4"]
+    API -->|generate over HTTP| GEN
+```
+
+The API sends generation requests to the vLLM-Omni container over HTTP. The
+orchestrator owns that container's lifecycle over the Docker socket: it starts the
+container on demand and evicts it after an idle window to free VRAM (see
+[Status & security](#status--security)).
+
+## Features
+
+Every generation, reasoning, and action mode is **implemented, CPU-tested, and
+GPU-verified end to end on both FP8 and NVFP4**.
+
+| Capability | Endpoint(s) | Status |
+|---|---|---|
+| Text&rarr;image (FP8, NVFP4) | `POST /v1/generation/t2i` | Implemented · **GPU-verified¹** |
+| Text&rarr;video · image&rarr;video · video+audio | `POST /v1/generation/{t2v,i2v,t2v_audio}` | Implemented · **GPU-verified¹** |
+| Reasoning | `POST /v1/reason` | Implemented · **GPU-verified¹** |
+| Robot action / forward & inverse dynamics / policy | `POST /v1/action/{forward_dynamics,inverse_dynamics,policy}` | Implemented · **GPU-verified¹** |
+| Async jobs + live progress over SSE | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `.../events`, `.../artifact`, `.../trajectory`, `.../cancel` | Implemented · CPU-tested |
+| Health & Prometheus metrics | `GET /v1/health/{live,ready}`, `GET /v1/metrics` | Implemented · CPU-tested |
+| Web UI (generation, history, 3D / robot views) | Next.js 15 + React 19 app | Implemented · CPU-tested |
+
+¹ **GPU-verified** = a recorded end-to-end run on an RTX 5090,
+per mode and per format. All modes passed on **both FP8 and NVFP4**:
+text&rarr;image, the video modes, reasoning, and robot action.
+No performance numbers are promised.
+See [Status & security](#status--security) and
+[`docs/evidence_map.md`](docs/evidence_map.md).
 
 ## Project
 

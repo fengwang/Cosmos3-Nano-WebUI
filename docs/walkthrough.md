@@ -38,7 +38,7 @@ and the video modes **text→video**, **image→video**, and **video+audio**.
 
 1. Open **Studio** (the home page, `/studio`).
 2. In the prompt box, type: **`a red apple on a wooden table, studio photo`**.
-3. Keep the default size **480×480** and click **Generate**.
+3. Set the image size to **480×480** and click **Generate**.
 4. In a few seconds a clean, studio-lit image of a red apple on a wooden table appears in the gallery.
 
 **Expected:** one 480×480 PNG, coherent and on-prompt (this is the end-to-end `t2i` path GPU-verified
@@ -48,19 +48,22 @@ under `GPU-S3` on both FP8 and NVFP4).
 
 ### Text → video, image → video, video + audio
 
-1. In **Studio**, switch the stage to **Video** (or **Image→Video** / **Video+Audio**).
-2. For text→video, enter a prompt such as **`a paper boat drifting down a rain-filled gutter, close-up`**;
-   for image→video, upload a start frame; for video+audio, use a prompt with sound, e.g.
-   **`waves breaking on a rocky shore at sunset`**.
-3. Keep the default **1280×720**, 49-frame output and click **Generate**.
+In this section, we use default assets and settings from the quantized fp8 checkpoint, for both and nvfp4 and fp8 cases.
+The URL to these asserts folder can be fond [here](https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise/tree/main/assets).
 
-**Expected:** a ~1280×720 clip (about 49 frames) that follows the prompt; **video+audio** adds a matching
+1. In **Studio**, switch the stage to **Video** (or **Image→Video** / **Video+Audio**).
+2. For text→video and text->video+audio, enter the prompt from thejson file `example_t2v_prompt.json` in the assets folder.
+   for image→video, use the start frame image `example_i2v_input.jpg` and the prompt from `example_i2v_prompt.json` in the assets folder.
+3. Keep the default **1280×720**, 189-frame output and click **Generate**.
+
+**Expected:** a ~1280×720 clip (about 189 frames, 7s) that follows the prompt; **video+audio** adds a matching
 soundtrack. All three video modes are GPU-verified on both FP8 and NVFP4 with the owner's quality PASS
 (2026-07-26). Prefer **NVFP4** for more VRAM headroom at higher frame counts.
 
-![Studio text→video result](docs/images/studio-t2v.png)
+![Studio text→video+audio setting](docs/images/studio-t2av-setting.png)
+![Studio text→video+audio result](docs/images/studio-t2av.png)
+![Studio image→video setting](docs/images/studio-i2v-setting.png)
 ![Studio image→video result](docs/images/studio-i2v.png)
-![Studio video+audio result](docs/images/studio-t2v_audio.png)
 
 <details>
 <summary>Reproduce via the API</summary>
@@ -77,7 +80,7 @@ The **Reasoning** tab (`/chat`) is a streaming chat surface served by the quanti
 (zero BF16) — no separate base model.
 
 1. Open the **Reasoning** tab.
-2. Type a question, e.g. **`List three primary colors, comma-separated.`** and send it.
+2. Type a question, e.g. **`How chopsticks are made?`** and send it.
 3. The answer streams back token by token.
 
 **Expected:** a coherent, on-topic answer — for the example above, `Red, Blue, Yellow`. Multi-step
