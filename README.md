@@ -96,6 +96,15 @@ NVFP4 checkpoint is recommended as it gives more VRAM headroom for longer videos
 - [FP8 video Examples](https://huggingface.co/wfen/Cosmos3-Nano-FP8-Blockwise/tree/main/assets/FP8-Examples), and
 - [NVFP4 video Examples](https://huggingface.co/wfen/Cosmos3-Nano-NVFP4-Blockwise/tree/main/assets)
 
+Below are two NVFP4 example videos, 720P and 7s.
+
+<img width="3034" height="1754" alt="example_i2v_input" src="https://github.com/user-attachments/assets/42cb466d-a5d4-4e31-99c5-5e56efbfa71b" />
+
+<img width="3034" height="1754" alt="example_i2v_input" src="https://github.com/user-attachments/assets/1369458c-5d21-4fe0-a871-3b5837681116" />
+
+
+https://github.com/user-attachments/assets/8ddc1fb4-b6d9-4aeb-8361-6519b812074d
+
 
 
 ## Requirements
