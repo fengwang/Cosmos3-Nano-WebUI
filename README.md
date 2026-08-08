@@ -220,3 +220,4 @@ See [Status & security](#status--security) and
 - 📜 **Code of Conduct:** [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 - ⚖️ **License:** repo code is [MIT](LICENSE); model weights carry their own licenses
   (see [Checkpoint setup](#checkpoint-setup)).
+- [**Nvidia Cosmos**](https://github.com/NVIDIA/cosmos)
